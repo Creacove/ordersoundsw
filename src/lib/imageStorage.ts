@@ -180,7 +180,7 @@ export async function preValidateBase64Image(dataUrl: string): Promise<{ isValid
 }
 
 /**
- * Uploads an image to Supabase storage with hardcoded JPEG handling
+ * Uploads an image to Supabase storage using RAW BLOB UPLOAD to bypass File constructor corruption
  */
 export const uploadImage = async (
   fileOrUrl: FileOrUrl, 
@@ -189,7 +189,7 @@ export const uploadImage = async (
   progressCallback?: (progress: number) => void
 ): Promise<string> => {
   try {
-    // If we're passed an object with a URL, and it's a data URL, convert it to a file
+    // If we're passed an object with a URL, and it's a data URL, convert it to a blob
     if ('url' in fileOrUrl && typeof fileOrUrl.url === 'string') {
       // If it's a plain URL (not a data URL), just return it
       if (!fileOrUrl.url.startsWith('data:')) {
@@ -202,43 +202,83 @@ export const uploadImage = async (
         throw new Error(`Pre-validation failed: ${preValidation.error}`);
       }
       
-      // Convert data URL to file with validation
+      // Convert data URL to blob with validation
       const blob = await dataURLtoBlob(fileOrUrl.url);
       
-      // Hardcode everything to JPEG
+      // DEBUG: Log the blob properties
+      console.log(`🔍 BLOB DEBUG: size=${blob.size}, type="${blob.type}"`);
+      
+      // Generate filename with hardcoded JPEG extension
       const fileName = `${uuidv4()}.jpeg`;
-      const file = new File([blob], fileName, { type: 'image/jpeg' });
+      const filePath = path ? `${path}/${fileName}` : fileName;
       
-      console.log(`Created File object: ${fileName} with hardcoded type: image/jpeg (${file.size} bytes)`);
+      console.log(`⚡ EMERGENCY BYPASS: Uploading RAW BLOB as ${bucket}/${filePath}`);
+      console.log(`⚡ FORCED CONTENT-TYPE: image/jpeg (ignoring blob.type="${blob.type}")`);
       
-      // Now we have a properly validated file, proceed with upload
-      fileOrUrl = file;
+      if (progressCallback) {
+        progressCallback(10);
+      }
+      
+      // 🚨 EMERGENCY RAW BLOB UPLOAD - BYPASS FILE CONSTRUCTOR COMPLETELY
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, blob, {
+          contentType: 'image/jpeg', // 🔥 HARDCODED - NO DYNAMIC TYPE DETECTION
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error(`💥 RAW BLOB UPLOAD FAILED for ${bucket}/${filePath}:`, error);
+        throw error;
+      }
+      
+      // Get public URL for the file
+      const { data: publicUrlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(data.path);
+      
+      console.log(`✅ RAW BLOB UPLOAD SUCCESS: ${publicUrlData.publicUrl}`);
+      
+      if (progressCallback) {
+        progressCallback(100);
+      }
+      
+      return publicUrlData.publicUrl;
     }
     
-    // Now we should have a File object
+    // Handle File objects by extracting the blob data and uploading as raw blob
     const file = fileOrUrl as File;
     
-    // Generate a unique filename with hardcoded JPEG extension
+    // DEBUG: Log the File object properties
+    console.log(`🔍 FILE DEBUG: name="${file.name}", type="${file.type}", size=${file.size}`);
+    console.log(`🚨 FILE.TYPE CORRUPTION DETECTED: "${file.type}" - BYPASSING WITH RAW BLOB`);
+    
+    // Extract the raw blob data from the File object
+    const rawBlob = new Blob([file], { type: 'image/jpeg' });
+    
+    // Generate filename with hardcoded JPEG extension
     const fileName = `${uuidv4()}.jpeg`;
     const filePath = path ? `${path}/${fileName}` : fileName;
     
-    console.log(`Uploading hardcoded JPEG image ${file.name} (${file.size} bytes) to ${bucket}/${filePath}`);
+    console.log(`⚡ EMERGENCY BYPASS: Converting File to RAW BLOB for ${bucket}/${filePath}`);
+    console.log(`⚡ FORCED CONTENT-TYPE: image/jpeg (ignoring file.type="${file.type}")`);
     
     if (progressCallback) {
       progressCallback(10);
     }
     
-    // Upload file to Supabase Storage with explicit JPEG content type
+    // 🚨 EMERGENCY RAW BLOB UPLOAD - BYPASS FILE CONSTRUCTOR COMPLETELY
     const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(filePath, file, {
-        contentType: 'image/jpeg', // Hardcoded JPEG content type
+      .upload(filePath, rawBlob, {
+        contentType: 'image/jpeg', // 🔥 HARDCODED - NO DYNAMIC TYPE DETECTION
         cacheControl: '3600',
         upsert: true
       });
     
     if (error) {
-      console.error(`Error uploading to ${bucket}/${filePath}:`, error);
+      console.error(`💥 RAW BLOB UPLOAD FAILED for ${bucket}/${filePath}:`, error);
       throw error;
     }
     
@@ -247,7 +287,7 @@ export const uploadImage = async (
       .from(bucket)
       .getPublicUrl(data.path);
     
-    console.log(`JPEG image uploaded successfully: ${publicUrlData.publicUrl}`);
+    console.log(`✅ RAW BLOB UPLOAD SUCCESS: ${publicUrlData.publicUrl}`);
     
     if (progressCallback) {
       progressCallback(100);
@@ -255,7 +295,7 @@ export const uploadImage = async (
     
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('💥 RAW BLOB UPLOAD ERROR:', error);
     throw error;
   }
 };
