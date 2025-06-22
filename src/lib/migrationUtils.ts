@@ -267,18 +267,7 @@ export const migrateBeatCoverImagesToStorage = async (): Promise<BeatMigrationRe
           
           console.log(`Beat ${beat.id} validation passed - ${validation.type}, ${validation.size} bytes`);
           
-          // Step 2: Create backup of original data
-          const { error: backupError } = await supabase
-            .from('beats')
-            .update({ cover_image_backup: beat.cover_image })
-            .eq('id', beat.id);
-            
-          if (backupError) {
-            console.warn(`Failed to backup original data for beat ${beat.id}:`, backupError);
-            // Continue anyway - this is just for safety
-          }
-          
-          // Step 3: Upload to storage (no post-verification)
+          // Step 2: Upload to storage (no post-verification)
           const storageUrl = await uploadImage(
             { url: beat.cover_image }, 
             'covers', 
@@ -287,7 +276,7 @@ export const migrateBeatCoverImagesToStorage = async (): Promise<BeatMigrationRe
           
           console.log(`Beat ${beat.id} uploaded successfully to: ${storageUrl}`);
           
-          // Step 4: Update database record immediately after successful upload
+          // Step 3: Update database record immediately after successful upload
           const { error: updateError } = await supabase
             .from('beats')
             .update({ cover_image: storageUrl })
@@ -307,25 +296,6 @@ export const migrateBeatCoverImagesToStorage = async (): Promise<BeatMigrationRe
           console.error(`Failed to migrate beat ${beat.id}:`, error);
           result.failedBeats++;
           result.errors.push(`Beat ${beat.id} (${beat.title}): ${error instanceof Error ? error.message : 'Unknown error'}`);
-          
-          // Try to restore from backup if update failed
-          try {
-            const { data: backupData } = await supabase
-              .from('beats')
-              .select('cover_image_backup')
-              .eq('id', beat.id)
-              .single();
-              
-            if (backupData?.cover_image_backup) {
-              await supabase
-                .from('beats')
-                .update({ cover_image: backupData.cover_image_backup })
-                .eq('id', beat.id);
-              console.log(`Restored backup for beat ${beat.id}`);
-            }
-          } catch (restoreError) {
-            console.error(`Failed to restore backup for beat ${beat.id}:`, restoreError);
-          }
         }
       }
     }
@@ -436,48 +406,14 @@ export const migrateBase64ImagesToStorage = async (): Promise<MigrationResult> =
 };
 
 /**
- * Clean up backup columns after successful migration
+ * Clean up backup columns after successful migration - DEPRECATED
  */
 export const cleanupMigrationBackups = async (): Promise<{ cleaned: number; errors: string[] }> => {
   const result = { cleaned: 0, errors: [] };
   
-  try {
-    console.log('Cleaning up migration backup data...');
-    
-    // Clear backup column for successfully migrated beats
-    const { data: beats, error: selectError } = await supabase
-      .from('beats')
-      .select('id')
-      .not('cover_image_backup', 'is', null)
-      .not('cover_image', 'is', null)
-      .not('cover_image', 'like', 'data:image%');
-      
-    if (selectError) {
-      throw selectError;
-    }
-    
-    if (beats && beats.length > 0) {
-      const beatIds = beats.map(b => b.id);
-      const { error: updateError } = await supabase
-        .from('beats')
-        .update({ cover_image_backup: null })
-        .in('id', beatIds);
-        
-      if (updateError) {
-        result.errors.push(`Failed to clear backups: ${updateError.message}`);
-      } else {
-        result.cleaned = beats.length;
-      }
-    }
-    
-    console.log(`Cleanup completed. Cleared ${result.cleaned} backup records`);
-    return result;
-    
-  } catch (error) {
-    console.error('Cleanup failed:', error);
-    result.errors.push(`Cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return result;
-  }
+  // This function is deprecated since backup columns no longer exist
+  result.errors.push('Backup cleanup is no longer needed - backup columns have been removed');
+  return result;
 };
 
 // Legacy functions for compatibility - keeping the existing interface
