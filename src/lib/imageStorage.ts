@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -48,12 +49,13 @@ export const uploadImage = async (
     
     console.log(`Uploading image to ${bucket}/${filePath}`);
     
-    // Upload file to Supabase storage
+    // Upload file to Supabase storage with correct contentType
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true
+        upsert: true,
+        contentType: file.type
       });
     
     if (error) {
