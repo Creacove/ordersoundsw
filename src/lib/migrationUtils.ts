@@ -1,5 +1,5 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { uploadImage, preValidateBase64Image } from '@/lib/imageStorage';
 
 export interface MigrationResult {
   totalUsers: number;
@@ -17,52 +17,12 @@ export interface BeatMigrationResult {
   errors: string[];
 }
 
-export interface SingleBeatMigrationResult {
-  success: boolean;
-  beatId: string;
-  beatTitle: string;
-  originalUrl?: string;
-  newUrl?: string;
-  error?: string;
-  usedBackup?: boolean;
-}
-
 export interface StorageRepairResult {
   totalFiles: number;
   repairedFiles: number;
   failedFiles: number;
   errors: string[];
 }
-
-/**
- * Detects image format from file header bytes
- */
-const detectImageFormat = (buffer: ArrayBuffer): string | null => {
-  const bytes = new Uint8Array(buffer);
-  
-  // JPEG: FF D8 FF
-  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
-    return 'image/jpeg';
-  }
-  
-  // PNG: 89 50 4E 47
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-    return 'image/png';
-  }
-  
-  // GIF: 47 49 46
-  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
-    return 'image/gif';
-  }
-  
-  // WEBP: 52 49 46 46 ... 57 45 42 50
-  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-    return 'image/webp';
-  }
-  
-  return null;
-};
 
 /**
  * Emergency cleanup function to remove corrupted storage files
@@ -211,310 +171,43 @@ export const resetCorruptedDatabaseRecords = async (): Promise<{ reset: number; 
   }
 };
 
-/**
- * Bulletproof migration of beat cover images from base64 to Supabase storage
- * 10x Engineer Version: No post-upload verification, just upload and update
- */
+// Legacy functions for compatibility - deprecated
 export const migrateBeatCoverImagesToStorage = async (): Promise<BeatMigrationResult> => {
-  const result: BeatMigrationResult = {
+  return {
     totalBeats: 0,
     migratedBeats: 0,
     failedBeats: 0,
     skippedBeats: 0,
-    errors: []
+    errors: ['Migration functions have been deprecated. Use the new direct upload system.']
   };
-
-  try {
-    console.log('Starting bulletproof beat cover image migration...');
-    
-    // Get all beats with base64 cover images
-    const { data: beats, error } = await supabase
-      .from('beats')
-      .select('id, cover_image, title')
-      .not('cover_image', 'is', null)
-      .like('cover_image', 'data:image%');
-
-    if (error) {
-      throw error;
-    }
-
-    result.totalBeats = beats?.length || 0;
-    console.log(`Found ${result.totalBeats} beats with base64 cover images`);
-
-    if (!beats || beats.length === 0) {
-      console.log('No beats with base64 cover images found');
-      return result;
-    }
-
-    // Process beats in small batches for safety
-    const batchSize = 3;
-    for (let i = 0; i < beats.length; i += batchSize) {
-      const batch = beats.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(beats.length / batchSize)}`);
-      
-      for (const beat of batch) {
-        try {
-          console.log(`Processing beat ${beat.id}: ${beat.title}`);
-          
-          // Step 1: Pre-validate the base64 image
-          const validation = await preValidateBase64Image(beat.cover_image);
-          if (!validation.isValid) {
-            console.warn(`Skipping beat ${beat.id} - invalid base64: ${validation.error}`);
-            result.skippedBeats++;
-            result.errors.push(`Beat ${beat.id} (${beat.title}): ${validation.error}`);
-            continue;
-          }
-          
-          console.log(`Beat ${beat.id} validation passed - ${validation.type}, ${validation.size} bytes`);
-          
-          // Step 2: Upload to storage (no post-verification)
-          const storageUrl = await uploadImage(
-            { url: beat.cover_image }, 
-            'covers', 
-            'migrated'
-          );
-          
-          console.log(`Beat ${beat.id} uploaded successfully to: ${storageUrl}`);
-          
-          // Step 3: Update database record immediately after successful upload
-          const { error: updateError } = await supabase
-            .from('beats')
-            .update({ cover_image: storageUrl })
-            .eq('id', beat.id);
-            
-          if (updateError) {
-            throw updateError;
-          }
-          
-          result.migratedBeats++;
-          console.log(`Successfully migrated beat ${beat.id}`);
-          
-          // Add small delay between uploads to avoid overwhelming the system
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-        } catch (error) {
-          console.error(`Failed to migrate beat ${beat.id}:`, error);
-          result.failedBeats++;
-          result.errors.push(`Beat ${beat.id} (${beat.title}): ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      }
-    }
-    
-    console.log(`Beat migration completed. Migrated: ${result.migratedBeats}, Failed: ${result.failedBeats}, Skipped: ${result.skippedBeats}`);
-    return result;
-    
-  } catch (error) {
-    console.error('Beat migration failed:', error);
-    result.errors.push(`Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return result;
-  }
 };
 
-/**
- * Bulletproof migration of user profile pictures from base64 to Supabase storage
- * 10x Engineer Version: No post-upload verification, just upload and update
- */
 export const migrateBase64ImagesToStorage = async (): Promise<MigrationResult> => {
-  const result: MigrationResult = {
+  return {
     totalUsers: 0,
     migratedUsers: 0,
     failedUsers: 0,
     skippedUsers: 0,
-    errors: []
+    errors: ['Migration functions have been deprecated. Use the new direct upload system.']
   };
-
-  try {
-    console.log('Starting bulletproof user profile picture migration...');
-    
-    // Get all users with base64 profile pictures
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('id, profile_picture, full_name, stage_name')
-      .not('profile_picture', 'is', null)
-      .like('profile_picture', 'data:image%');
-
-    if (error) {
-      throw error;
-    }
-
-    result.totalUsers = users?.length || 0;
-    console.log(`Found ${result.totalUsers} users with base64 profile pictures`);
-
-    if (!users || users.length === 0) {
-      console.log('No users with base64 profile pictures found');
-      return result;
-    }
-
-    // Process users in small batches
-    const batchSize = 3;
-    for (let i = 0; i < users.length; i += batchSize) {
-      const batch = users.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(users.length / batchSize)}`);
-      
-      for (const user of batch) {
-        try {
-          console.log(`Processing user ${user.id}: ${user.full_name || user.stage_name}`);
-          
-          // Step 1: Pre-validate the base64 image
-          const validation = await preValidateBase64Image(user.profile_picture);
-          if (!validation.isValid) {
-            console.warn(`Skipping user ${user.id} - invalid base64: ${validation.error}`);
-            result.skippedUsers++;
-            result.errors.push(`User ${user.id}: ${validation.error}`);
-            continue;
-          }
-          
-          // Step 2: Upload to storage (no post-verification)
-          const storageUrl = await uploadImage(
-            { url: user.profile_picture }, 
-            'avatars', 
-            'migrated'
-          );
-          
-          // Step 3: Update database record immediately after successful upload
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({ profile_picture: storageUrl })
-            .eq('id', user.id);
-            
-          if (updateError) {
-            throw updateError;
-          }
-          
-          result.migratedUsers++;
-          console.log(`Successfully migrated user ${user.id} to ${storageUrl}`);
-          
-          // Small delay between uploads
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-        } catch (error) {
-          console.error(`Failed to migrate user ${user.id}:`, error);
-          result.failedUsers++;
-          result.errors.push(`User ${user.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      }
-    }
-    
-    console.log(`User migration completed. Migrated: ${result.migratedUsers}, Failed: ${result.failedUsers}, Skipped: ${result.skippedUsers}`);
-    return result;
-    
-  } catch (error) {
-    console.error('User migration failed:', error);
-    result.errors.push(`Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return result;
-  }
 };
 
-/**
- * Clean up backup columns after successful migration - DEPRECATED
- */
 export const cleanupMigrationBackups = async (): Promise<{ cleaned: number; errors: string[] }> => {
-  const result = { cleaned: 0, errors: [] };
-  
-  // This function is deprecated since backup columns no longer exist
-  result.errors.push('Backup cleanup is no longer needed - backup columns have been removed');
-  return result;
+  return {
+    cleaned: 0,
+    errors: ['Backup cleanup is no longer needed - backup columns have been removed']
+  };
 };
 
-// Legacy functions for compatibility - keeping the existing interface
 export const cleanupCorruptedRecords = async (): Promise<{ cleaned: number; errors: string[] }> => {
-  // This now calls the new emergency cleanup function
   return await emergencyCleanupCorruptedStorage();
 };
 
 export const repairCorruptedStorageImages = async (): Promise<StorageRepairResult> => {
-  // This function is no longer needed with the new bulletproof approach
-  // But keeping for compatibility
   return {
     totalFiles: 0,
     repairedFiles: 0,
     failedFiles: 0,
-    errors: ['This function has been replaced by the new bulletproof migration system']
+    errors: ['This function has been replaced by the new direct upload system']
   };
-};
-
-/**
- * Migrate a single beat cover image for testing purposes
- */
-export const migrateSingleBeatCoverToStorage = async (beatId: string): Promise<SingleBeatMigrationResult> => {
-  try {
-    console.log(`Testing migration for beat ID: ${beatId}`);
-    
-    // Get the specific beat - only query cover_image field
-    const { data: beat, error } = await supabase
-      .from('beats')
-      .select('id, cover_image, title')
-      .eq('id', beatId)
-      .single();
-
-    if (error || !beat) {
-      return {
-        success: false,
-        beatId,
-        beatTitle: 'Unknown',
-        error: `Beat not found: ${error?.message || 'No beat with this ID'}`
-      };
-    }
-
-    // Check if we have a base64 image to migrate
-    if (!beat.cover_image || !beat.cover_image.startsWith('data:image')) {
-      return {
-        success: false,
-        beatId,
-        beatTitle: beat.title,
-        originalUrl: beat.cover_image || 'No cover image',
-        error: 'No base64 image found to migrate'
-      };
-    }
-
-    // Pre-validate the base64 image
-    const validation = await preValidateBase64Image(beat.cover_image);
-    if (!validation.isValid) {
-      return {
-        success: false,
-        beatId,
-        beatTitle: beat.title,
-        originalUrl: beat.cover_image.substring(0, 50) + '...',
-        error: `Invalid base64 image: ${validation.error}`
-      };
-    }
-
-    console.log(`Beat ${beatId} validation passed - ${validation.type}, ${validation.size} bytes`);
-
-    // Upload to storage
-    const storageUrl = await uploadImage(
-      { url: beat.cover_image }, 
-      'covers', 
-      'test-migration'
-    );
-
-    console.log(`Beat ${beatId} uploaded successfully to: ${storageUrl}`);
-
-    // Update database record
-    const { error: updateError } = await supabase
-      .from('beats')
-      .update({ cover_image: storageUrl })
-      .eq('id', beatId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    return {
-      success: true,
-      beatId,
-      beatTitle: beat.title,
-      originalUrl: beat.cover_image.substring(0, 50) + '...',
-      newUrl: storageUrl
-    };
-
-  } catch (error) {
-    console.error(`Failed to migrate beat ${beatId}:`, error);
-    return {
-      success: false,
-      beatId,
-      beatTitle: 'Unknown',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
 };
