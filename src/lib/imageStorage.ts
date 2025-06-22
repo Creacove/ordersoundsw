@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -83,16 +82,16 @@ function validateImageBlob(blob: Blob): Promise<{ isValid: boolean; detectedType
         }
         // PNG: 89 50 4E 47
         else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-          detectedType = 'image/png';
+          detectedType = 'image/jpeg'; // Force to JPEG
         }
         // GIF: 47 49 46
         else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
-          detectedType = 'image/gif';
+          detectedType = 'image/jpeg'; // Force to JPEG
         }
         // WEBP: 52 49 46 46 ... 57 45 42 50
         else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
                  bytes.length > 11 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-          detectedType = 'image/webp';
+          detectedType = 'image/jpeg'; // Force to JPEG
         }
         else {
           resolve({ isValid: false, error: 'No valid image file signature found' });
@@ -129,7 +128,6 @@ export async function dataURLtoBlob(dataUrl: string): Promise<Blob> {
   try {
     // Step 2: Extract and decode base64 data
     const arr = dataUrl.split(',');
-    const mimeType = validation.mimeType!;
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
@@ -138,8 +136,8 @@ export async function dataURLtoBlob(dataUrl: string): Promise<Blob> {
       u8arr[n] = bstr.charCodeAt(n);
     }
     
-    // Step 3: Create blob
-    const blob = new Blob([u8arr], { type: mimeType });
+    // Step 3: Create blob with hardcoded JPEG type
+    const blob = new Blob([u8arr], { type: 'image/jpeg' });
     
     // Step 4: Validate the blob contains actual image data
     const blobValidation = await validateImageBlob(blob);
@@ -147,14 +145,7 @@ export async function dataURLtoBlob(dataUrl: string): Promise<Blob> {
       throw new Error(`Invalid image blob: ${blobValidation.error}`);
     }
     
-    // Step 5: Verify detected type matches declared type
-    if (blobValidation.detectedType && blobValidation.detectedType !== mimeType) {
-      console.warn(`MIME type mismatch: declared ${mimeType}, detected ${blobValidation.detectedType}`);
-      // Use detected type for the blob
-      return new Blob([u8arr], { type: blobValidation.detectedType });
-    }
-    
-    console.log(`Successfully created validated ${mimeType} blob (${blob.size} bytes)`);
+    console.log(`Successfully created validated JPEG blob (${blob.size} bytes)`);
     return blob;
     
   } catch (error) {
@@ -178,7 +169,7 @@ export async function preValidateBase64Image(dataUrl: string): Promise<{ isValid
     return {
       isValid: true,
       size: blob.size,
-      type: blob.type
+      type: 'image/jpeg' // Always return JPEG
     };
   } catch (error) {
     return {
@@ -189,7 +180,7 @@ export async function preValidateBase64Image(dataUrl: string): Promise<{ isValid
 }
 
 /**
- * Uploads an image to Supabase storage with pre-upload validation only
+ * Uploads an image to Supabase storage with hardcoded JPEG handling
  */
 export const uploadImage = async (
   fileOrUrl: FileOrUrl, 
@@ -214,13 +205,11 @@ export const uploadImage = async (
       // Convert data URL to file with validation
       const blob = await dataURLtoBlob(fileOrUrl.url);
       
-      // Use the blob's actual type (corrected type) instead of preValidation.type
-      const actualType = blob.type;
-      const fileExt = actualType.split('/')[1] || 'png';
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const file = new File([blob], fileName, { type: actualType });
+      // Hardcode everything to JPEG
+      const fileName = `${uuidv4()}.jpeg`;
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
       
-      console.log(`Created File object: ${fileName} with corrected type: ${actualType}`);
+      console.log(`Created File object: ${fileName} with hardcoded type: image/jpeg (${file.size} bytes)`);
       
       // Now we have a properly validated file, proceed with upload
       fileOrUrl = file;
@@ -229,22 +218,21 @@ export const uploadImage = async (
     // Now we should have a File object
     const file = fileOrUrl as File;
     
-    // Generate a unique filename to prevent collisions
-    const fileExt = file.name.split('.').pop() || 'png';
-    const fileName = `${uuidv4()}.${fileExt}`;
+    // Generate a unique filename with hardcoded JPEG extension
+    const fileName = `${uuidv4()}.jpeg`;
     const filePath = path ? `${path}/${fileName}` : fileName;
     
-    console.log(`Uploading validated image ${file.name} (${file.size} bytes, ${file.type}) to ${bucket}/${filePath}`);
+    console.log(`Uploading hardcoded JPEG image ${file.name} (${file.size} bytes) to ${bucket}/${filePath}`);
     
     if (progressCallback) {
       progressCallback(10);
     }
     
-    // Upload file to Supabase Storage
+    // Upload file to Supabase Storage with explicit JPEG content type
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
-        contentType: file.type,
+        contentType: 'image/jpeg', // Hardcoded JPEG content type
         cacheControl: '3600',
         upsert: true
       });
@@ -259,7 +247,7 @@ export const uploadImage = async (
       .from(bucket)
       .getPublicUrl(data.path);
     
-    console.log(`Image uploaded successfully: ${publicUrlData.publicUrl}`);
+    console.log(`JPEG image uploaded successfully: ${publicUrlData.publicUrl}`);
     
     if (progressCallback) {
       progressCallback(100);
