@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -20,11 +19,34 @@ serve(async (req) => {
   }
 
   try {
-    // Create client for admin operations (uses service role key)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    // Verify user is admin
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header')
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      throw new Error('Invalid authentication')
+    }
+
+    // Check if user is admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (userError || userData?.role !== 'admin') {
+      throw new Error('Insufficient permissions')
+    }
 
     const { operation, count = 5, producerId }: AdminOperationRequest = await req.json()
     
@@ -33,7 +55,7 @@ serve(async (req) => {
         throw new Error('Producer ID is required for this operation')
       }
       
-      console.log(`Admin requested to set producer ${producerId} as producer of the week`)
+      console.log(`Admin ${user.id} requested to set producer ${producerId} as producer of the week`)
       
       // Step 1: Reset all current producers of the week
       const { error: resetError } = await supabase
@@ -86,7 +108,7 @@ serve(async (req) => {
     }
     
     if (operation === 'refresh_trending_beats') {
-      console.log(`Admin requested trending beats refresh with count: ${count}`)
+      console.log(`Admin ${user.id} requested trending beats refresh with count: ${count}`)
       
       // Start transaction - reset all trending beats to false
       const { error: resetError } = await supabase
@@ -142,7 +164,7 @@ serve(async (req) => {
     
     if (operation === 'refresh_featured_beats') {
       const featuredCount = Math.min(count || 1, 1) // Enforce max 1 featured beat
-      console.log(`Admin requested featured beats refresh with count: ${featuredCount}`)
+      console.log(`Admin ${user.id} requested featured beats refresh with count: ${featuredCount}`)
       
       // Step 1: Reset all featured beats to false
       const { error: resetError } = await supabase
@@ -197,7 +219,7 @@ serve(async (req) => {
     
     if (operation === 'refresh_weekly_picks') {
       const weeklyCount = Math.max(5, Math.min(count || 6, 7)) // Enforce 5-7 range
-      console.log(`Admin requested weekly picks refresh with count: ${weeklyCount}`)
+      console.log(`Admin ${user.id} requested weekly picks refresh with count: ${weeklyCount}`)
       
       // Step 1: Reset all weekly picks to false
       const { error: resetError } = await supabase
