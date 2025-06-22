@@ -213,9 +213,14 @@ export const uploadImage = async (
       
       // Convert data URL to file with validation
       const blob = await dataURLtoBlob(fileOrUrl.url);
-      const fileExt = preValidation.type?.split('/')[1] || 'png';
+      
+      // Use the blob's actual type (corrected type) instead of preValidation.type
+      const actualType = blob.type;
+      const fileExt = actualType.split('/')[1] || 'png';
       const fileName = `${uuidv4()}.${fileExt}`;
-      const file = new File([blob], fileName, { type: preValidation.type });
+      const file = new File([blob], fileName, { type: actualType });
+      
+      console.log(`Created File object: ${fileName} with corrected type: ${actualType}`);
       
       // Now we have a properly validated file, proceed with upload
       fileOrUrl = file;
