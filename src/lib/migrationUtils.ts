@@ -17,6 +17,16 @@ export interface BeatMigrationResult {
   errors: string[];
 }
 
+export interface SingleBeatMigrationResult {
+  success: boolean;
+  beatId: string;
+  beatTitle: string;
+  originalUrl?: string;
+  newUrl?: string;
+  error?: string;
+  usedBackup?: boolean;
+}
+
 export interface StorageRepairResult {
   totalFiles: number;
   repairedFiles: number;
@@ -485,4 +495,122 @@ export const repairCorruptedStorageImages = async (): Promise<StorageRepairResul
     failedFiles: 0,
     errors: ['This function has been replaced by the new bulletproof migration system']
   };
+};
+
+/**
+ * Migrate a single beat cover image for testing purposes
+ */
+export const migrateSingleBeatCoverToStorage = async (beatId: string): Promise<SingleBeatMigrationResult> => {
+  try {
+    console.log(`Testing migration for beat ID: ${beatId}`);
+    
+    // Get the specific beat
+    const { data: beat, error } = await supabase
+      .from('beats')
+      .select('id, cover_image, cover_image_backup, title')
+      .eq('id', beatId)
+      .single();
+
+    if (error || !beat) {
+      return {
+        success: false,
+        beatId,
+        beatTitle: 'Unknown',
+        error: `Beat not found: ${error?.message || 'No beat with this ID'}`
+      };
+    }
+
+    let imageToMigrate = beat.cover_image;
+    let usedBackup = false;
+
+    // Check if current cover_image is a broken Supabase URL
+    if (beat.cover_image && beat.cover_image.includes('supabase') && !beat.cover_image.startsWith('data:')) {
+      console.log(`Beat ${beatId} has broken Supabase URL, checking backup...`);
+      
+      if (beat.cover_image_backup && beat.cover_image_backup.startsWith('data:image')) {
+        imageToMigrate = beat.cover_image_backup;
+        usedBackup = true;
+        console.log(`Using backup image for beat ${beatId}`);
+      } else {
+        return {
+          success: false,
+          beatId,
+          beatTitle: beat.title,
+          originalUrl: beat.cover_image,
+          error: 'No valid backup image found for broken Supabase URL'
+        };
+      }
+    }
+
+    // Check if we have a base64 image to migrate
+    if (!imageToMigrate || !imageToMigrate.startsWith('data:image')) {
+      return {
+        success: false,
+        beatId,
+        beatTitle: beat.title,
+        originalUrl: beat.cover_image,
+        error: 'No base64 image found to migrate'
+      };
+    }
+
+    // Pre-validate the base64 image
+    const validation = await preValidateBase64Image(imageToMigrate);
+    if (!validation.isValid) {
+      return {
+        success: false,
+        beatId,
+        beatTitle: beat.title,
+        originalUrl: imageToMigrate.substring(0, 50) + '...',
+        error: `Invalid base64 image: ${validation.error}`,
+        usedBackup
+      };
+    }
+
+    console.log(`Beat ${beatId} validation passed - ${validation.type}, ${validation.size} bytes`);
+
+    // Create backup if we haven't already
+    if (!usedBackup && !beat.cover_image_backup) {
+      await supabase
+        .from('beats')
+        .update({ cover_image_backup: beat.cover_image })
+        .eq('id', beatId);
+    }
+
+    // Upload to storage
+    const storageUrl = await uploadImage(
+      { url: imageToMigrate }, 
+      'covers', 
+      'test-migration'
+    );
+
+    console.log(`Beat ${beatId} uploaded successfully to: ${storageUrl}`);
+
+    // Update database record
+    const { error: updateError } = await supabase
+      .from('beats')
+      .update({ cover_image: storageUrl })
+      .eq('id', beatId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return {
+      success: true,
+      beatId,
+      beatTitle: beat.title,
+      originalUrl: imageToMigrate.substring(0, 50) + '...',
+      newUrl: storageUrl,
+      usedBackup
+    };
+
+  } catch (error) {
+    console.error(`Failed to migrate beat ${beatId}:`, error);
+    return {
+      success: false,
+      beatId,
+      beatTitle: 'Unknown',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 };

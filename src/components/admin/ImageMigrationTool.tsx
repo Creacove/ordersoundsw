@@ -2,15 +2,19 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertTriangle, Upload, Image, Wrench } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, CheckCircle, AlertTriangle, Upload, Image, Wrench, TestTube } from 'lucide-react';
 import { 
   migrateBase64ImagesToStorage, 
   cleanupCorruptedRecords, 
   migrateBeatCoverImagesToStorage,
   repairCorruptedStorageImages,
+  migrateSingleBeatCoverToStorage,
   type MigrationResult,
   type BeatMigrationResult,
-  type StorageRepairResult 
+  type StorageRepairResult,
+  type SingleBeatMigrationResult 
 } from '@/lib/migrationUtils';
 import { toast } from 'sonner';
 
@@ -20,6 +24,35 @@ export function ImageMigrationTool() {
   const [beatMigrationResult, setBeatMigrationResult] = useState<BeatMigrationResult | null>(null);
   const [cleanupResult, setCleanupResult] = useState<{ cleaned: number; errors: string[] } | null>(null);
   const [repairResult, setRepairResult] = useState<StorageRepairResult | null>(null);
+  const [singleBeatResult, setSingleBeatResult] = useState<SingleBeatMigrationResult | null>(null);
+  const [testBeatId, setTestBeatId] = useState('');
+
+  const runSingleBeatMigration = async () => {
+    if (!testBeatId.trim()) {
+      toast.error('Please enter a beat ID');
+      return;
+    }
+
+    setIsRunning(true);
+    setSingleBeatResult(null);
+    
+    try {
+      toast.info(`Testing migration for beat ID: ${testBeatId}`);
+      const result = await migrateSingleBeatCoverToStorage(testBeatId.trim());
+      setSingleBeatResult(result);
+      
+      if (result.success) {
+        toast.success(`Test migration successful! Beat ${result.beatTitle} migrated.`);
+      } else {
+        toast.error(`Test migration failed: ${result.error}`);
+      }
+    } catch (error) {
+      toast.error('Test migration failed');
+      console.error('Single beat migration error:', error);
+    } finally {
+      setIsRunning(false);
+    }
+  };
 
   const runMigration = async () => {
     setIsRunning(true);
@@ -114,8 +147,89 @@ export function ImageMigrationTool() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <TestTube className="h-5 w-5" />
+            Single Beat Migration Test
+          </CardTitle>
+          <CardDescription>
+            Test migration of a single beat cover image before running bulk migration. This is safer for testing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="beatId">Beat ID</Label>
+              <Input
+                id="beatId"
+                type="text"
+                placeholder="Enter beat UUID"
+                value={testBeatId}
+                onChange={(e) => setTestBeatId(e.target.value)}
+                disabled={isRunning}
+              />
+            </div>
+            <Button
+              onClick={runSingleBeatMigration}
+              disabled={isRunning || !testBeatId.trim()}
+              className="w-full"
+            >
+              {isRunning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <TestTube className="mr-2 h-4 w-4" />
+                  Test Migration
+                </>
+              )}
+            </Button>
+          </div>
+
+          {singleBeatResult && (
+            <Alert className={singleBeatResult.success ? "border-green-500" : "border-red-500"}>
+              {singleBeatResult.success ? (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              )}
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p><strong>Test Migration Results:</strong></p>
+                  <p>Beat ID: {singleBeatResult.beatId}</p>
+                  <p>Beat Title: {singleBeatResult.beatTitle}</p>
+                  <p>Status: {singleBeatResult.success ? 'Success' : 'Failed'}</p>
+                  {singleBeatResult.usedBackup && (
+                    <p className="text-orange-600">Used backup image (original was broken Supabase URL)</p>
+                  )}
+                  {singleBeatResult.newUrl && (
+                    <p>
+                      New URL: {' '}
+                      <a 
+                        href={singleBeatResult.newUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline break-all"
+                      >
+                        {singleBeatResult.newUrl}
+                      </a>
+                    </p>
+                  )}
+                  {singleBeatResult.error && (
+                    <p className="text-red-600">Error: {singleBeatResult.error}</p>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Image Storage Migration Tool
+            Bulk Image Storage Migration Tool
           </CardTitle>
           <CardDescription>
             Migrate profile pictures and beat cover images from base64 storage to Supabase Storage to fix database corruption and improve performance.
