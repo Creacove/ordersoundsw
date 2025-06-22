@@ -12,22 +12,19 @@ export function isFile(obj: any): obj is File {
 }
 
 /**
- * Clean, simple image upload to Supabase storage
+ * Simple image upload to Supabase storage
  * Returns the public URL to store in database
  */
 export const uploadImage = async (
   fileOrUrl: FileOrUrl, 
-  bucket: 'covers' | 'avatars', 
+  bucket: 'beats' | 'covers' | 'avatars', 
   path = '',
   progressCallback?: (progress: number) => void
 ): Promise<string> => {
   try {
     // If it's already a URL, return it
     if ('url' in fileOrUrl && typeof fileOrUrl.url === 'string') {
-      if (!fileOrUrl.url.startsWith('data:')) {
-        return fileOrUrl.url;
-      }
-      throw new Error('Base64 data URLs are no longer supported. Please upload a file.');
+      return fileOrUrl.url;
     }
     
     const file = fileOrUrl as File;
@@ -90,7 +87,7 @@ export const uploadImage = async (
 /**
  * Deletes an image from Supabase storage
  */
-export const deleteImage = async (url: string, bucket: 'covers' | 'avatars'): Promise<void> => {
+export const deleteImage = async (url: string, bucket: 'beats' | 'covers' | 'avatars'): Promise<void> => {
   try {
     // Extract file path from URL
     const urlObj = new URL(url);
