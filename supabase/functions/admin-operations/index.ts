@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -19,7 +20,14 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    // Create client for user auth verification (uses anon key)
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    )
+
+    // Create client for admin operations (uses service role key)
+    const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
@@ -31,14 +39,14 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token)
     
     if (authError || !user) {
       throw new Error('Invalid authentication')
     }
 
-    // Check if user is admin
-    const { data: userData, error: userError } = await supabase
+    // Check if user is admin using admin client
+    const { data: userData, error: userError } = await adminClient
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -58,7 +66,7 @@ serve(async (req) => {
       console.log(`Admin ${user.id} requested to set producer ${producerId} as producer of the week`)
       
       // Step 1: Reset all current producers of the week
-      const { error: resetError } = await supabase
+      const { error: resetError } = await adminClient
         .from('users')
         .update({ is_producer_of_week: false })
         .eq('is_producer_of_week', true)
@@ -69,7 +77,7 @@ serve(async (req) => {
       }
 
       // Step 2: Verify the producer exists and is a producer
-      const { data: producerData, error: producerError } = await supabase
+      const { data: producerData, error: producerError } = await adminClient
         .from('users')
         .select('id, stage_name, full_name, role')
         .eq('id', producerId)
@@ -82,7 +90,7 @@ serve(async (req) => {
       }
 
       // Step 3: Set the new producer of the week
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminClient
         .from('users')
         .update({ is_producer_of_week: true })
         .eq('id', producerId)
@@ -111,7 +119,7 @@ serve(async (req) => {
       console.log(`Admin ${user.id} requested trending beats refresh with count: ${count}`)
       
       // Start transaction - reset all trending beats to false
-      const { error: resetError } = await supabase
+      const { error: resetError } = await adminClient
         .from('beats')
         .update({ is_trending: false })
         .eq('status', 'published')
@@ -122,7 +130,7 @@ serve(async (req) => {
       }
 
       // Get random published beats to set as trending
-      const { data: randomBeats, error: selectError } = await supabase
+      const { data: randomBeats, error: selectError } = await adminClient
         .rpc('get_random_published_beats', { beat_count: count })
       
       if (selectError) {
@@ -136,7 +144,7 @@ serve(async (req) => {
 
       // Set selected beats as trending
       const beatIds = randomBeats.map((beat: any) => beat.id)
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminClient
         .from('beats')
         .update({ is_trending: true })
         .in('id', beatIds)
@@ -167,7 +175,7 @@ serve(async (req) => {
       console.log(`Admin ${user.id} requested featured beats refresh with count: ${featuredCount}`)
       
       // Step 1: Reset all featured beats to false
-      const { error: resetError } = await supabase
+      const { error: resetError } = await adminClient
         .from('beats')
         .update({ is_featured: false })
         .eq('status', 'published')
@@ -178,7 +186,7 @@ serve(async (req) => {
       }
 
       // Step 2: Get random published beats to set as featured
-      const { data: randomBeats, error: selectError } = await supabase
+      const { data: randomBeats, error: selectError } = await adminClient
         .rpc('get_random_published_beats', { beat_count: featuredCount })
       
       if (selectError) {
@@ -192,7 +200,7 @@ serve(async (req) => {
 
       // Step 3: Set selected beats as featured
       const beatIds = randomBeats.map((beat: any) => beat.id)
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminClient
         .from('beats')
         .update({ is_featured: true })
         .in('id', beatIds)
@@ -222,7 +230,7 @@ serve(async (req) => {
       console.log(`Admin ${user.id} requested weekly picks refresh with count: ${weeklyCount}`)
       
       // Step 1: Reset all weekly picks to false
-      const { error: resetError } = await supabase
+      const { error: resetError } = await adminClient
         .from('beats')
         .update({ is_weekly_pick: false })
         .eq('status', 'published')
@@ -233,7 +241,7 @@ serve(async (req) => {
       }
 
       // Step 2: Get random published beats to set as weekly picks
-      const { data: randomBeats, error: selectError } = await supabase
+      const { data: randomBeats, error: selectError } = await adminClient
         .rpc('get_random_published_beats', { beat_count: weeklyCount })
       
       if (selectError) {
@@ -247,7 +255,7 @@ serve(async (req) => {
 
       // Step 3: Set selected beats as weekly picks
       const beatIds = randomBeats.map((beat: any) => beat.id)
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminClient
         .from('beats')
         .update({ is_weekly_pick: true })
         .in('id', beatIds)
