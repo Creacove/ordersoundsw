@@ -504,10 +504,10 @@ export const migrateSingleBeatCoverToStorage = async (beatId: string): Promise<S
   try {
     console.log(`Testing migration for beat ID: ${beatId}`);
     
-    // Get the specific beat
+    // Get the specific beat - only query cover_image field
     const { data: beat, error } = await supabase
       .from('beats')
-      .select('id, cover_image, cover_image_backup, title')
+      .select('id, cover_image, title')
       .eq('id', beatId)
       .single();
 
@@ -520,65 +520,34 @@ export const migrateSingleBeatCoverToStorage = async (beatId: string): Promise<S
       };
     }
 
-    let imageToMigrate = beat.cover_image;
-    let usedBackup = false;
-
-    // Check if current cover_image is a broken Supabase URL
-    if (beat.cover_image && beat.cover_image.includes('supabase') && !beat.cover_image.startsWith('data:')) {
-      console.log(`Beat ${beatId} has broken Supabase URL, checking backup...`);
-      
-      if (beat.cover_image_backup && beat.cover_image_backup.startsWith('data:image')) {
-        imageToMigrate = beat.cover_image_backup;
-        usedBackup = true;
-        console.log(`Using backup image for beat ${beatId}`);
-      } else {
-        return {
-          success: false,
-          beatId,
-          beatTitle: beat.title,
-          originalUrl: beat.cover_image,
-          error: 'No valid backup image found for broken Supabase URL'
-        };
-      }
-    }
-
     // Check if we have a base64 image to migrate
-    if (!imageToMigrate || !imageToMigrate.startsWith('data:image')) {
+    if (!beat.cover_image || !beat.cover_image.startsWith('data:image')) {
       return {
         success: false,
         beatId,
         beatTitle: beat.title,
-        originalUrl: beat.cover_image,
+        originalUrl: beat.cover_image || 'No cover image',
         error: 'No base64 image found to migrate'
       };
     }
 
     // Pre-validate the base64 image
-    const validation = await preValidateBase64Image(imageToMigrate);
+    const validation = await preValidateBase64Image(beat.cover_image);
     if (!validation.isValid) {
       return {
         success: false,
         beatId,
         beatTitle: beat.title,
-        originalUrl: imageToMigrate.substring(0, 50) + '...',
-        error: `Invalid base64 image: ${validation.error}`,
-        usedBackup
+        originalUrl: beat.cover_image.substring(0, 50) + '...',
+        error: `Invalid base64 image: ${validation.error}`
       };
     }
 
     console.log(`Beat ${beatId} validation passed - ${validation.type}, ${validation.size} bytes`);
 
-    // Create backup if we haven't already
-    if (!usedBackup && !beat.cover_image_backup) {
-      await supabase
-        .from('beats')
-        .update({ cover_image_backup: beat.cover_image })
-        .eq('id', beatId);
-    }
-
     // Upload to storage
     const storageUrl = await uploadImage(
-      { url: imageToMigrate }, 
+      { url: beat.cover_image }, 
       'covers', 
       'test-migration'
     );
@@ -599,9 +568,8 @@ export const migrateSingleBeatCoverToStorage = async (beatId: string): Promise<S
       success: true,
       beatId,
       beatTitle: beat.title,
-      originalUrl: imageToMigrate.substring(0, 50) + '...',
-      newUrl: storageUrl,
-      usedBackup
+      originalUrl: beat.cover_image.substring(0, 50) + '...',
+      newUrl: storageUrl
     };
 
   } catch (error) {
