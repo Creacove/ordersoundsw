@@ -16,8 +16,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== Payment Verification Function Started ===');
+    
     // Get the Paystack secret key from environment
-    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY') || 'sk_test_ec208ff2f8e96d80e9adca93adbb259e3796a801';
+    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
     if (!PAYSTACK_SECRET_KEY) {
       console.error('Missing Paystack secret key');
       throw new Error('Missing Paystack secret key');
@@ -58,8 +60,14 @@ serve(async (req) => {
     console.log('Test mode:', isTestMode);
     
     // Create a Supabase client with SERVICE ROLE KEY to bypass RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || "https://uoezlwkxhbzajdivrlby.supabase.co";
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZXpsd2t4aGJ6YWpkaXZybGJ5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjczODkzMCwiZXhwIjoyMDU4MzE0OTMwfQ.K3oOSrM2LZo3pCuOoLY0mZ_K1kZQcHLAMZJYhLzFdT4";
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables');
+      throw new Error('Missing Supabase configuration');
+    }
+    
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log('Using service role key for database access');
@@ -167,13 +175,13 @@ serve(async (req) => {
               console.log(`Successfully recorded ${purchasedItems.length} purchases`);
             }
             
-            // Update purchase counts for beats
+            // Update purchase counts for beats - use simple SQL increment
             for (const item of orderItems) {
               try {
                 const { error: updateCountError } = await supabaseClient
                   .from('beats')
                   .update({ 
-                    purchase_count: supabaseClient.rpc('increment', { column_name: 'purchase_count' }) 
+                    purchase_count: supabaseClient.sql`purchase_count + 1`
                   })
                   .eq('id', item.beat_id);
                 
@@ -183,7 +191,8 @@ serve(async (req) => {
                   console.log(`Updated purchase count for beat ${item.beat_id}`);
                 }
               } catch (err) {
-                console.error(`Error updating purchase count:`, err);
+                console.error(`Error updating purchase count for beat ${item.beat_id}:`, err);
+                // Continue processing other beats
               }
             }
             
@@ -328,13 +337,13 @@ serve(async (req) => {
                 console.log(`Successfully recorded ${purchasedItems.length} purchases`);
               }
               
-              // Update purchase counts
+              // Update purchase counts - use simple SQL increment
               for (const item of orderItems) {
                 try {
                   const { error: updateCountError } = await supabaseClient
                     .from('beats')
                     .update({ 
-                      purchase_count: supabaseClient.rpc('increment', { column_name: 'purchase_count' }) 
+                      purchase_count: supabaseClient.sql`purchase_count + 1`
                     })
                     .eq('id', item.beat_id);
                     
@@ -342,7 +351,7 @@ serve(async (req) => {
                     console.log(`Updated purchase count for beat ${item.beat_id}`);
                   }
                 } catch (err) {
-                  console.error(`Error updating purchase count:`, err);
+                  console.error(`Error updating purchase count for beat ${item.beat_id}:`, err);
                 }
               }
             } catch (purchaseInsertError) {
