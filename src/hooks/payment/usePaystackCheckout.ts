@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -80,38 +79,10 @@ export function usePaystackCheckout({
         
         const orderItemsData = JSON.parse(orderItemsStr);
         
-        // Check current order status first
-        const { data: orderData, error: orderCheckError } = await supabase
-          .from('orders')
-          .select('status')
-          .eq('id', orderId)
-          .single();
-          
-        if (orderCheckError) {
-          console.error('Error checking order status:', orderCheckError);
-        } else if (orderData && orderData.status === 'completed') {
-          // Order already completed, skip verification
-          console.log('Order already completed, proceeding as success');
-          toast.success('Payment successful! Redirecting to your library...');
-          
-          clearCart();
-          localStorage.setItem('purchaseSuccess', 'true');
-          localStorage.setItem('purchaseTime', Date.now().toString());
-          setIsProcessing(false);
-          setPaymentStarted(false);
-          onSuccess(response.reference);
-          
-          // Force redirect to library
-          setTimeout(() => {
-            window.location.href = '/library';
-          }, 1500);
-          return;
-        }
-        
         // Show verification toast
         toast.loading('Verifying payment...', { id: 'payment-verification' });
         
-        // Verify the payment
+        // Verify the payment directly - let the edge function handle order status checks
         const verificationResult = await verifyPaystackPayment(
           response.reference, 
           orderId,
