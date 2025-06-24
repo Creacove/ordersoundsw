@@ -170,7 +170,19 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
       }
     }
     
-    // Call the verification edge function with explicit order items data
+    // Get current session for authorization headers
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData.session) {
+      console.error('Session validation failed before edge function call:', sessionError);
+      toast.dismiss(verificationToastId);
+      toast.error('Authentication session expired. Please refresh and try again.');
+      return { success: false, error: 'Authentication required' };
+    }
+    
+    console.log('Calling verify-paystack-payment edge function with auth headers...');
+    
+    // Call the verification edge function with explicit authorization headers
     const { data, error } = await supabase.functions.invoke('verify-paystack-payment', {
       body: { 
         reference: paymentReference, 
@@ -178,6 +190,10 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
         orderItems,
         isTestMode: isTestReference // Send test mode flag to edge function
       },
+      headers: {
+        'Authorization': `Bearer ${sessionData.session.access_token}`,
+        'Content-Type': 'application/json'
+      }
     });
     
     // Always dismiss the loading toast
@@ -185,6 +201,12 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
     
     if (error) {
       console.error('Verification error from edge function:', error);
+      console.error('Full error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       toast.error(`Payment could not be verified. ${error.message || 'Please try again later.'}`);
       return { success: false, error: error.message };
     }
@@ -192,9 +214,11 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
     console.log('Verification response:', data);
     
     if (data && data.verified) {
+      console.log('Payment successfully verified by edge function');
       return { success: true };
     } else {
       const errorMsg = data?.message || 'Payment verification failed';
+      console.error('Payment verification failed:', errorMsg);
       toast.error(`Payment could not be completed. Please try again or contact support with reference: ${paymentReference}`);
       return { success: false, error: errorMsg };
     }
