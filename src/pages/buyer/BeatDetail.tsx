@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Play, Pause, Heart, ShoppingCart, 
+  Play, Pause, Heart, ShoppingCart, download,
   Share2, ArrowLeft, Music, Info, Tag, Clock, User, Globe
 } from 'lucide-react';
 import { MainLayoutWithPlayer } from '@/components/layout/MainLayoutWithPlayer';
@@ -556,7 +556,7 @@ const BeatDetail = () => {
                     >
                       {isBeatPurchased ? (
                         <>
-                          <Download className="mr-2 h-4 w-4" />
+                          <download className="mr-2 h-4 w-4" />
                           Download
                         </>
                       ) : (
@@ -617,7 +617,7 @@ const BeatDetail = () => {
                     >
                       {isBeatPurchased ? (
                         <>
-                          <Download className="mr-2 h-4 w-4" />
+                          <download className="mr-2 h-4 w-4" />
                           Download
                         </>
                       ) : (
@@ -675,7 +675,7 @@ const BeatDetail = () => {
                     >
                       {isBeatPurchased ? (
                         <>
-                          <Download className="mr-2 h-4 w-4" />
+                          <download className="mr-2 h-4 w-4" />
                           Download
                         </>
                       ) : (
@@ -735,7 +735,7 @@ const BeatDetail = () => {
                     >
                       {isBeatPurchased ? (
                         <>
-                          <Download className="mr-2 h-4 w-4" />
+                          <download className="mr-2 h-4 w-4" />
                           Download
                         </>
                       ) : (
