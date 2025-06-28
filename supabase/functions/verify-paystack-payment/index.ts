@@ -22,17 +22,33 @@ serve(async (req) => {
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
     if (!PAYSTACK_SECRET_KEY) {
       console.error('Missing Paystack secret key');
-      throw new Error('Missing Paystack secret key');
+      return new Response(
+        JSON.stringify({ success: false, verified: false, message: 'Missing Paystack secret key' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
-    // Parse request body
+    // Parse request body with better error handling
     let body;
+    let rawBody = '';
     try {
-      body = await req.json();
+      rawBody = await req.text();
+      console.log('Raw request body:', rawBody);
+      
+      if (!rawBody || rawBody.trim() === '') {
+        console.error('Empty request body received');
+        return new Response(
+          JSON.stringify({ success: false, verified: false, message: 'Empty request body' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      body = JSON.parse(rawBody);
     } catch (e) {
       console.error('Failed to parse request body:', e);
+      console.error('Raw body was:', rawBody);
       return new Response(
-        JSON.stringify({ success: false, message: 'Invalid request body' }),
+        JSON.stringify({ success: false, verified: false, message: 'Invalid request body' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
@@ -42,7 +58,7 @@ serve(async (req) => {
     if (!reference) {
       console.error('Missing payment reference');
       return new Response(
-        JSON.stringify({ success: false, message: 'Missing payment reference' }),
+        JSON.stringify({ success: false, verified: false, message: 'Missing payment reference' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
@@ -50,7 +66,7 @@ serve(async (req) => {
     if (!orderId) {
       console.error('Missing order ID');
       return new Response(
-        JSON.stringify({ success: false, message: 'Missing order ID' }),
+        JSON.stringify({ success: false, verified: false, message: 'Missing order ID' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
@@ -65,7 +81,10 @@ serve(async (req) => {
     
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables');
-      throw new Error('Missing Supabase configuration');
+      return new Response(
+        JSON.stringify({ success: false, verified: false, message: 'Missing Supabase configuration' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
     
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -87,7 +106,7 @@ serve(async (req) => {
           verified: false,
           message: `Failed to find order: ${orderCheckError.message}`,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
     
@@ -99,7 +118,7 @@ serve(async (req) => {
           verified: false,
           message: 'Order not found',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       );
     }
     
@@ -145,7 +164,7 @@ serve(async (req) => {
               verified: false,
               message: `Failed to update order: ${updateError.message}`,
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
           );
         }
         
@@ -175,15 +194,15 @@ serve(async (req) => {
               console.log(`Successfully recorded ${purchasedItems.length} purchases`);
             }
             
-            // Update purchase counts for beats - use simple SQL increment
+            // Update purchase counts for beats using the RPC function
             for (const item of orderItems) {
               try {
                 const { error: updateCountError } = await supabaseClient
-                  .from('beats')
-                  .update({ 
-                    purchase_count: supabaseClient.sql`purchase_count + 1`
-                  })
-                  .eq('id', item.beat_id);
+                  .rpc('increment_counter', {
+                    p_table_name: 'beats',
+                    p_column_name: 'purchase_count',
+                    p_id: item.beat_id
+                  });
                 
                 if (updateCountError) {
                   console.error(`Failed to update purchase count for beat ${item.beat_id}:`, updateCountError);
@@ -239,7 +258,7 @@ serve(async (req) => {
             verified: false,
             message: `Error processing test payment: ${error.message}`,
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
       }
     }
@@ -264,7 +283,7 @@ serve(async (req) => {
             verified: false,
             message: `Paystack API error: ${verifyResponse.status}`,
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
       }
 
@@ -301,7 +320,7 @@ serve(async (req) => {
                 verified: true,
                 message: 'Payment was verified but an error occurred updating order',
               }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
             );
           }
 
@@ -337,15 +356,15 @@ serve(async (req) => {
                 console.log(`Successfully recorded ${purchasedItems.length} purchases`);
               }
               
-              // Update purchase counts - use simple SQL increment
+              // Update purchase counts using the RPC function
               for (const item of orderItems) {
                 try {
                   const { error: updateCountError } = await supabaseClient
-                    .from('beats')
-                    .update({ 
-                      purchase_count: supabaseClient.sql`purchase_count + 1`
-                    })
-                    .eq('id', item.beat_id);
+                    .rpc('increment_counter', {
+                      p_table_name: 'beats',
+                      p_column_name: 'purchase_count',
+                      p_id: item.beat_id
+                    });
                     
                   if (!updateCountError) {
                     console.log(`Updated purchase count for beat ${item.beat_id}`);
@@ -366,7 +385,7 @@ serve(async (req) => {
               verified: true,
               message: 'Payment was verified but an error occurred during order processing',
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
           );
         }
 
@@ -398,7 +417,7 @@ serve(async (req) => {
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
+            status: 400,
           }
         );
       }
@@ -408,23 +427,25 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
+          verified: false,
           message: `Error verifying with Paystack: ${payStackApiError.message || 'Unknown error'}`,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
   } catch (error) {
     console.error('Global error in edge function:', error);
     
-    // Always return 200 with error details
+    // Return proper error status codes
     return new Response(
       JSON.stringify({
         success: false,
+        verified: false,
         message: `Error processing request: ${error.message || 'Unknown error'}`,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+        status: 500,
       }
     );
   }

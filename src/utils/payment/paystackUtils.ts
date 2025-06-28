@@ -182,14 +182,27 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
     
     console.log('Calling verify-paystack-payment edge function with auth headers...');
     
+    // Validate payload before sending
+    const requestPayload = { 
+      reference: paymentReference, 
+      orderId,
+      orderItems,
+      isTestMode: isTestReference
+    };
+    
+    console.log('Request payload:', requestPayload);
+    
+    // Ensure all required fields are present
+    if (!paymentReference || !orderId || !orderItems) {
+      console.error('Missing required fields in request payload');
+      toast.dismiss(verificationToastId);
+      toast.error('Invalid payment data. Please try again.');
+      return { success: false, error: 'Invalid payment data' };
+    }
+    
     // Call the verification edge function with explicit authorization headers
     const { data, error } = await supabase.functions.invoke('verify-paystack-payment', {
-      body: { 
-        reference: paymentReference, 
-        orderId,
-        orderItems,
-        isTestMode: isTestReference // Send test mode flag to edge function
-      },
+      body: JSON.stringify(requestPayload),
       headers: {
         'Authorization': `Bearer ${sessionData.session.access_token}`,
         'Content-Type': 'application/json'
