@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useMemo } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
+import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
 import { BeatCard } from "@/components/ui/BeatCard";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ export default function Trending() {
   const hasMore = displayCount < allTrendingBeats.length;
 
   return (
-    <MainLayout>
+    <MainLayoutWithPlayer activeTab="trending">
       <div className="container py-4 md:py-8 px-4 md:px-6">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold">Trending Beats</h1>
@@ -99,6 +99,6 @@ export default function Trending() {
           </>
         )}
       </div>
-    </MainLayout>
+    </MainLayoutWithPlayer>
   );
 }
