@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,12 +64,13 @@ export const ImageUploadSandbox = () => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
-      // Upload to Supabase storage
+      // Upload to Supabase storage with correct content type
       const { data, error } = await supabase.storage
         .from('covers')
         .upload(filename, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          contentType: file.type
         });
 
       clearInterval(progressInterval);
