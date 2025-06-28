@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Play, Pause, Heart, Download, ShoppingCart, 
-  Share2, ArrowLeft, Music, Info, Tag, Clock, User, Globe, AudioWaveform
+  Play, Pause, Heart, ShoppingCart, 
+  Share2, ArrowLeft, Music, Info, Tag, Clock, User, Globe
 } from 'lucide-react';
 import { MainLayoutWithPlayer } from '@/components/layout/MainLayoutWithPlayer';
 import { BeatListItem } from '@/components/ui/BeatListItem';
@@ -59,10 +59,7 @@ const BeatDetail = () => {
   const [similarBeats, setSimilarBeats] = useState<Beat[]>([]);
   const [selectedLicense, setSelectedLicense] = useState<string>('basic');
   const isMobile = useIsMobile();
-  const [playCount, setPlayCount] = useState<number>(0);
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
-  const [purchaseCount, setPurchaseCount] = useState<number>(0);
-  const [played, setPlayed] = useState<boolean>(false);
   const [localBeat, setLocalBeat] = useState<Beat | null>(null);
 
   const { data: beat, isLoading, error, refetch } = useQuery({
@@ -74,9 +71,7 @@ const BeatDetail = () => {
       
       if (!result) throw new Error('Beat not found');
       
-      setPlayCount(result.plays || 0);
       setFavoritesCount(result.favorites_count || 0);
-      setPurchaseCount(result.purchase_count || 0);
       setLocalBeat(result);
       
       return result;
@@ -190,38 +185,6 @@ const BeatDetail = () => {
   const isBeatPurchased = beat ? isPurchased(beat.id) : false;
   const beatInCart = beat ? isInCart(beat.id) : false;
 
-  const incrementPlayCount = async () => {
-    try {
-      if (beat && !played) {
-        setPlayed(true);
-        
-        // Call the RPC function with proper parameters
-        const { error } = await supabase.rpc('increment_counter', {
-          p_table_name: 'beats',
-          p_column_name: 'plays',
-          p_id: beat.id
-        });
-        
-        if (error) {
-          console.error('Error incrementing play count:', error);
-          setPlayed(false); // Reset on error
-        } else {
-          console.log('Successfully incremented play count for beat:', beat.id);
-          // Update local state and sync with database
-          setPlayCount(prev => prev + 1);
-          
-          // Refresh the beat data to sync with database
-          setTimeout(() => {
-            refetch();
-          }, 1000);
-        }
-      }
-    } catch (error) {
-      console.error('Error incrementing play count:', error);
-      setPlayed(false); // Reset on error
-    }
-  };
-
   const handlePlay = (similarBeat?: Beat) => {
     if (similarBeat) {
       playBeat(similarBeat);
@@ -233,7 +196,6 @@ const BeatDetail = () => {
         togglePlayPause();
       } else {
         playBeat(beat);
-        incrementPlayCount();
       }
     }
   };
@@ -465,20 +427,10 @@ const BeatDetail = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
-                    <div className="flex items-center gap-1 text-sm">
-                      <Download size={14} className="text-primary/70" /> 
-                      <span>{purchaseCount} downloads</span>
-                    </div>
-                    <div className="h-4 w-px bg-border"></div>
+                  <div className="flex items-center justify-center sm:justify-start mt-3">
                     <div className="flex items-center gap-1 text-sm">
                       <Heart size={14} className="text-primary/70" /> 
                       <span>{favoritesCount} likes</span>
-                    </div>
-                    <div className="h-4 w-px bg-border"></div>
-                    <div className="flex items-center gap-1 text-sm">
-                      <AudioWaveform size={14} className="text-primary/70" /> 
-                      <span>{playCount} plays</span>
                     </div>
                   </div>
                 </div>
