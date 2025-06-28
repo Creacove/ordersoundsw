@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
-import { BeatCard } from "@/components/ui/BeatCard";
+import { BeatCardCompact } from "@/components/marketplace/BeatCardCompact";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
@@ -10,7 +10,6 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { fetchNewBeats } from "@/services/beats/queryService";
 import { useAuth } from "@/context/AuthContext";
 import { useBeats } from "@/hooks/useBeats";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { Beat } from "@/types";
 
 export default function New() {
@@ -18,7 +17,6 @@ export default function New() {
   const { isInCart } = useCart();
   const { toggleFavorite, isFavorite, isPurchased } = useBeats();
   const { user } = useAuth();
-  const { handlePlayBeat } = useAudioPlayer();
   
   // Smart caching: Single cache key, slice client-side
   const { data: allNewBeats = [], isLoading } = useQuery({
@@ -45,13 +43,6 @@ export default function New() {
 
   const hasMore = displayCount < allNewBeats.length;
 
-  const handlePlay = async (beatId: string) => {
-    const beat = newBeats.find(b => b.id === beatId);
-    if (beat) {
-      await handlePlayBeat(beat);
-    }
-  };
-
   return (
     <MainLayoutWithPlayer activeTab="new">
       <div className="container py-4 md:py-8 px-4 md:px-6">
@@ -74,14 +65,9 @@ export default function New() {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {newBeats.map((beat) => (
-                <BeatCard 
+                <BeatCardCompact 
                   key={beat.id} 
                   beat={beat}
-                  onPlay={handlePlay}
-                  onToggleFavorite={user ? toggleFavorite : undefined}
-                  isFavorite={isFavorite(beat.id)}
-                  isInCart={isInCart(beat.id)}
-                  isPurchased={isPurchased(beat.id)}
                 />
               ))}
             </div>
