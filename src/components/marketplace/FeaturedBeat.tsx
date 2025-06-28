@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { fetchFeaturedBeats } from "@/services/beats/queryService";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { Play, Pause } from "lucide-react";
 
 export const FeaturedBeat = () => {
   const { data: featuredBeat, isLoading } = useQuery({
@@ -13,6 +15,8 @@ export const FeaturedBeat = () => {
     }
   });
 
+  const { handlePlayBeat, isCurrentlyPlaying } = useAudioPlayer();
+
   if (isLoading) {
     return (
       <div className="w-full h-[300px] rounded-lg bg-muted/40 animate-pulse mb-8 flex items-center justify-center">
@@ -22,6 +26,12 @@ export const FeaturedBeat = () => {
   }
 
   if (!featuredBeat) return null;
+
+  const isPlaying = isCurrentlyPlaying(featuredBeat.id);
+
+  const handleListenNow = () => {
+    handlePlayBeat(featuredBeat);
+  };
 
   return (
     <section className="relative w-full h-[300px] rounded-lg overflow-hidden mb-8">
@@ -42,11 +52,22 @@ export const FeaturedBeat = () => {
           <p className="text-sm opacity-70">{featuredBeat.bpm} BPM • {featuredBeat.genre}</p>
         </div>
         <div className="flex gap-3 mt-4">
-          <Link to={`/beat/${featuredBeat.id}`}>
-            <Button className="bg-purple-600 hover:bg-purple-700">
-              Listen now
-            </Button>
-          </Link>
+          <Button 
+            className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
+            onClick={handleListenNow}
+          >
+            {isPlaying ? (
+              <>
+                <Pause className="w-4 h-4" />
+                Playing
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Listen now
+              </>
+            )}
+          </Button>
           <Link to={`/beat/${featuredBeat.id}`}>
             <Button 
               variant="outline" 
