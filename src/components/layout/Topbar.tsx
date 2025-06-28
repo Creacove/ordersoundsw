@@ -85,7 +85,12 @@ export function Topbar({ sidebarVisible = false }) {
     return "/settings";
   };
 
-  const isInProducerView = location.pathname.startsWith('/producer');
+  const getProfilePath = () => {
+    if (user?.role === "producer") {
+      return `/producer/${user.id}`;
+    }
+    return `/buyer/${user.id}`;
+  };
 
   // Get display name based on user role
   const getDisplayName = (user: any) => {
@@ -229,7 +234,7 @@ export function Topbar({ sidebarVisible = false }) {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(`/buyer/${user.id}`)}>
+                <DropdownMenuItem onClick={() => navigate(getProfilePath())}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
@@ -245,17 +250,6 @@ export function Topbar({ sidebarVisible = false }) {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                {user.role === "producer" && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => isInProducerView ? navigate("/") : navigate("/producer/dashboard")}>
-                      <span className="mr-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                        {isInProducerView ? 'Artist' : 'Producer'}
-                      </span>
-                      <span>Switch to {isInProducerView ? 'Artist' : 'Producer'} View</span>
-                    </DropdownMenuItem>
-                  </>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
