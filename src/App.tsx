@@ -41,6 +41,7 @@ import Royalties from "./pages/producer/Royalties";
 import ProtectedProducerRoute from "./components/auth/ProtectedProducerRoute";
 import ProtectedAdminRoute from "./components/auth/ProtectedAdminRoute";
 import Sandbox from "./pages/Sandbox";
+import Licenses from "./pages/Licenses";
 
 // Lazy load admin dashboard to avoid affecting main app performance
 import { lazy, Suspense } from "react";
@@ -96,6 +97,7 @@ const AppContent = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/beat/:beatId" element={<BeatDetail />} />
+            <Route path="/licenses" element={<Licenses />} />
             <Route path="/sandbox" element={<Sandbox />} />
 
             {/* Profile Routes */}
