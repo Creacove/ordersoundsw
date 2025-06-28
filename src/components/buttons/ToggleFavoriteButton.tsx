@@ -50,7 +50,7 @@ const ToggleFavoriteButton = memo(function ToggleFavoriteButton({
         onToggleComplete(wasAdded);
       }
       
-      toast.success(wasAdded ? 'Added to favorites' : 'Removed from favorites');
+      // Remove the duplicate toast notification here since useFavorites hook already handles it
     } catch (error) {
       console.error('ToggleFavoriteButton: Error toggling favorite:', error);
       toast.error('Failed to update favorite status');
