@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -17,6 +16,8 @@ serve(async (req) => {
 
   try {
     console.log('=== Payment Verification Function Started ===');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
     // Get the Paystack secret key from environment
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
@@ -33,7 +34,8 @@ serve(async (req) => {
     let rawBody = '';
     try {
       rawBody = await req.text();
-      console.log('Raw request body:', rawBody);
+      console.log('Raw request body length:', rawBody.length);
+      console.log('Raw request body preview:', rawBody.substring(0, 200) + (rawBody.length > 200 ? '...' : ''));
       
       if (!rawBody || rawBody.trim() === '') {
         console.error('Empty request body received');
@@ -44,16 +46,19 @@ serve(async (req) => {
       }
       
       body = JSON.parse(rawBody);
+      console.log('Parsed request body:', JSON.stringify(body, null, 2));
     } catch (e) {
       console.error('Failed to parse request body:', e);
       console.error('Raw body was:', rawBody);
       return new Response(
-        JSON.stringify({ success: false, verified: false, message: 'Invalid request body' }),
+        JSON.stringify({ success: false, verified: false, message: 'Invalid request body format' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
     const { reference, orderId, orderItems, isTestMode } = body;
+    
+    console.log('Extracted parameters:', { reference, orderId, orderItemsCount: orderItems?.length, isTestMode });
     
     if (!reference) {
       console.error('Missing payment reference');
@@ -197,6 +202,7 @@ serve(async (req) => {
             // Update purchase counts for beats using the RPC function
             for (const item of orderItems) {
               try {
+                console.log(`Updating purchase count for beat ${item.beat_id}`);
                 const { error: updateCountError } = await supabaseClient
                   .rpc('increment_counter', {
                     p_table_name: 'beats',
@@ -207,7 +213,7 @@ serve(async (req) => {
                 if (updateCountError) {
                   console.error(`Failed to update purchase count for beat ${item.beat_id}:`, updateCountError);
                 } else {
-                  console.log(`Updated purchase count for beat ${item.beat_id}`);
+                  console.log(`Successfully updated purchase count for beat ${item.beat_id}`);
                 }
               } catch (err) {
                 console.error(`Error updating purchase count for beat ${item.beat_id}:`, err);

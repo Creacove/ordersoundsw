@@ -182,7 +182,7 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
     
     console.log('Calling verify-paystack-payment edge function with auth headers...');
     
-    // Validate payload before sending
+    // Create payload - DON'T stringify it as invoke() handles JSON conversion internally
     const requestPayload = { 
       reference: paymentReference, 
       orderId,
@@ -190,7 +190,7 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
       isTestMode: isTestReference
     };
     
-    console.log('Request payload:', requestPayload);
+    console.log('Request payload before sending:', requestPayload);
     
     // Ensure all required fields are present
     if (!paymentReference || !orderId || !orderItems) {
@@ -200,9 +200,9 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
       return { success: false, error: 'Invalid payment data' };
     }
     
-    // Call the verification edge function with explicit authorization headers
+    // Call the verification edge function - Pass payload as object, NOT stringified
     const { data, error } = await supabase.functions.invoke('verify-paystack-payment', {
-      body: JSON.stringify(requestPayload),
+      body: requestPayload, // Pass as plain object, not JSON.stringify()
       headers: {
         'Authorization': `Bearer ${sessionData.session.access_token}`,
         'Content-Type': 'application/json'
