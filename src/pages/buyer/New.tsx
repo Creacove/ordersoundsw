@@ -10,6 +10,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { fetchNewBeats } from "@/services/beats/queryService";
 import { useAuth } from "@/context/AuthContext";
 import { useBeats } from "@/hooks/useBeats";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { Beat } from "@/types";
 
 export default function New() {
@@ -17,6 +18,7 @@ export default function New() {
   const { isInCart } = useCart();
   const { toggleFavorite, isFavorite, isPurchased } = useBeats();
   const { user } = useAuth();
+  const { handlePlayBeat } = useAudioPlayer();
   
   // Smart caching: Single cache key, slice client-side
   const { data: allNewBeats = [], isLoading } = useQuery({
@@ -43,6 +45,13 @@ export default function New() {
 
   const hasMore = displayCount < allNewBeats.length;
 
+  const handlePlay = async (beatId: string) => {
+    const beat = newBeats.find(b => b.id === beatId);
+    if (beat) {
+      await handlePlayBeat(beat);
+    }
+  };
+
   return (
     <MainLayoutWithPlayer activeTab="new">
       <div className="container py-4 md:py-8 px-4 md:px-6">
@@ -68,6 +77,7 @@ export default function New() {
                 <BeatCard 
                   key={beat.id} 
                   beat={beat}
+                  onPlay={handlePlay}
                   onToggleFavorite={user ? toggleFavorite : undefined}
                   isFavorite={isFavorite(beat.id)}
                   isInCart={isInCart(beat.id)}

@@ -10,6 +10,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { fetchMetricBasedTrending } from "@/services/beats/queryService";
 import { useAuth } from "@/context/AuthContext";
 import { useBeats } from "@/hooks/useBeats";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { Beat } from "@/types";
 
 export default function Trending() {
@@ -17,6 +18,7 @@ export default function Trending() {
   const { isInCart } = useCart();
   const { toggleFavorite, isFavorite, isPurchased } = useBeats();
   const { user } = useAuth();
+  const { handlePlayBeat } = useAudioPlayer();
   
   // Smart caching: Single cache key, slice client-side
   const { data: allTrendingBeats = [], isLoading } = useQuery({
@@ -42,6 +44,13 @@ export default function Trending() {
   };
 
   const hasMore = displayCount < allTrendingBeats.length;
+
+  const handlePlay = async (beatId: string) => {
+    const beat = trendingBeats.find(b => b.id === beatId);
+    if (beat) {
+      await handlePlayBeat(beat);
+    }
+  };
 
   return (
     <MainLayoutWithPlayer activeTab="trending">
@@ -70,6 +79,7 @@ export default function Trending() {
                 <BeatCard 
                   key={beat.id} 
                   beat={beat} 
+                  onPlay={handlePlay}
                   onToggleFavorite={user ? toggleFavorite : undefined}
                   isFavorite={isFavorite(beat.id)}
                   isInCart={isInCart(beat.id)}
