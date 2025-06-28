@@ -11,7 +11,7 @@ export function useAudioPlayer() {
   
   const incrementPlayCount = useCallback(async (beatId: string) => {
     try {
-      // Use the new increment_counter function we just created
+      // Use the correct RPC function with proper parameters
       const { error } = await supabase.rpc('increment_counter', {
         p_table_name: 'beats',
         p_column_name: 'plays',
@@ -50,7 +50,7 @@ export function useAudioPlayer() {
         
         playBeat(beat);
         
-        // Increment play count when starting a new track (removed the timeout delay)
+        // Increment play count when starting a new track
         await incrementPlayCount(beat.id);
       }
     } catch (error) {

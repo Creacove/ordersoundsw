@@ -65,7 +65,7 @@ const BeatDetail = () => {
   const [played, setPlayed] = useState<boolean>(false);
   const [localBeat, setLocalBeat] = useState<Beat | null>(null);
 
-  const { data: beat, isLoading, error } = useQuery({
+  const { data: beat, isLoading, error, refetch } = useQuery({
     queryKey: ['beat', beatId],
     queryFn: async () => {
       if (!beatId) throw new Error('Beat ID is required');
@@ -77,7 +77,7 @@ const BeatDetail = () => {
       setPlayCount(result.plays || 0);
       setFavoritesCount(result.favorites_count || 0);
       setPurchaseCount(result.purchase_count || 0);
-      setLocalBeat(result); // Set the local beat state
+      setLocalBeat(result);
       
       return result;
     },
@@ -193,17 +193,32 @@ const BeatDetail = () => {
   const incrementPlayCount = async () => {
     try {
       if (beat && !played) {
-        setPlayed(true); // Mark as played
-        await supabase.rpc("increment_counter" as any, {
-          p_table_name: "beats",
-          p_column_name: "plays",
+        setPlayed(true);
+        
+        // Call the RPC function with proper parameters
+        const { error } = await supabase.rpc('increment_counter', {
+          p_table_name: 'beats',
+          p_column_name: 'plays',
           p_id: beat.id
         });
         
-        setPlayCount(prev => prev + 1);
+        if (error) {
+          console.error('Error incrementing play count:', error);
+          setPlayed(false); // Reset on error
+        } else {
+          console.log('Successfully incremented play count for beat:', beat.id);
+          // Update local state and sync with database
+          setPlayCount(prev => prev + 1);
+          
+          // Refresh the beat data to sync with database
+          setTimeout(() => {
+            refetch();
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error('Error incrementing play count:', error);
+      setPlayed(false); // Reset on error
     }
   };
 
@@ -234,12 +249,23 @@ const BeatDetail = () => {
     }
     
     if (beat) {
-      const wasAdded = await toggleFavorite(beat.id);
-      
-      if (wasAdded) {
-        setFavoritesCount(prev => prev + 1);
-      } else {
-        setFavoritesCount(prev => Math.max(0, prev - 1));
+      try {
+        const wasAdded = await toggleFavorite(beat.id);
+        
+        // Update local state immediately for UI responsiveness
+        if (wasAdded) {
+          setFavoritesCount(prev => prev + 1);
+        } else {
+          setFavoritesCount(prev => Math.max(0, prev - 1));
+        }
+        
+        // Sync with database after a short delay
+        setTimeout(() => {
+          refetch();
+        }, 1500);
+      } catch (error) {
+        console.error('Error toggling favorite:', error);
+        toast.error('Failed to update favorite status');
       }
     }
   };

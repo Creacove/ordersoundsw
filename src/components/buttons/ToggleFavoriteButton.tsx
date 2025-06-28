@@ -10,12 +10,14 @@ interface ToggleFavoriteButtonProps {
   beatId: string;
   size?: "sm" | "md" | "lg";
   absolutePosition?: boolean;
+  onToggleComplete?: (isFavorited: boolean) => void;
 }
 
 const ToggleFavoriteButton = memo(function ToggleFavoriteButton({ 
   beatId, 
   size = "md", 
-  absolutePosition = true 
+  absolutePosition = true,
+  onToggleComplete
 }: ToggleFavoriteButtonProps) {
   const { isFavorite, toggleFavorite } = useBeats();
   const { user } = useAuth();
@@ -41,7 +43,14 @@ const ToggleFavoriteButton = memo(function ToggleFavoriteButton({
     setIsButtonClicked(true);
     
     try {
-      await toggleFavorite(beatId);
+      const wasAdded = await toggleFavorite(beatId);
+      
+      // Call the callback to notify parent component
+      if (onToggleComplete) {
+        onToggleComplete(wasAdded);
+      }
+      
+      toast.success(wasAdded ? 'Added to favorites' : 'Removed from favorites');
     } catch (error) {
       console.error('ToggleFavoriteButton: Error toggling favorite:', error);
       toast.error('Failed to update favorite status');
