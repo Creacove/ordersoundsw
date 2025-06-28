@@ -11,12 +11,18 @@ export function useAudioPlayer() {
   
   const incrementPlayCount = useCallback(async (beatId: string) => {
     try {
-      await supabase.rpc("increment_counter" as any, {
-        p_table_name: "beats",
-        p_column_name: "plays",
+      // Use the new increment_counter function we just created
+      const { error } = await supabase.rpc('increment_counter', {
+        p_table_name: 'beats',
+        p_column_name: 'plays',
         p_id: beatId
       });
-      console.log('Incremented play count for beat:', beatId);
+      
+      if (error) {
+        console.error('Error incrementing play count:', error);
+      } else {
+        console.log('Successfully incremented play count for beat:', beatId);
+      }
     } catch (error) {
       console.error('Error incrementing play count:', error);
     }
@@ -44,8 +50,8 @@ export function useAudioPlayer() {
         
         playBeat(beat);
         
-        // Increment play count only when starting a new track
-        setTimeout(() => incrementPlayCount(beat.id), 1000);
+        // Increment play count when starting a new track (removed the timeout delay)
+        await incrementPlayCount(beat.id);
       }
     } catch (error) {
       console.error("Error handling play:", error);

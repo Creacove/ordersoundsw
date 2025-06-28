@@ -887,6 +887,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      increment_counter: {
+        Args: { p_table_name: string; p_column_name: string; p_id: string }
+        Returns: undefined
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
