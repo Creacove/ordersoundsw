@@ -1,7 +1,7 @@
 
 import React from "react";
 import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
-import { ImageUploadSandbox } from "@/components/sandbox/ImageUploadSandbox";
+import { ImageUpload } from "@/components/sandbox/ImageUploadSandbox";
 
 const Sandbox = () => {
   return (
@@ -19,7 +19,7 @@ const Sandbox = () => {
           <p className="text-sm text-muted-foreground mb-6">
             Upload images to the 'covers' bucket in Supabase storage
           </p>
-          <ImageUploadSandbox />
+          <ImageUpload />
         </div>
       </div>
     </MainLayoutWithPlayer>
