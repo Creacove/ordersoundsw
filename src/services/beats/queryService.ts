@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Beat } from '@/types';
 import { mapSupabaseBeatToBeat } from './utils';
@@ -115,13 +116,14 @@ export async function fetchMetricBasedTrending(limit: number = 100): Promise<Bea
   try {
     console.log('Fetching metrics-based trending beats using optimized query...');
     
-    // Lean query - only essential fields for initial load
+    // Lean query - only essential fields for initial load INCLUDING audio_preview
     const { data, error } = await supabase
       .from('beats')
       .select(`
         id,
         title,
         cover_image,
+        audio_preview,
         basic_license_price_local,
         basic_license_price_diaspora,
         genre,
