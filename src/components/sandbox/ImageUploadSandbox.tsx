@@ -64,13 +64,12 @@ export const ImageUploadSandbox = () => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
-      // Upload to Supabase storage with correct content type
+      // Upload to Supabase storage - let Supabase auto-detect content type
       const { data, error } = await supabase.storage
         .from('covers')
         .upload(filename, file, {
           cacheControl: '3600',
-          upsert: false,
-          contentType: file.type
+          upsert: false
         });
 
       clearInterval(progressInterval);
