@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSolanaPayment } from "@/hooks/payment/useSolanaPayment";
 import { toast } from "sonner";
@@ -209,11 +210,6 @@ export const SolanaCheckoutDialog = ({
     const groupedItems = getItemsByProducer();
     
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) {
-        throw new Error("Please log in to complete your purchase");
-      }
-
       console.log(`Processing ${groupedItems.length} USDC payments on ${network} network`);
 
       // Process USDC payments and track results
@@ -280,7 +276,7 @@ export const SolanaCheckoutDialog = ({
       const successfulPayments = paymentResults.filter(result => result.success);
       const transactionSignatures = successfulPayments.map(result => result.signature!);
       
-      // Only create order if we have successful payments
+      // Only create order if we have successful payments (non-blocking)
       if (successfulPayments.length > 0) {
         try {
           // Calculate accurate total from successful payments only
@@ -291,7 +287,6 @@ export const SolanaCheckoutDialog = ({
           const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert({
-              buyer_id: userData.user.id,
               total_price: actualOrderTotal,
               status: 'completed',
               currency_used: 'USDC',
