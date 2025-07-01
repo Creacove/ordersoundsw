@@ -139,6 +139,7 @@ export const useSolanaPayment = () => {
               console.error("Order creation failed:", orderError);
               // Don't throw - payment was successful, just log the issue
             } else {
+              // Create order item record
               const { error: itemError } = await supabase
                 .from('order_items')
                 .insert({
@@ -153,6 +154,22 @@ export const useSolanaPayment = () => {
                 console.error("Order item creation failed:", itemError);
                 // Attempt to clean up the order if items fail
                 await supabase.from('orders').delete().eq('id', orderData.id);
+              } else {
+                // CRITICAL: Create user_purchased_beats record so it shows in library
+                const { error: purchasedBeatError } = await supabase
+                  .from('user_purchased_beats')
+                  .insert({
+                    user_id: user.id,
+                    beat_id: productData.id,
+                    order_id: orderData.id,
+                    license_type: 'basic', // Default license type for single purchases
+                    currency_code: 'USDC'
+                  });
+
+                if (purchasedBeatError) {
+                  console.error("Failed to create purchased beat record:", purchasedBeatError);
+                  // This is critical for library display but don't fail the payment
+                }
               }
             }
           }
@@ -281,7 +298,29 @@ export const useSolanaPayment = () => {
               quantity: 1,
             }));
             
-            await supabase.from('order_items').insert(orderItems);
+            const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+            
+            if (!itemsError) {
+              // CRITICAL: Create user_purchased_beats records for library display
+              const purchasedBeatsRecords = items.map(item => ({
+                user_id: user.id,
+                beat_id: item.id || '',
+                order_id: orderData.id,
+                license_type: 'basic', // Default license type
+                currency_code: 'USDC'
+              })).filter(record => record.beat_id); // Only insert valid beat IDs
+              
+              if (purchasedBeatsRecords.length > 0) {
+                const { error: purchasedBeatsError } = await supabase
+                  .from('user_purchased_beats')
+                  .insert(purchasedBeatsRecords);
+                
+                if (purchasedBeatsError) {
+                  console.error("Failed to create purchased beats records:", purchasedBeatsError);
+                  // Critical for library display but don't fail the payment
+                }
+              }
+            }
           }
         }
       } catch (dbError) {

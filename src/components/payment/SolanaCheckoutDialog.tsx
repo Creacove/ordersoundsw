@@ -328,6 +328,26 @@ export const SolanaCheckoutDialog = ({
               if (itemsError) {
                 console.error("Order items error:", itemsError);
                 toast.warning("Order created but some items may not be recorded properly");
+              } else {
+                // CRITICAL: Create user_purchased_beats records for library display
+                const purchasedBeatsRecords = successfulItems.map(item => ({
+                  user_id: user.id,
+                  beat_id: item.id,
+                  order_id: order.id,
+                  license_type: 'basic', // Default license type for cart purchases
+                  currency_code: 'USDC'
+                }));
+                
+                const { error: purchasedBeatsError } = await supabase
+                  .from('user_purchased_beats')
+                  .insert(purchasedBeatsRecords);
+                
+                if (purchasedBeatsError) {
+                  console.error("Failed to create purchased beats records:", purchasedBeatsError);
+                  toast.warning("Order created but beats may not appear in library immediately");
+                } else {
+                  console.log("Successfully created purchased beats records for library");
+                }
               }
             }
           }
