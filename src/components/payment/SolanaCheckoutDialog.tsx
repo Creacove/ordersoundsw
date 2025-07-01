@@ -284,42 +284,48 @@ export const SolanaCheckoutDialog = ({
           
           console.log(`Creating order with accurate total: $${actualOrderTotal} (from ${successfulPayments.length} successful payments)`);
           
-          const { data: order, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-              total_price: actualOrderTotal,
-              status: 'completed',
-              currency_used: 'USDC',
-              payment_method: 'solana_usdc',
-              transaction_signatures: transactionSignatures
-            })
-            .select()
-            .single();
-            
-          if (orderError) {
-            console.error("Order creation error:", orderError);
-            toast.error("Payments completed but failed to create order record");
-          } else {
-            console.log("Created order:", order);
-            
-            // Create order items for successful payments only
-            const successfulItems = successfulPayments.flatMap(result => result.items);
+          // Get current user for buyer_id
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user) {
+            const { data: order, error: orderError } = await supabase
+              .from('orders')
+              .insert({
+                buyer_id: user.id,
+                total_price: actualOrderTotal,
+                status: 'completed',
+                currency_used: 'USDC',
+                payment_method: 'solana_usdc',
+                transaction_signatures: transactionSignatures
+              })
+              .select()
+              .single();
               
-            const orderItems = successfulItems.map(item => ({
-              order_id: order.id,
-              product_id: item.id,
-              quantity: item.quantity,
-              price: item.price,
-              title: item.title
-            }));
-            
-            const { error: itemsError } = await supabase
-              .from('order_items')
-              .insert(orderItems);
+            if (orderError) {
+              console.error("Order creation error:", orderError);
+              toast.error("Payments completed but failed to create order record");
+            } else {
+              console.log("Created order:", order);
               
-            if (itemsError) {
-              console.error("Order items error:", itemsError);
-              toast.warning("Order created but some items may not be recorded properly");
+              // Create order items for successful payments only
+              const successfulItems = successfulPayments.flatMap(result => result.items);
+                
+              const orderItems = successfulItems.map(item => ({
+                order_id: order.id,
+                product_id: item.id,
+                quantity: item.quantity,
+                price: item.price,
+                title: item.title
+              }));
+              
+              const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItems);
+                
+              if (itemsError) {
+                console.error("Order items error:", itemsError);
+                toast.warning("Order created but some items may not be recorded properly");
+              }
             }
           }
         } catch (dbError) {

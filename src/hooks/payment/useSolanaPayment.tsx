@@ -114,10 +114,11 @@ export const useSolanaPayment = () => {
       // Handle product purchase record if applicable (non-blocking)
       if (productData) {
         try {
-          // Create order record without auth check since user is already authenticated
+          // Create order record with buyer_id
           const { data: orderData, error: orderError } = await supabase
             .from('orders')
             .insert({
+              buyer_id: supabase.auth.getUser().then(u => u.data.user?.id || ''),
               total_price: amount,
               status: 'completed',
               transaction_signatures: [signature],
@@ -242,30 +243,36 @@ export const useSolanaPayment = () => {
 
       // Record transaction details in database (non-blocking)
       try {
-        // Create order record without auth check since user is already authenticated
-        const { data: orderData, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            total_price: items.reduce((total, item) => total + item.price, 0),
-            status: 'completed',
-            transaction_signatures: signatures,
-            payment_method: 'solana_usdc',
-            currency_used: 'USDC'
-          })
-          .select()
-          .single();
-          
-        if (!orderError && orderData) {
-          // Create order items
-          const orderItems = items.map(item => ({
-            order_id: orderData.id,
-            product_id: item.id || 'unknown',
-            title: item.title || 'Beat purchase',
-            price: item.price,
-            quantity: 1,
-          }));
-          
-          await supabase.from('order_items').insert(orderItems);
+        // Get current user for buyer_id  
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Create order record with buyer_id
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .insert({
+              buyer_id: user.id,
+              total_price: items.reduce((total, item) => total + item.price, 0),
+              status: 'completed',
+              transaction_signatures: signatures,
+              payment_method: 'solana_usdc',
+              currency_used: 'USDC'
+            })
+            .select()
+            .single();
+            
+          if (!orderError && orderData) {
+            // Create order items
+            const orderItems = items.map(item => ({
+              order_id: orderData.id,
+              product_id: item.id || 'unknown',
+              title: item.title || 'Beat purchase',
+              price: item.price,
+              quantity: 1,
+            }));
+            
+            await supabase.from('order_items').insert(orderItems);
+          }
         }
       } catch (dbError) {
         // Don't fail the transaction if database recording fails
