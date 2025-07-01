@@ -285,9 +285,12 @@ export const SolanaCheckoutDialog = ({
           console.log(`Creating order with accurate total: $${actualOrderTotal} (from ${successfulPayments.length} successful payments)`);
           
           // Get current user for buyer_id
-          const { data: { user } } = await supabase.auth.getUser();
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
           
-          if (user) {
+          if (userError || !user) {
+            console.error("Could not get user for order recording:", userError);
+            toast.warning("Payments completed but failed to record order");
+          } else {
             const { data: order, error: orderError } = await supabase
               .from('orders')
               .insert({

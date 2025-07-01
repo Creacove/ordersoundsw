@@ -114,38 +114,46 @@ export const useSolanaPayment = () => {
       // Handle product purchase record if applicable (non-blocking)
       if (productData) {
         try {
-          // Create order record with buyer_id
-          const { data: orderData, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-              buyer_id: supabase.auth.getUser().then(u => u.data.user?.id || ''),
-              total_price: amount,
-              status: 'completed',
-              transaction_signatures: [signature],
-              payment_method: 'solana_usdc',
-              currency_used: 'USDC'
-            })
-            .select()
-            .single();
-
-          if (orderError) {
-            console.error("Order creation failed:", orderError);
+          // Get current user for buyer_id
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          
+          if (userError || !user) {
+            console.error("Could not get user for order recording:", userError);
             // Don't throw - payment was successful, just log the issue
           } else {
-            const { error: itemError } = await supabase
-              .from('order_items')
+            // Create order record with buyer_id
+            const { data: orderData, error: orderError } = await supabase
+              .from('orders')
               .insert({
-                order_id: orderData.id,
-                product_id: productData.id,
-                title: productData.title,
-                price: productData.price,
-                quantity: 1,
-              });
+                buyer_id: user.id,
+                total_price: amount,
+                status: 'completed',
+                transaction_signatures: [signature],
+                payment_method: 'solana_usdc',
+                currency_used: 'USDC'
+              })
+              .select()
+              .single();
 
-            if (itemError) {
-              console.error("Order item creation failed:", itemError);
-              // Attempt to clean up the order if items fail
-              await supabase.from('orders').delete().eq('id', orderData.id);
+            if (orderError) {
+              console.error("Order creation failed:", orderError);
+              // Don't throw - payment was successful, just log the issue
+            } else {
+              const { error: itemError } = await supabase
+                .from('order_items')
+                .insert({
+                  order_id: orderData.id,
+                  product_id: productData.id,
+                  title: productData.title,
+                  price: productData.price,
+                  quantity: 1,
+                });
+
+              if (itemError) {
+                console.error("Order item creation failed:", itemError);
+                // Attempt to clean up the order if items fail
+                await supabase.from('orders').delete().eq('id', orderData.id);
+              }
             }
           }
         } catch (dbError) {
@@ -244,9 +252,11 @@ export const useSolanaPayment = () => {
       // Record transaction details in database (non-blocking)
       try {
         // Get current user for buyer_id  
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (user) {
+        if (userError || !user) {
+          console.error("Could not get user for order recording:", userError);
+        } else {
           // Create order record with buyer_id
           const { data: orderData, error: orderError } = await supabase
             .from('orders')
