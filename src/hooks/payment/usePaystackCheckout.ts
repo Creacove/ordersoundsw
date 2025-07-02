@@ -412,7 +412,7 @@ export function usePaystackCheckout({
       try {
         // Create Paystack handler with LIVE configuration using correct public key
         const handler = window.PaystackPop.setup({
-          key: 'pk_live_699eb330ab23079fd06b6567349abd7af5a768ba', // Correct live public key from dashboard
+          key: 'pk_live_699eb330ab23079fd06b6567349abd7af5a758ba', // Correct live public key from dashboard
           email: user?.email || '',
           amount: totalAmount * 100, // Convert to kobo
           currency: 'NGN',
