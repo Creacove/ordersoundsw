@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -30,7 +29,7 @@ export function usePaystackCheckout({
   splitCode,
   producerId,
   beatId,
-  testMode = false
+  testMode = false // This parameter is now ignored - we always use live mode
 }: UsePaystackCheckoutProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -405,13 +404,13 @@ export function usePaystackCheckout({
         ]
       };
       
-      console.log('Starting Paystack payment');
+      console.log('Starting Paystack payment in LIVE mode');
       
       // Mark payment as started
       setPaymentStarted(true);
       
       try {
-        // Create Paystack handler with proper configuration - LIVE MODE
+        // Create Paystack handler with LIVE configuration
         const handler = window.PaystackPop.setup({
           key: 'pk_live_bc18dfe1cccaafc5ce5ca2b6e0f0b5ac9d2e16c0', // Live public key
           email: user?.email || '',

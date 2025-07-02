@@ -55,8 +55,8 @@ export function PaystackDialog({
           <div className="p-5 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-xl border border-primary/10 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-foreground">Order Total</h3>
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
-                Test Mode
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                Live Payment
               </Badge>
             </div>
             
@@ -102,19 +102,14 @@ export function PaystackDialog({
             </div>
           )}
           
-          {/* Test Mode Instructions */}
+          {/* Live Payment Information */}
           {paymentStarted && (
-            <Alert className="bg-blue-50/80 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40">
-              <Info className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-              <AlertDescription className="text-sm text-blue-700 dark:text-blue-300">
+            <Alert className="bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/40">
+              <Info className="h-4 w-4 text-green-500 dark:text-green-400" />
+              <AlertDescription className="text-sm text-green-700 dark:text-green-300">
                 <div className="space-y-2">
-                  <p className="font-medium">Test Payment Instructions:</p>
-                  <div className="space-y-1 text-xs">
-                    <p>• Card Number: <code className="bg-blue-100/70 dark:bg-blue-800/70 px-1.5 py-0.5 rounded font-mono">408 4084 0840 8408</code></p>
-                    <p>• CVV: Any 3 digits</p>
-                    <p>• Expiry: Any future date</p>
-                    <p>• OTP: <code className="bg-blue-100/70 dark:bg-blue-800/70 px-1.5 py-0.5 rounded font-mono">123456</code></p>
-                  </div>
+                  <p className="font-medium">Live Payment Processing</p>
+                  <p className="text-xs">You will be charged the full amount. Please use your actual payment details.</p>
                 </div>
               </AlertDescription>
             </Alert>
