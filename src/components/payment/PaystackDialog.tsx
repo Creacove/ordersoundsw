@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useEffect } from 'react';
 
 interface PaystackDialogProps {
   isOpen: boolean;
@@ -31,6 +32,24 @@ export function PaystackDialog({
   forceCancel,
   paymentStarted
 }: PaystackDialogProps) {
+  // Auto-close dialog when payment window opens to prevent interference
+  useEffect(() => {
+    if (paymentStarted) {
+      // Small delay to ensure Paystack window is fully loaded
+      const timer = setTimeout(() => {
+        // Don't call onClose() as it might interfere with payment flow
+        // Just let the Paystack window take full control
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStarted]);
+
+  // Don't render the dialog at all when payment has started to prevent any interference
+  if (paymentStarted) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md p-0 max-h-[90vh] overflow-y-auto border-primary/20 shadow-xl backdrop-blur-sm bg-background/95">
@@ -42,9 +61,7 @@ export function PaystackDialog({
             <div>
               <DialogTitle className="text-xl font-semibold text-foreground">Complete Your Purchase</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-1">
-                {paymentStarted ? 
-                  "Payment window is opening. If you don't see it, please check if it's been blocked by your browser." :
-                  "You'll be redirected to Paystack's secure payment platform to complete this transaction."}
+                You'll be redirected to Paystack's secure payment platform to complete this transaction.
               </DialogDescription>
             </div>
           </div>
@@ -103,17 +120,15 @@ export function PaystackDialog({
           )}
           
           {/* Live Payment Information */}
-          {paymentStarted && (
-            <Alert className="bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/40">
-              <Info className="h-4 w-4 text-green-500 dark:text-green-400" />
-              <AlertDescription className="text-sm text-green-700 dark:text-green-300">
-                <div className="space-y-2">
-                  <p className="font-medium">Live Payment Processing</p>
-                  <p className="text-xs">You will be charged the full amount. Please use your actual payment details.</p>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert className="bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/40">
+            <Info className="h-4 w-4 text-green-500 dark:text-green-400" />
+            <AlertDescription className="text-sm text-green-700 dark:text-green-300">
+              <div className="space-y-2">
+                <p className="font-medium">Live Payment Processing</p>
+                <p className="text-xs">You will be charged the full amount. Please use your actual payment details.</p>
+              </div>
+            </AlertDescription>
+          </Alert>
           
           <Separator className="my-4" />
           
@@ -121,16 +136,11 @@ export function PaystackDialog({
           <div className="flex flex-col gap-3">
             <Button 
               onClick={onPaymentStart}
-              disabled={isProcessing || isValidating || validationError !== null || paymentStarted}
+              disabled={isProcessing || isValidating || validationError !== null}
               className="w-full py-6 text-base shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
               size="lg"
             >
               {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing Payment...
-                </>
-              ) : paymentStarted ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Opening Payment Window...
@@ -148,7 +158,7 @@ export function PaystackDialog({
               )}
             </Button>
             
-            {(isProcessing || paymentStarted) && forceCancel && (
+            {isProcessing && forceCancel && (
               <Button 
                 variant="destructive" 
                 onClick={forceCancel}
