@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -19,12 +20,12 @@ serve(async (req) => {
     console.log('Request method:', req.method);
     console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
-    // Get the Paystack secret key from environment
-    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
+    // Get the Paystack LIVE secret key from environment
+    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE');
     if (!PAYSTACK_SECRET_KEY) {
-      console.error('Missing Paystack secret key');
+      console.error('Missing Paystack live secret key');
       return new Response(
-        JSON.stringify({ success: false, verified: false, message: 'Missing Paystack secret key' }),
+        JSON.stringify({ success: false, verified: false, message: 'Missing Paystack live secret key' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
@@ -56,9 +57,9 @@ serve(async (req) => {
       );
     }
 
-    const { reference, orderId, orderItems, isTestMode } = body;
+    const { reference, orderId, orderItems } = body;
     
-    console.log('Extracted parameters:', { reference, orderId, orderItemsCount: orderItems?.length, isTestMode });
+    console.log('Extracted parameters:', { reference, orderId, orderItemsCount: orderItems?.length });
     
     if (!reference) {
       console.error('Missing payment reference');
@@ -78,7 +79,6 @@ serve(async (req) => {
 
     console.log(`Processing verification for reference: ${reference}, order: ${orderId}`);
     console.log('Order items received:', orderItems);
-    console.log('Test mode:', isTestMode);
     
     // Create a Supabase client with SERVICE ROLE KEY to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -146,130 +146,7 @@ serve(async (req) => {
       );
     }
 
-    // Special handling for test mode or references with ORDER_ prefix
-    if (isTestMode || reference.startsWith('ORDER_')) {
-      console.log(`Test mode detected for reference: ${reference}`);
-      
-      try {
-        // Update order status
-        const { error: updateError } = await supabaseClient
-          .from('orders')
-          .update({
-            status: 'completed',
-            consent_timestamp: new Date().toISOString(),
-            payment_reference: reference
-          })
-          .eq('id', orderId);
-          
-        if (updateError) {
-          console.error('Failed to update order status:', updateError);
-          return new Response(
-            JSON.stringify({
-              success: false,
-              verified: false,
-              message: `Failed to update order: ${updateError.message}`,
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
-        }
-        
-        console.log(`Successfully updated order ${orderId} status to completed`);
-        
-        // Process user_purchased_beats
-        if (orderItems && Array.isArray(orderItems)) {
-          try {
-            // Add purchased beats directly instead of waiting for webhook
-            const purchasedItems = orderItems.map(item => ({
-              user_id: orderData.buyer_id,
-              beat_id: item.beat_id,
-              license_type: item.license || 'basic',
-              currency_code: 'NGN',
-              order_id: orderId,
-            }));
-            
-            console.log(`Adding ${purchasedItems.length} purchased beats to user collection`);
-            const { error: purchaseError } = await supabaseClient
-              .from('user_purchased_beats')
-              .insert(purchasedItems);
-              
-            if (purchaseError) {
-              console.error('Failed to record purchases:', purchaseError);
-              // Continue despite error - the order is still marked as completed
-            } else {
-              console.log(`Successfully recorded ${purchasedItems.length} purchases`);
-            }
-            
-            // Update purchase counts for beats using the RPC function
-            for (const item of orderItems) {
-              try {
-                console.log(`Updating purchase count for beat ${item.beat_id}`);
-                const { error: updateCountError } = await supabaseClient
-                  .rpc('increment_counter', {
-                    p_table_name: 'beats',
-                    p_column_name: 'purchase_count',
-                    p_id: item.beat_id
-                  });
-                
-                if (updateCountError) {
-                  console.error(`Failed to update purchase count for beat ${item.beat_id}:`, updateCountError);
-                } else {
-                  console.log(`Successfully updated purchase count for beat ${item.beat_id}`);
-                }
-              } catch (err) {
-                console.error(`Error updating purchase count for beat ${item.beat_id}:`, err);
-                // Continue processing other beats
-              }
-            }
-            
-            // Create notification for buyer
-            try {
-              const { error: buyerNotificationError } = await supabaseClient
-                .from('notifications')
-                .insert({
-                  recipient_id: orderData.buyer_id,
-                  title: 'Purchase Completed Successfully',
-                  body: `Your order has been processed. ${orderItems.length} beat${orderItems.length === 1 ? '' : 's'} added to your library.`,
-                  is_read: false
-                });
-                
-              if (!buyerNotificationError) {
-                console.log('Created notification for buyer');
-              }
-            } catch (notifyError) {
-              console.error('Error creating buyer notification:', notifyError);
-            }
-          } catch (purchaseErr) {
-            console.error('Error recording purchases:', purchaseErr);
-          }
-        }
-        
-        // Return success response
-        return new Response(
-          JSON.stringify({
-            success: true,
-            verified: true,
-            message: 'Payment accepted in test mode',
-            data: {
-              reference: reference,
-              orderId: orderId,
-            },
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      } catch (error) {
-        console.error('Error processing test payment:', error);
-        return new Response(
-          JSON.stringify({
-            success: false,
-            verified: false,
-            message: `Error processing test payment: ${error.message}`,
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-    }
-
-    // For non-test transactions, verify with Paystack API
+    // All payments are now live - verify with Paystack API
     try {
       console.log(`Making request to Paystack API: https://api.paystack.co/transaction/verify/${reference}`);
       const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {

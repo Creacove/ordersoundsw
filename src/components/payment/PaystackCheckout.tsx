@@ -21,7 +21,7 @@ export function PaystackCheckout({
   producerId,
   beatId
 }: PaystackProps) {
-  // Only initialize the hook if the dialog is open to save resources
+  // Remove testMode forcing - now running in live mode
   const {
     isProcessing,
     isValidating,
@@ -36,8 +36,8 @@ export function PaystackCheckout({
     totalAmount,
     splitCode,
     producerId,
-    beatId,
-    testMode: true // Force test mode to ensure consistency
+    beatId
+    // Removed testMode: true to switch to live mode
   });
 
   // Don't render anything if dialog is not open

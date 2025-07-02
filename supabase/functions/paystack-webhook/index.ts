@@ -14,11 +14,11 @@ serve(async (req) => {
   }
 
   try {
-    // Verify that request is from Paystack using the secret key
-    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY') || 'sk_test_ec208ff2f8e96d80e9adca93adbb259e3796a801';
+    // Verify that request is from Paystack using the LIVE secret key
+    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE');
     if (!PAYSTACK_SECRET_KEY) {
-      console.error('Missing Paystack secret key');
-      throw new Error('Missing Paystack secret key');
+      console.error('Missing Paystack live secret key');
+      throw new Error('Missing Paystack live secret key');
     }
 
     // Parse the webhook payload
