@@ -232,7 +232,7 @@ serve(async (req) => {
   // Get Supabase client
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY')!;
+  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
   
   if (!paystackSecretKey) {
     console.error('Missing Paystack secret key');
