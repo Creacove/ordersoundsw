@@ -20,7 +20,7 @@ serve(async (req) => {
     console.log('Request method:', req.method);
     console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
-    // Get the Paystack LIVE secret key from environment
+    // Get the Paystack LIVE secret key from environment - FIXED: Using live key
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE');
     if (!PAYSTACK_SECRET_KEY) {
       console.error('Missing Paystack live secret key');
@@ -146,7 +146,7 @@ serve(async (req) => {
       );
     }
 
-    // All payments are now live - verify with Paystack API
+    // Verify with Paystack API using LIVE secret key
     try {
       console.log(`Making request to Paystack API: https://api.paystack.co/transaction/verify/${reference}`);
       const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
