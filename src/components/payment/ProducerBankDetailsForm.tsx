@@ -182,8 +182,8 @@ export function ProducerBankDetailsForm({
       // Only try to create/update Paystack subaccount if specifically needed
       try {
         await updateBankDetails(producerId, {
-          bank_code: values.bank_code,
-          account_number: values.account_number,
+          bankCode: values.bank_code,
+          accountNumber: values.account_number,
         });
       } catch (splitError) {
         console.error("Error updating Paystack split account:", splitError);
@@ -278,7 +278,7 @@ export function ProducerBankDetailsForm({
                       onAccountChange(value, accountNumber);
                     }
                   }}
-                  value={field.value} // Use value instead of defaultValue
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>

@@ -41,6 +41,29 @@ const makePaystackRequest = async (endpoint: string, method: string = 'GET', dat
   }
 };
 
+export const fetchSupportedBanks = async () => {
+  try {
+    console.log('Fetching supported banks from Paystack');
+    
+    const response = await supabase.functions.invoke('paystack-operations', {
+      body: {
+        operation: 'fetch-banks',
+        endpoint: '/bank',
+        method: 'GET'
+      }
+    });
+
+    if (response.error) {
+      throw new Error(`Failed to fetch banks: ${response.error.message}`);
+    }
+
+    return response.data?.data || [];
+  } catch (error) {
+    console.error('Error fetching supported banks:', error);
+    throw error;
+  }
+};
+
 export const createProducerSubaccount = async (producerId: string) => {
   try {
     console.log('Creating producer subaccount with LIVE key for producer:', producerId);
