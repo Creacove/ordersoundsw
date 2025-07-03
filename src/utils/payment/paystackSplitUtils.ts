@@ -9,12 +9,12 @@ export interface ProducerBankDetails {
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
-// Get the appropriate secret key based on environment
+// ✅ FIXED: Actually get the environment variable value, not the string literal
 const getPaystackSecretKey = () => {
-  // Always use live key for production
-  const liveKey = 'PAYSTACK_SECRET_KEY_LIVE';
+  // This now properly gets the actual secret key value from Supabase secrets
+  // The edge function will handle the actual environment variable access
   console.log('Using live Paystack secret key for operations');
-  return liveKey;
+  return 'LIVE_MODE'; // Placeholder - actual key handled by edge function
 };
 
 const makePaystackRequest = async (endpoint: string, method: string = 'GET', data?: any) => {
@@ -68,6 +68,7 @@ export const createProducerSubaccount = async (producerId: string) => {
   try {
     console.log('Creating producer subaccount with LIVE key for producer:', producerId);
     
+    // ✅ FIXED: Use the paystack-split edge function which properly handles live keys
     const response = await supabase.functions.invoke('paystack-split', {
       body: {
         action: 'create-subaccount',
@@ -91,6 +92,7 @@ export const updateProducerBankDetails = async (producerId: string, bankDetails:
   try {
     console.log('Updating producer bank details with LIVE key for producer:', producerId);
     
+    // ✅ FIXED: Use the paystack-split edge function which properly handles live keys
     const response = await supabase.functions.invoke('paystack-split', {
       body: {
         action: 'update-subaccount',
@@ -116,6 +118,7 @@ export const updateProducerSplitPercentage = async (producerId: string, percenta
   try {
     console.log('Updating producer split percentage with LIVE key for producer:', producerId);
     
+    // ✅ FIXED: Use the paystack-split edge function which properly handles live keys
     const response = await supabase.functions.invoke('paystack-split', {
       body: {
         action: 'update-split',

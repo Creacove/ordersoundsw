@@ -1,93 +1,93 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-
-// Get the secret key from environment variables
-const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')
-if (!PAYSTACK_SECRET_KEY) {
-  console.error('PAYSTACK_SECRET_KEY is not set')
-}
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
+
+  // ✅ CRITICAL FIX: Use the actual live secret key from environment
+  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE');
+  
+  if (!paystackSecretKey) {
+    console.error('Missing Paystack live secret key');
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: Missing Paystack live key' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // ✅ VALIDATION: Ensure we're using a live key, not test key
+  if (paystackSecretKey.startsWith('sk_test_')) {
+    console.error('Test key detected when live key expected');
+    return new Response(
+      JSON.stringify({ error: 'Configuration error: Test key provided instead of live key' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log('✅ Using LIVE Paystack key for operations');
 
   try {
-    const { operation, data } = await req.json()
+    const body = await req.json();
+    const { operation, endpoint, method = 'GET', data } = body;
 
-    if (!PAYSTACK_SECRET_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    console.log(`Processing Paystack operation: ${operation}`);
 
-    // Handle different Paystack operations
+    let url = '';
+    let requestOptions: RequestInit = {
+      method,
+      headers: {
+        'Authorization': `Bearer ${paystackSecretKey}`,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    // Handle different operations
     switch (operation) {
-      case 'create-split':
-        return await handleCreateSplit(data)
-      case 'update-split':
-        return await handleUpdateSplit(data)
-      case 'fetch-split':
-        return await handleFetchSplit(data)
+      case 'fetch-banks':
+        url = 'https://api.paystack.co/bank';
+        break;
+      
+      case 'resolve-account':
+        if (!data?.account_number || !data?.bank_code) {
+          throw new Error('Account number and bank code are required');
+        }
+        url = `https://api.paystack.co/bank/resolve?account_number=${data.account_number}&bank_code=${data.bank_code}`;
+        break;
+      
       default:
-        return new Response(
-          JSON.stringify({ error: 'Unknown operation' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+        throw new Error(`Unsupported operation: ${operation}`);
     }
-  } catch (error) {
-    console.error('Error processing request:', error)
+
+    console.log(`Making request to: ${url}`);
+    
+    const response = await fetch(url, requestOptions);
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('Paystack API error:', responseData);
+      throw new Error(responseData.message || 'Paystack API request failed');
+    }
+
+    console.log(`✅ ${operation} completed successfully in LIVE mode`);
+
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify(responseData),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Paystack operations error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
   }
-})
-
-async function makePaystackRequest(endpoint: string, method: string, body?: any) {
-  const url = `https://api.paystack.co${endpoint}`
-  
-  const options: RequestInit = {
-    method,
-    headers: {
-      'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
-  }
-  
-  if (body && (method === 'POST' || method === 'PUT')) {
-    options.body = JSON.stringify(body)
-  }
-  
-  const response = await fetch(url, options)
-  const result = await response.json()
-  
-  return new Response(
-    JSON.stringify(result),
-    { 
-      status: response.status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    }
-  )
-}
-
-async function handleCreateSplit(data: any) {
-  return await makePaystackRequest('/split', 'POST', data)
-}
-
-async function handleUpdateSplit(data: any) {
-  const { id, ...updateData } = data
-  return await makePaystackRequest(`/split/${id}`, 'PUT', updateData)
-}
-
-async function handleFetchSplit(data: any) {
-  const { id } = data
-  return await makePaystackRequest(`/split/${id}`, 'GET')
-}
+});
