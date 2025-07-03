@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,257 +13,199 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    // Verify that request is from Paystack using the LIVE secret key - FIXED: Using live key
-    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE');
-    if (!PAYSTACK_SECRET_KEY) {
-      console.error('Missing Paystack live secret key');
-      throw new Error('Missing Paystack live secret key');
-    }
-
-    // Parse the webhook payload
-    let payload;
-    try {
-      payload = await req.json();
-    } catch (e) {
-      console.error('Failed to parse webhook payload:', e);
-      throw new Error('Invalid webhook payload');
-    }
-    
-    console.log('Received webhook payload:', JSON.stringify(payload));
-
-    // Verify the event is valid and from Paystack
-    // In production, we should validate the signature
-    // For now, we'll just check the event type
-    if (payload.event !== 'charge.success') {
-      console.log(`Ignoring non-charge.success event: ${payload.event}`);
-      return new Response(
-        JSON.stringify({ success: true, message: 'Event ignored (not charge.success)' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    }
-
-    // Get transaction data
-    const { reference, metadata } = payload.data;
-    console.log(`Processing webhook for transaction reference: ${reference}`);
-    
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing Supabase credentials');
-      throw new Error('Server configuration error');
-    }
-    
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Find the order using the reference by looking at pending orders
-    const { data: orderData, error: orderError } = await supabaseClient
-      .from('orders')
-      .select('id, status, buyer_id')
-      .eq('status', 'pending') // Only look at pending orders
-      .order('order_date', { ascending: false })
-      .limit(5); // Look at the 5 most recent pending orders
-      
-    if (orderError) {
-      console.error('Error fetching pending orders:', orderError);
-      throw new Error(`Failed to fetch orders: ${orderError.message}`);
-    }
-    
-    if (!orderData || orderData.length === 0) {
-      console.log('No pending orders found to process');
-      return new Response(
-        JSON.stringify({ success: true, message: 'No pending orders found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    }
-    
-    // For this webhook, we'll process all pending orders received in the last 15 minutes
-    // This is a safety net in case the frontend callback didn't complete
-    console.log(`Found ${orderData.length} recent pending orders to check`);
-    
-    for (const order of orderData) {
-      const orderId = order.id;
-      
-      // Update order status
-      console.log(`Updating order ${orderId} to completed status via webhook`);
-      const { error: updateError } = await supabaseClient
-        .from('orders')
-        .update({
-          status: 'completed',
-          consent_timestamp: new Date().toISOString(),
-        })
-        .eq('id', orderId);
-        
-      if (updateError) {
-        console.error(`Failed to update order ${orderId}:`, updateError);
-        continue; // Try the next order
-      }
-      
-      // Get line items for this order
-      const { data: lineItems, error: lineItemsError } = await supabaseClient
-        .from('line_items')
-        .select('beat_id, price_charged, currency_code')
-        .eq('order_id', orderId);
-        
-      if (lineItemsError || !lineItems) {
-        console.error(`Failed to fetch line items for order ${orderId}:`, lineItemsError);
-        continue;
-      }
-      
-      // Add purchased beats to user's collection if they haven't been added yet
-      if (lineItems.length > 0) {
-        // First check if purchases were already recorded
-        const { data: existingPurchases, error: checkError } = await supabaseClient
-          .from('user_purchased_beats')
-          .select('id')
-          .eq('order_id', orderId);
-          
-        if (checkError) {
-          console.error(`Failed to check existing purchases for order ${orderId}:`, checkError);
-          continue;
-        }
-        
-        // Only insert if no purchases exist for this order
-        if (!existingPurchases || existingPurchases.length === 0) {
-          const purchasedItems = lineItems.map(item => ({
-            user_id: order.buyer_id,
-            beat_id: item.beat_id,
-            license_type: 'basic', // Default to basic
-            currency_code: item.currency_code,
-            order_id: orderId,
-          }));
-          
-          console.log(`Adding ${purchasedItems.length} purchased beats to user collection via webhook`);
-          const { error: purchaseError } = await supabaseClient
-            .from('user_purchased_beats')
-            .insert(purchasedItems);
-          
-          if (purchaseError) {
-            console.error(`Failed to record purchases for order ${orderId}:`, purchaseError);
-            continue;
-          }
-          
-          // Create notification for buyer
-          const { error: buyerNotificationError } = await supabaseClient
-            .from('notifications')
-            .insert({
-              recipient_id: order.buyer_id,
-              title: 'Purchase Completed Successfully',
-              body: `Your order has been processed. ${purchasedItems.length} beat${purchasedItems.length === 1 ? '' : 's'} added to your library.`,
-              is_read: false
-            });
-            
-          if (buyerNotificationError) {
-            console.error(`Failed to create buyer notification for order ${orderId}:`, buyerNotificationError);
-          }
-          
-          // Create notifications for producers
-          await notifyProducers(supabaseClient, lineItems, order.buyer_id);
-          
-          // Update purchase count for each beat
-          for (const item of lineItems) {
-            await updateBeatPurchaseCount(supabaseClient, item.beat_id);
-          }
-        } else {
-          console.log(`Purchases for order ${orderId} already recorded, skipping`);
-        }
-      }
-      
-      console.log(`Webhook processing completed for order ${orderId}`);
-    }
-    
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
+  
+  if (!paystackSecretKey) {
+    console.error('Missing Paystack live secret key');
     return new Response(
-      JSON.stringify({ success: true, message: 'Webhook processed successfully' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      JSON.stringify({ error: 'Server configuration error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-    
-  } catch (error) {
-    console.error('Error processing webhook:', error);
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  try {
+    const body = await req.json();
+    const signature = req.headers.get('x-paystack-signature');
+
+    // Validate webhook signature
+    if (!signature) {
+      console.error('Missing webhook signature');
+      return new Response(
+        JSON.stringify({ error: 'Missing signature' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify webhook signature
+    const crypto = await import('node:crypto');
+    const hash = crypto.createHmac('sha512', paystackSecretKey)
+      .update(JSON.stringify(body))
+      .digest('hex');
+
+    if (hash !== signature) {
+      console.error('Invalid webhook signature');
+      return new Response(
+        JSON.stringify({ error: 'Invalid signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { event, data } = body;
+    console.log(`Processing webhook event: ${event}`);
+
+    // Handle charge.success event (successful payment)
+    if (event === 'charge.success') {
+      const reference = data.reference;
+      console.log(`Processing successful charge: ${reference}`);
+
+      // Find the order associated with this transaction
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          buyer_id,
+          total_price,
+          line_items (
+            beat_id,
+            beats (
+              id,
+              title,
+              producer_id,
+              users (
+                id,
+                full_name,
+                stage_name
+              )
+            )
+          )
+        `)
+        .eq('payment_reference', reference)
+        .single();
+
+      if (orderError) {
+        console.error('Order not found for reference:', reference, orderError);
+        return new Response(
+          JSON.stringify({ error: 'Order not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Update order status
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status: 'completed' })
+        .eq('id', orderData.id);
+
+      if (updateError) {
+        console.error('Error updating order status:', updateError);
+      }
+
+      // Create payment record
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          order_id: orderData.id,
+          transaction_reference: reference,
+          amount: data.amount / 100, // Convert from kobo to naira
+          status: 'success',
+          payment_method: 'paystack',
+          payment_details: data,
+        });
+
+      if (paymentError) {
+        console.error('Error creating payment record:', paymentError);
+      }
+
+      // Send notifications to producers for each beat sold
+      if (orderData.line_items && orderData.line_items.length > 0) {
+        console.log(`Sending notifications to ${orderData.line_items.length} producers`);
+        
+        for (const lineItem of orderData.line_items) {
+          const beat = lineItem.beats;
+          const producer = beat?.users;
+          
+          if (producer) {
+            console.log(`Sending notification to producer: ${producer.id}`);
+            
+            const { error: notificationError } = await supabase
+              .from('notifications')
+              .insert({
+                recipient_id: producer.id,
+                title: 'Beat Sale - Payment Received',
+                body: `Your beat "${beat.title}" has been purchased! Payment of ₦${(data.amount / 100).toLocaleString()} has been processed.`,
+                notification_type: 'sale',
+                related_entity_type: 'beat',
+                related_entity_id: beat.id,
+              });
+
+            if (notificationError) {
+              console.error(`Error sending notification to producer ${producer.id}:`, notificationError);
+            } else {
+              console.log(`Notification sent successfully to producer: ${producer.stage_name || producer.full_name}`);
+            }
+          }
+        }
+      }
+
+      console.log(`Successfully processed charge.success for reference: ${reference}`);
+    }
+
+    // Handle transfer.success event (successful payout to producer)
+    if (event === 'transfer.success') {
+      const transferReference = data.reference;
+      console.log(`Processing successful transfer: ${transferReference}`);
+
+      const { error: payoutError } = await supabase
+        .from('payouts')
+        .update({ 
+          status: 'success',
+          payout_date: new Date().toISOString(),
+          transaction_details: data,
+        })
+        .eq('transaction_reference', transferReference);
+
+      if (payoutError) {
+        console.error('Error updating payout status:', payoutError);
+      } else {
+        console.log(`Successfully processed transfer.success for reference: ${transferReference}`);
+      }
+    }
+
+    // Handle transfer.failed event (failed payout to producer)
+    if (event === 'transfer.failed') {
+      const transferReference = data.reference;
+      console.log(`Processing failed transfer: ${transferReference}`);
+
+      const { error: payoutError } = await supabase
+        .from('payouts')
+        .update({ 
+          status: 'failed',
+          failure_reason: data.reason || 'Unknown failure reason',
+          transaction_details: data,
+        })
+        .eq('transaction_reference', transferReference);
+
+      if (payoutError) {
+        console.error('Error updating failed payout status:', payoutError);
+      } else {
+        console.log(`Successfully processed transfer.failed for reference: ${transferReference}`);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: false, message: error.message || 'Failed to process webhook' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ success: true, event }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
-// Helper function to notify producers of beat sales
-async function notifyProducers(supabaseClient, lineItems, buyerId) {
-  try {
-    // First, get all beats info including producer_id
-    const beatIds = lineItems.map(item => item.beat_id);
-    
-    if (beatIds.length === 0) return;
-    
-    const { data: beats, error: beatsError } = await supabaseClient
-      .from('beats')
-      .select('id, title, producer_id')
-      .in('id', beatIds);
-      
-    if (beatsError || !beats) {
-      console.error('Failed to fetch beats for producer notifications:', beatsError);
-      return;
-    }
-    
-    // Group beats by producer_id
-    const beatsByProducer = {};
-    
-    for (const beat of beats) {
-      if (!beat.producer_id) continue;
-      
-      if (!beatsByProducer[beat.producer_id]) {
-        beatsByProducer[beat.producer_id] = [];
-      }
-      
-      beatsByProducer[beat.producer_id].push({
-        id: beat.id,
-        title: beat.title
-      });
-    }
-    
-    // Create notifications for each producer
-    for (const producerId in beatsByProducer) {
-      const producerBeats = beatsByProducer[producerId];
-      
-      // Don't notify the producer if they're the buyer (self-purchase)
-      if (producerId === buyerId) continue;
-      
-      // Create the notification
-      const { error: notificationError } = await supabaseClient
-        .from('notifications')
-        .insert({
-          recipient_id: producerId,
-          title: 'New Beat Sale!',
-          body: producerBeats.length === 1
-            ? `Congratulations! Your beat "${producerBeats[0].title}" was just purchased.`
-            : `Congratulations! ${producerBeats.length} of your beats were just purchased.`,
-          is_read: false
-        });
-        
-      if (notificationError) {
-        console.error(`Failed to create notification for producer ${producerId}:`, notificationError);
-      }
-    }
-  } catch (error) {
-    console.error('Error notifying producers:', error);
-  }
-}
-
-// Helper function to update beat purchase count
-async function updateBeatPurchaseCount(supabaseClient, beatId) {
-  try {
-    // Use RPC function to increment the counter
-    const { error } = await supabaseClient.rpc('increment', {
-      row_id: beatId,
-      table_name: 'beats',
-      column_name: 'purchase_count',
-    });
-    
-    if (error) {
-      console.error(`Failed to update purchase count for beat ${beatId}:`, error);
-    }
-  } catch (error) {
-    console.error(`Error updating purchase count for beat ${beatId}:`, error);
-  }
-}

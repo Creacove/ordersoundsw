@@ -162,6 +162,33 @@ export function usePaystackCheckout({
     };
   }, []);
 
+  // Fetch producer's split code from database
+  const fetchProducerSplitCode = async (producerId: string): Promise<string | null> => {
+    try {
+      console.log('Fetching split code for producer:', producerId);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('paystack_split_code')
+        .eq('id', producerId)
+        .eq('role', 'producer')
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching producer split code:', error);
+        return null;
+      }
+      
+      const splitCode = data?.paystack_split_code || null;
+      console.log('Retrieved split code:', splitCode ? `SPL_${splitCode.substring(0, 8)}...` : 'none');
+      
+      return splitCode;
+    } catch (error) {
+      console.error('Exception fetching producer split code:', error);
+      return null;
+    }
+  };
+
   // Validate cart items before checkout
   const validateCartItems = useCallback(async () => {
     if (!user) {
@@ -324,6 +351,27 @@ export function usePaystackCheckout({
         return;
       }
       
+      // Determine the producer ID for split code fetching
+      let targetProducerId = producerId;
+      
+      // For cart purchases, get the first producer ID (assuming single producer per cart for now)
+      if (!targetProducerId && cartItems && cartItems.length > 0) {
+        targetProducerId = cartItems[0].beat.producer_id;
+      }
+      
+      // Fetch split code if producer ID is available
+      let dynamicSplitCode = splitCode; // Use passed splitCode as fallback
+      
+      if (targetProducerId) {
+        const fetchedSplitCode = await fetchProducerSplitCode(targetProducerId);
+        if (fetchedSplitCode) {
+          dynamicSplitCode = fetchedSplitCode;
+          console.log('Using fetched split code for payment');
+        } else {
+          console.log('No split code found, proceeding without split');
+        }
+      }
+      
       // Generate a unique reference ID
       const reference = `ORDER_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
       
@@ -385,6 +433,20 @@ export function usePaystackCheckout({
         return;
       }
       
+      // Update order with split code if available
+      if (dynamicSplitCode) {
+        console.log('Updating order with split code');
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ split_code: dynamicSplitCode })
+          .eq('id', orderId);
+        
+        if (updateError) {
+          console.error('Error updating order with split code:', updateError);
+          // Don't fail the payment, just log the error
+        }
+      }
+      
       // Store order data for verification
       localStorage.setItem('pendingOrderId', orderId);
       localStorage.setItem('orderItems', JSON.stringify(orderItemsData));
@@ -405,13 +467,14 @@ export function usePaystackCheckout({
       };
       
       console.log('Starting Paystack payment in LIVE mode');
+      console.log('Split code status:', dynamicSplitCode ? 'INCLUDED' : 'NOT_INCLUDED');
       
       // Mark payment as started
       setPaymentStarted(true);
       
       try {
-        // Create Paystack handler with LIVE configuration using correct public key
-        const handler = window.PaystackPop.setup({
+        // Create Paystack handler configuration
+        const paystackConfig: any = {
           key: 'pk_live_699eb330ab23079fd06b6567349abd7af5a758ba', // Correct live public key from dashboard
           email: user?.email || '',
           amount: totalAmount * 100, // Convert to kobo
@@ -425,7 +488,16 @@ export function usePaystackCheckout({
           frame: true,
           embed: false,
           container: undefined, // Make sure we don't set a container
-        });
+        };
+        
+        // Include split code if available
+        if (dynamicSplitCode) {
+          paystackConfig.split_code = dynamicSplitCode;
+          console.log('Added split code to Paystack configuration');
+        }
+        
+        // Create Paystack handler with LIVE configuration
+        const handler = window.PaystackPop.setup(paystackConfig);
         
         paystackHandlerRef.current = handler;
         
