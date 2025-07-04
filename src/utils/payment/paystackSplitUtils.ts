@@ -68,7 +68,7 @@ export const createProducerSubaccount = async (producerId: string) => {
 
 export const updateProducerBankDetails = async (producerId: string, bankDetails: ProducerBankDetails) => {
   try {
-    console.log('Updating producer bank details with LIVE key for producer:', producerId);
+    console.log('Updating producer bank details with LIVE key for producer:', producerId, bankDetails);
     
     const response = await supabase.functions.invoke('paystack-split', {
       body: {
@@ -79,13 +79,26 @@ export const updateProducerBankDetails = async (producerId: string, bankDetails:
       }
     });
 
+    console.log('Paystack split response:', response);
+
     if (response.error) {
-      console.error('Error updating bank details:', response.error);
+      console.error('Error from paystack-split function:', response.error);
       throw new Error(`Failed to update bank details: ${response.error.message}`);
     }
 
-    console.log('Bank details updated successfully in LIVE mode');
-    return response.data;
+    // Check for API error in response data
+    if (response.data && !response.data.success) {
+      console.error('Paystack API error:', response.data.error);
+      throw new Error(`Paystack API error: ${response.data.error}`);
+    }
+
+    if (response.data && response.data.success) {
+      console.log('Bank details updated successfully in LIVE mode:', response.data);
+      return response.data;
+    } else {
+      console.error('Unexpected response format:', response.data);
+      throw new Error('Unexpected response from Paystack API');
+    }
   } catch (error) {
     console.error('Error updating producer bank details:', error);
     throw error;

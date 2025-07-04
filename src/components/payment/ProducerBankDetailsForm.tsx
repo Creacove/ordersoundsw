@@ -202,28 +202,38 @@ export function ProducerBankDetailsForm({
       // Try to create/update Paystack subaccount with live key
       try {
         console.log('Creating/updating Paystack subaccount in LIVE mode');
-        await updateBankDetails(producerId, {
+        const result = await updateBankDetails(producerId, {
           bankCode: values.bank_code,
           accountNumber: values.account_number,
         });
-        console.log('Subaccount operation completed successfully in LIVE mode');
+        
+        if (result && result.success) {
+          console.log('Subaccount operation completed successfully in LIVE mode:', result);
+          
+          toast({
+            title: "Success",
+            description: "Bank details and Paystack subaccount updated successfully",
+          });
+        } else {
+          console.warn('Subaccount operation completed with warnings:', result);
+          toast({
+            title: "Success",
+            description: "Bank details saved. Paystack integration may need manual review.",
+            variant: "default",
+          });
+        }
       } catch (splitError) {
         console.error("Error updating Paystack split account:", splitError);
         // Continue even if Paystack update fails - we've updated the database
         toast({
           title: "Warning",
-          description: "Bank details saved but Paystack integration may need manual review.",
+          description: `Bank details saved but Paystack integration failed: ${splitError.message}`,
           variant: "default",
         });
       }
 
       setIsEditMode(false);
       setVerificationWarning(null);
-
-      toast({
-        title: "Success",
-        description: "Bank details saved successfully",
-      });
 
       if (onSuccess) {
         onSuccess();
@@ -232,7 +242,7 @@ export function ProducerBankDetailsForm({
       console.error("Error saving bank details:", error);
       toast({
         title: "Error",
-        description: "Failed to save bank details. Please try again.",
+        description: `Failed to save bank details: ${error.message}`,
         variant: "destructive",
       });
     }

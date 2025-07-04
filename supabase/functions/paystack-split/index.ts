@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -262,6 +261,8 @@ serve(async (req) => {
       requestBody = await req.json();
     }
     
+    console.log(`Processing Paystack split action: ${action}`, { method: req.method });
+    
     // Handle webhook
     if (action === 'webhook') {
       const signature = req.headers.get('x-paystack-signature');
@@ -376,6 +377,7 @@ serve(async (req) => {
       const { producerId } = requestBody;
       
       if (!producerId) {
+        console.error('Missing producer ID');
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -410,11 +412,16 @@ serve(async (req) => {
         );
       }
       
+      // Validate required fields for subaccount creation
       if (!producer.bank_code || !producer.account_number) {
+        console.error('Missing bank details for producer:', producerId, {
+          hasBankCode: !!producer.bank_code,
+          hasAccountNumber: !!producer.account_number
+        });
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: 'Producer bank details are incomplete',
+            error: 'Producer bank details are incomplete. Please add bank code and account number.',
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -424,54 +431,87 @@ serve(async (req) => {
       }
       
       // Create the subaccount
-      const subaccountData = await createSubaccount(producer, paystackSecretKey);
-      
-      // Update producer record with subaccount code
-      await supabase
-        .from('users')
-        .update({ 
-          paystack_subaccount_code: subaccountData.subaccount_code,
-          verified_account_name: subaccountData.account_name,
-        })
-        .eq('id', producerId);
-      
-      // Create transaction split
-      const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code, paystackSecretKey);
-      
-      // Save split code to producer record
-      await supabase
-        .from('users')
-        .update({ 
-          paystack_split_code: splitData.split_code,
-        })
-        .eq('id', producerId);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          data: {
-            subaccount_code: subaccountData.subaccount_code,
-            split_code: splitData.split_code,
-            account_name: subaccountData.account_name,
-            bank_name: subaccountData.bank_name,
-          },
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
+      try {
+        const subaccountData = await createSubaccount(producer, paystackSecretKey);
+        
+        // Update producer record with subaccount code
+        await supabase
+          .from('users')
+          .update({ 
+            paystack_subaccount_code: subaccountData.subaccount_code,
+            verified_account_name: subaccountData.account_name,
+          })
+          .eq('id', producerId);
+        
+        // Create transaction split
+        const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code, paystackSecretKey);
+        
+        // Save split code to producer record
+        await supabase
+          .from('users')
+          .update({ 
+            paystack_split_code: splitData.split_code,
+          })
+          .eq('id', producerId);
+        
+        console.log('Subaccount and split created successfully in LIVE mode for producer:', producerId);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            data: {
+              subaccount_code: subaccountData.subaccount_code,
+              split_code: splitData.split_code,
+              account_name: subaccountData.account_name,
+              bank_name: subaccountData.bank_name,
+            },
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        );
+      } catch (error) {
+        console.error('Error in subaccount creation process:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Failed to create subaccount: ${error.message}`,
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
     }
     
     // Update subaccount
-    if (action === 'update-subaccount' && req.method === 'PUT') {
+    if (action === 'update-subaccount' && req.method === 'POST') {
       const { producerId, bankCode, accountNumber } = requestBody;
       
+      console.log('Update subaccount request:', { producerId, bankCode, accountNumber });
+      
       if (!producerId) {
+        console.error('Missing producer ID for update');
         return new Response(
           JSON.stringify({ 
             success: false, 
             error: 'Producer ID is required',
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+      
+      if (!bankCode || !accountNumber) {
+        console.error('Missing bank details for update:', { bankCode, accountNumber });
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Bank code and account number are required',
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -489,7 +529,7 @@ serve(async (req) => {
         .single();
       
       if (producerError || !producer) {
-        console.error('Error fetching producer:', producerError);
+        console.error('Error fetching producer for update:', producerError);
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -502,11 +542,127 @@ serve(async (req) => {
         );
       }
       
+      // If producer doesn't have a subaccount, create one instead of updating
       if (!producer.paystack_subaccount_code) {
+        console.log('Producer has no subaccount, creating new one');
+        
+        // Update producer with new bank details first
+        await supabase
+          .from('users')
+          .update({ 
+            bank_code: bankCode,
+            account_number: accountNumber,
+          })
+          .eq('id', producerId);
+        
+        // Fetch updated producer data
+        const { data: updatedProducer } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', producerId)
+          .single();
+        
+        try {
+          // Create the subaccount
+          const subaccountData = await createSubaccount(updatedProducer, paystackSecretKey);
+          
+          // Update producer record with subaccount code
+          await supabase
+            .from('users')
+            .update({ 
+              paystack_subaccount_code: subaccountData.subaccount_code,
+              verified_account_name: subaccountData.account_name,
+            })
+            .eq('id', producerId);
+          
+          // Create transaction split
+          const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code, paystackSecretKey);
+          
+          // Save split code to producer record
+          await supabase
+            .from('users')
+            .update({ 
+              paystack_split_code: splitData.split_code,
+            })
+            .eq('id', producerId);
+          
+          console.log('New subaccount and split created successfully in LIVE mode');
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              data: {
+                subaccount_code: subaccountData.subaccount_code,
+                split_code: splitData.split_code,
+                account_name: subaccountData.account_name,
+                bank_name: subaccountData.bank_name,
+                created: true
+              },
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            }
+          );
+        } catch (error) {
+          console.error('Error creating new subaccount:', error);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: `Failed to create subaccount: ${error.message}`,
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+            }
+          );
+        }
+      }
+      
+      // Update existing subaccount
+      try {
+        const updates = {
+          settlement_bank: bankCode,
+          account_number: accountNumber,
+        };
+        
+        const updatedSubaccount = await updateSubaccount(
+          producer.paystack_subaccount_code, 
+          updates, 
+          paystackSecretKey
+        );
+        
+        // Update producer record with new bank details
+        await supabase
+          .from('users')
+          .update({ 
+            bank_code: bankCode,
+            account_number: accountNumber,
+            verified_account_name: updatedSubaccount.account_name,
+          })
+          .eq('id', producerId);
+        
+        console.log('Subaccount updated successfully in LIVE mode');
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            data: {
+              ...updatedSubaccount,
+              updated: true
+            },
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        );
+      } catch (error) {
+        console.error('Error updating subaccount:', error);
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: 'Producer does not have a subaccount',
+            error: `Failed to update subaccount: ${error.message}`,
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -514,39 +670,6 @@ serve(async (req) => {
           }
         );
       }
-      
-      // Update the subaccount
-      const updates = {
-        settlement_bank: bankCode,
-        account_number: accountNumber,
-      };
-      
-      const updatedSubaccount = await updateSubaccount(
-        producer.paystack_subaccount_code, 
-        updates, 
-        paystackSecretKey
-      );
-      
-      // Update producer record with new bank details
-      await supabase
-        .from('users')
-        .update({ 
-          bank_code: bankCode,
-          account_number: accountNumber,
-          verified_account_name: updatedSubaccount.account_name,
-        })
-        .eq('id', producerId);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          data: updatedSubaccount,
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
     }
     
     // Update split
@@ -664,7 +787,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: 'Invalid action',
+        error: 'Invalid action or method',
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -685,3 +808,128 @@ serve(async (req) => {
     );
   }
 });
+
+async function makePaystackRequest(endpoint: string, method: string, body?: any) {
+  const url = `https://api.paystack.co${endpoint}`
+  
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  }
+  
+  if (body && (method === 'POST' || method === 'PUT')) {
+    options.body = JSON.stringify(body)
+  }
+  
+  console.log(`Making Paystack request: ${method} ${url}`)
+  
+  const response = await fetch(url, options)
+  const result = await response.json()
+  
+  // Log mode detection for debugging
+  if (result.data && typeof result.data === 'object') {
+    console.log(`Paystack API response received - Status: ${response.status}`)
+  }
+  
+  return new Response(
+    JSON.stringify(result),
+    { 
+      status: response.status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  )
+}
+
+async function handleFetchBanks() {
+  try {
+    console.log('Fetching banks from Paystack API')
+    return await makePaystackRequest('/bank', 'GET')
+  } catch (error) {
+    console.error('Error fetching banks:', error)
+    return new Response(
+      JSON.stringify({ 
+        error: 'Failed to fetch banks', 
+        details: error.message,
+        // Provide fallback empty data structure
+        data: []
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+}
+
+async function handleResolveAccount(data: any) {
+  try {
+    const { account_number, bank_code } = data
+    if (!account_number || !bank_code) {
+      return new Response(
+        JSON.stringify({ error: 'Missing account_number or bank_code' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`Resolving account: ${account_number} for bank: ${bank_code}`)
+    
+    // First check if bank supports verification
+    const bankResponse = await fetch('https://api.paystack.co/bank', {
+      headers: {
+        'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    
+    if (bankResponse.ok) {
+      const bankData = await bankResponse.json()
+      const bank = bankData.data?.find((b: any) => b.code === bank_code)
+      
+      if (bank && !bank.enabled_for_verification) {
+        console.log(`Bank ${bank_code} does not support verification`)
+        return new Response(
+          JSON.stringify({ 
+            status: false,
+            message: 'Bank does not support account verification',
+            data: null
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+    
+    // Proceed with account resolution
+    return await makePaystackRequest('/bank/resolve', 'POST', {
+      account_number,
+      bank_code
+    })
+  } catch (error) {
+    console.error('Error resolving account:', error)
+    return new Response(
+      JSON.stringify({ 
+        status: false,
+        message: 'Failed to resolve account', 
+        details: error.message,
+        data: null
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+}
+
+async function handleCreateSplit(data: any) {
+  console.log('Creating split with live key')
+  return await makePaystackRequest('/split', 'POST', data)
+}
+
+async function handleUpdateSplit(data: any) {
+  const { id, ...updateData } = data
+  console.log(`Updating split ${id} with live key`)
+  return await makePaystackRequest(`/split/${id}`, 'PUT', updateData)
+}
+
+async function handleFetchSplit(data: any) {
+  const { id } = data
+  console.log(`Fetching split ${id} with live key`)
+  return await makePaystackRequest(`/split/${id}`, 'GET')
+}
