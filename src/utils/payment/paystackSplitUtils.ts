@@ -7,60 +7,38 @@ export interface ProducerBankDetails {
   accountName?: string;
 }
 
-const PAYSTACK_BASE_URL = 'https://api.paystack.co';
-
-// Get the appropriate secret key based on environment
-const getPaystackSecretKey = () => {
-  // Always use live key for production
-  const liveKey = 'PAYSTACK_SECRET_KEY_LIVE';
-  console.log('Using live Paystack secret key for operations');
-  return liveKey;
-};
-
-const makePaystackRequest = async (endpoint: string, method: string = 'GET', data?: any) => {
-  try {
-    console.log(`Making Paystack API request: ${method} ${endpoint}`);
-    
-    const response = await supabase.functions.invoke('paystack-operations', {
-      body: {
-        operation: endpoint.includes('split') ? 'create-split' : 'resolve-account',
-        endpoint,
-        method,
-        data
-      }
-    });
-
-    if (response.error) {
-      throw new Error(`Paystack API error: ${response.error.message}`);
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error('Paystack request failed:', error);
-    throw error;
-  }
-};
+// Always use live key for production operations
+console.log('PaystackSplitUtils: Initializing with live Paystack configuration');
 
 export const fetchSupportedBanks = async () => {
   try {
-    console.log('Fetching supported banks from Paystack');
+    console.log('Fetching supported banks from Paystack via edge function');
     
     const response = await supabase.functions.invoke('paystack-operations', {
       body: {
-        operation: 'fetch-banks',
-        endpoint: '/bank',
-        method: 'GET'
+        operation: 'fetch-banks'
       }
     });
 
     if (response.error) {
+      console.error('Error invoking paystack-operations for banks:', response.error);
       throw new Error(`Failed to fetch banks: ${response.error.message}`);
     }
 
-    return response.data?.data || [];
+    // Handle both successful API responses and error responses
+    if (response.data?.error) {
+      console.error('Paystack API error for banks:', response.data.error);
+      // Return empty array as fallback to prevent UI crashes
+      return [];
+    }
+
+    const banks = response.data?.data || [];
+    console.log(`Successfully fetched ${banks.length} banks from Paystack`);
+    return banks;
   } catch (error) {
     console.error('Error fetching supported banks:', error);
-    throw error;
+    // Return empty array as fallback to prevent UI crashes
+    return [];
   }
 };
 
@@ -76,6 +54,7 @@ export const createProducerSubaccount = async (producerId: string) => {
     });
 
     if (response.error) {
+      console.error('Error creating subaccount:', response.error);
       throw new Error(`Failed to create subaccount: ${response.error.message}`);
     }
 
@@ -101,6 +80,7 @@ export const updateProducerBankDetails = async (producerId: string, bankDetails:
     });
 
     if (response.error) {
+      console.error('Error updating bank details:', response.error);
       throw new Error(`Failed to update bank details: ${response.error.message}`);
     }
 
@@ -125,6 +105,7 @@ export const updateProducerSplitPercentage = async (producerId: string, percenta
     });
 
     if (response.error) {
+      console.error('Error updating split percentage:', response.error);
       throw new Error(`Failed to update split percentage: ${response.error.message}`);
     }
 
@@ -173,6 +154,12 @@ export const resolveAccountNumber = async (accountNumber: string, bankCode: stri
 
     if (response.error) {
       console.error('Account resolution failed:', response.error);
+      return null;
+    }
+
+    // Handle API error responses
+    if (response.data?.error) {
+      console.error('Paystack API error for account resolution:', response.data.error);
       return null;
     }
 
