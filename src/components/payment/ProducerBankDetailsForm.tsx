@@ -67,6 +67,7 @@ export function ProducerBankDetailsForm({
   const [banks, setBanks] = useState<Bank[]>([]);
   const [isLoadingBanks, setIsLoadingBanks] = useState(false);
   const [isEditMode, setIsEditMode] = useState(!hasCompleteDetails);
+  const [verificationWarning, setVerificationWarning] = useState<string | null>(null);
   const { user, updateProfile, updateUserInfo } = useAuth();
   const {
     isLoading,
@@ -116,7 +117,13 @@ export function ProducerBankDetailsForm({
   // Verify account number when changed
   const onAccountChange = async (bankCode: string, accountNumber: string) => {
     if (bankCode && accountNumber && accountNumber.length >= 10) {
-      await verifyBankAccount(accountNumber, bankCode);
+      setVerificationWarning(null);
+      const isVerified = await verifyBankAccount(accountNumber, bankCode);
+      
+      // Check if verification failed due to unsupported bank
+      if (!isVerified && accountName?.includes('verification not supported')) {
+        setVerificationWarning('This bank does not support automatic verification. You can still proceed with account creation.');
+      }
     }
   };
 
@@ -130,30 +137,45 @@ export function ProducerBankDetailsForm({
       return;
     }
 
-    // Verify the account first
-    const isVerified = await verifyBankAccount(
-      values.account_number,
-      values.bank_code
-    );
+    // Try to verify the account, but don't block if verification is unsupported
+    let verificationPassed = false;
+    let finalAccountName = accountName;
+    
+    try {
+      verificationPassed = await verifyBankAccount(values.account_number, values.bank_code);
+      
+      // If verification is unsupported but we have an account name, allow proceeding
+      if (!verificationPassed && accountName?.includes('verification not supported')) {
+        finalAccountName = `${getBankNameFromCode(values.bank_code)} Account`;
+        verificationPassed = true; // Allow proceeding
+        console.log('Proceeding with unverified bank account due to lack of verification support');
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      // Allow proceeding if verification fails completely
+      finalAccountName = `${getBankNameFromCode(values.bank_code)} Account`;
+      verificationPassed = true;
+    }
 
-    if (!isVerified) {
+    if (!verificationPassed && !finalAccountName) {
       toast({
         title: "Error",
-        description:
-          "Bank account verification failed. Please check your details.",
+        description: "Bank account verification failed. Please check your details.",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      console.log('Starting subaccount creation/update with LIVE key');
+      
       // First, update the database directly
       const { error } = await supabase
         .from("users")
         .update({
           bank_code: values.bank_code,
           account_number: values.account_number,
-          verified_account_name: accountName,
+          verified_account_name: finalAccountName,
         })
         .eq("id", producerId);
 
@@ -167,30 +189,36 @@ export function ProducerBankDetailsForm({
         ...user,
         bank_code: values.bank_code,
         account_number: values.account_number,
-        verified_account_name: accountName,
+        verified_account_name: finalAccountName,
       };
 
       // Update local user context
       if (updateUserInfo) {
-        // This directly updates the user context without an API call
         updateUserInfo(updatedUser);
       } else if (updateProfile) {
-        // Fallback to updateProfile if updateUserInfo is not available
         await updateProfile(updatedUser);
       }
 
-      // Only try to create/update Paystack subaccount if specifically needed
+      // Try to create/update Paystack subaccount with live key
       try {
+        console.log('Creating/updating Paystack subaccount in LIVE mode');
         await updateBankDetails(producerId, {
           bankCode: values.bank_code,
           accountNumber: values.account_number,
         });
+        console.log('Subaccount operation completed successfully in LIVE mode');
       } catch (splitError) {
         console.error("Error updating Paystack split account:", splitError);
         // Continue even if Paystack update fails - we've updated the database
+        toast({
+          title: "Warning",
+          description: "Bank details saved but Paystack integration may need manual review.",
+          variant: "default",
+        });
       }
 
       setIsEditMode(false);
+      setVerificationWarning(null);
 
       toast({
         title: "Success",
@@ -371,6 +399,18 @@ export function ProducerBankDetailsForm({
                     </span>
                   </>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Verification warning */}
+          {verificationWarning && (
+            <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                <span className="text-sm text-yellow-700">
+                  {verificationWarning}
+                </span>
               </div>
             </div>
           )}

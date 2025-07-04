@@ -163,9 +163,16 @@ export const resolveAccountNumber = async (accountNumber: string, bankCode: stri
       return null;
     }
 
+    // Handle successful resolution
     if (response.data?.status && response.data.data?.account_name) {
       console.log('Account resolved successfully in LIVE mode');
       return response.data.data.account_name;
+    }
+
+    // Handle banks that don't support verification
+    if (response.data?.status === false && response.data?.message?.includes('verification')) {
+      console.log('Bank does not support verification, proceeding without validation');
+      return 'Account verification not supported for this bank';
     }
 
     return null;
