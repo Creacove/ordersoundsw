@@ -810,12 +810,13 @@ serve(async (req) => {
 });
 
 async function makePaystackRequest(endpoint: string, method: string, body?: any) {
+  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
   const url = `https://api.paystack.co${endpoint}`
   
   const options: RequestInit = {
     method,
     headers: {
-      'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+      'Authorization': `Bearer ${paystackSecretKey}`,
       'Content-Type': 'application/json',
     },
   }
@@ -862,6 +863,8 @@ async function handleFetchBanks() {
 }
 
 async function handleResolveAccount(data: any) {
+  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
+  
   try {
     const { account_number, bank_code } = data
     if (!account_number || !bank_code) {
@@ -873,20 +876,37 @@ async function handleResolveAccount(data: any) {
     
     console.log(`Resolving account: ${account_number} for bank: ${bank_code}`)
     
-    // First check if bank supports verification
-    const bankResponse = await fetch('https://api.paystack.co/bank', {
+    // Directly call the resolve endpoint - let Paystack handle verification support
+    const response = await fetch('https://api.paystack.co/bank/resolve', {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Authorization': `Bearer ${paystackSecretKey}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        account_number,
+        bank_code
+      })
     })
     
-    if (bankResponse.ok) {
-      const bankData = await bankResponse.json()
-      const bank = bankData.data?.find((b: any) => b.code === bank_code)
+    const result = await response.json()
+    
+    if (response.ok && result.status && result.data?.account_name) {
+      console.log('Account resolved successfully in LIVE mode:', result.data.account_name)
+      return new Response(
+        JSON.stringify(result),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Handle specific error cases from Paystack
+    if (!response.ok || !result.status) {
+      const errorMessage = result.message || 'Account resolution failed'
+      console.log(`Account resolution failed: ${errorMessage}`)
       
-      if (bank && !bank.enabled_for_verification) {
-        console.log(`Bank ${bank_code} does not support verification`)
+      // Check if it's a verification not supported error
+      if (errorMessage.toLowerCase().includes('verification') || 
+          errorMessage.toLowerCase().includes('not supported')) {
         return new Response(
           JSON.stringify({ 
             status: false,
@@ -896,13 +916,18 @@ async function handleResolveAccount(data: any) {
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      
+      // Return the actual error from Paystack
+      return new Response(
+        JSON.stringify(result),
+        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
     
-    // Proceed with account resolution
-    return await makePaystackRequest('/bank/resolve', 'POST', {
-      account_number,
-      bank_code
-    })
+    return new Response(
+      JSON.stringify(result),
+      { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   } catch (error) {
     console.error('Error resolving account:', error)
     return new Response(
@@ -912,7 +937,7 @@ async function handleResolveAccount(data: any) {
         details: error.message,
         data: null
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 }
