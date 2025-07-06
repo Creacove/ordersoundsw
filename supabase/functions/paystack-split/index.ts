@@ -11,41 +11,70 @@ const PAYSTACK_API_URL = "https://api.paystack.co";
 const PLATFORM_SHARE_PERCENT = 10; // 10% of the beat price goes to the platform
 const PRODUCER_SHARE_PERCENT = 90; // 90% goes to the producer
 
+async function makePaystackRequest(endpoint: string, method: string, body?: any) {
+  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
+  const url = `https://api.paystack.co${endpoint}`;
+  
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${paystackSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+  };
+  
+  if (body && (method === 'POST' || method === 'PUT')) {
+    options.body = JSON.stringify(body);
+  }
+  
+  console.log(`Making Paystack request: ${method} ${url}`);
+  
+  const response = await fetch(url, options);
+  const result = await response.json();
+  
+  // Log mode detection for debugging
+  if (result.data && typeof result.data === 'object') {
+    console.log(`Paystack API response received - Status: ${response.status}`);
+  }
+  
+  return new Response(
+    JSON.stringify(result),
+    { 
+      status: response.status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
+}
+
 // Function to create a Paystack subaccount for a producer
-async function createSubaccount(producer: any, paystackSecretKey: string) {
+async function createSubaccount(producer: any) {
   try {
     console.log(`Creating subaccount for producer: ${producer.id}`);
     
-    const response = await fetch(`${PAYSTACK_API_URL}/subaccount`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${paystackSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        business_name: producer.producer_name || producer.full_name || `Producer ${producer.id}`,
-        settlement_bank: producer.bank_code,
-        account_number: producer.account_number,
-        percentage_charge: 0, // We will handle the split via split payment, not via subaccount charge
-        description: `Producer subaccount for OrderSOUNDS platform`,
-        primary_contact_email: producer.email,
-        primary_contact_name: producer.full_name,
-      }),
-    });
+    const body = {
+      business_name: producer.producer_name || producer.full_name || `Producer ${producer.id}`,
+      settlement_bank: producer.bank_code,
+      account_number: producer.account_number,
+      percentage_charge: 0, // We will handle the split via split payment, not via subaccount charge
+      description: `Producer subaccount for OrderSOUNDS platform`,
+      primary_contact_email: producer.email,
+      primary_contact_name: producer.full_name,
+    };
+    
+    const response = await makePaystackRequest('/subaccount', 'POST', body);
+    const result = await response.json();
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Paystack API error:', errorData);
-      throw new Error(`Failed to create subaccount: ${errorData.message || response.statusText}`);
+      console.error('Paystack API error:', result);
+      throw new Error(`Failed to create subaccount: ${result.message || 'Unknown error'}`);
     }
     
-    const data = await response.json();
-    console.log('Subaccount created successfully:', data.data.subaccount_code);
+    console.log('Subaccount created successfully:', result.data.subaccount_code);
     
     return {
-      subaccount_code: data.data.subaccount_code,
-      bank_name: data.data.settlement_bank,
-      account_name: data.data.account_name,
+      subaccount_code: result.data.subaccount_code,
+      bank_name: result.data.settlement_bank,
+      account_name: result.data.account_name,
     };
   } catch (error) {
     console.error('Error creating subaccount:', error);
@@ -54,42 +83,36 @@ async function createSubaccount(producer: any, paystackSecretKey: string) {
 }
 
 // Function to create a transaction split
-async function createTransactionSplit(producerId: string, subaccountCode: string, paystackSecretKey: string) {
+async function createTransactionSplit(producerId: string, subaccountCode: string) {
   try {
     console.log(`Creating transaction split for producer: ${producerId}`);
     
-    const response = await fetch(`${PAYSTACK_API_URL}/split`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${paystackSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: `Beat Sale Split for Producer ${producerId}`,
-        type: "percentage",
-        currency: "NGN",
-        subaccounts: [
-          {
-            subaccount: subaccountCode,
-            share: PRODUCER_SHARE_PERCENT,
-          }
-        ],
-        bearer_type: "account", // Main account bears the fees
-        bearer_subaccount: null,
-      }),
-    });
+    const body = {
+      name: `Beat Sale Split for Producer ${producerId}`,
+      type: "percentage",
+      currency: "NGN",
+      subaccounts: [
+        {
+          subaccount: subaccountCode,
+          share: PRODUCER_SHARE_PERCENT,
+        }
+      ],
+      bearer_type: "account", // Main account bears the fees
+      bearer_subaccount: null,
+    };
+    
+    const response = await makePaystackRequest('/split', 'POST', body);
+    const result = await response.json();
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Paystack API error:', errorData);
-      throw new Error(`Failed to create transaction split: ${errorData.message || response.statusText}`);
+      console.error('Paystack API error:', result);
+      throw new Error(`Failed to create transaction split: ${result.message || 'Unknown error'}`);
     }
     
-    const data = await response.json();
-    console.log('Transaction split created successfully:', data.data.split_code);
+    console.log('Transaction split created successfully:', result.data.split_code);
     
     return {
-      split_code: data.data.split_code,
+      split_code: result.data.split_code,
       share: PRODUCER_SHARE_PERCENT,
     };
   } catch (error) {
@@ -99,24 +122,17 @@ async function createTransactionSplit(producerId: string, subaccountCode: string
 }
 
 // Function to fetch all subaccounts
-async function fetchSubaccounts(paystackSecretKey: string) {
+async function fetchSubaccounts() {
   try {
-    const response = await fetch(`${PAYSTACK_API_URL}/subaccount`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${paystackSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await makePaystackRequest('/subaccount', 'GET');
+    const result = await response.json();
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Paystack API error:', errorData);
-      throw new Error(`Failed to fetch subaccounts: ${errorData.message || response.statusText}`);
+      console.error('Paystack API error:', result);
+      throw new Error(`Failed to fetch subaccounts: ${result.message || 'Unknown error'}`);
     }
     
-    const data = await response.json();
-    return data.data;
+    return result.data;
   } catch (error) {
     console.error('Error fetching subaccounts:', error);
     throw error;
@@ -124,24 +140,17 @@ async function fetchSubaccounts(paystackSecretKey: string) {
 }
 
 // Function to fetch all transaction splits
-async function fetchSplits(paystackSecretKey: string) {
+async function fetchSplits() {
   try {
-    const response = await fetch(`${PAYSTACK_API_URL}/split`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${paystackSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await makePaystackRequest('/split', 'GET');
+    const result = await response.json();
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Paystack API error:', errorData);
-      throw new Error(`Failed to fetch splits: ${errorData.message || response.statusText}`);
+      console.error('Paystack API error:', result);
+      throw new Error(`Failed to fetch splits: ${result.message || 'Unknown error'}`);
     }
     
-    const data = await response.json();
-    return data.data;
+    return result.data;
   } catch (error) {
     console.error('Error fetching splits:', error);
     throw error;
@@ -149,25 +158,17 @@ async function fetchSplits(paystackSecretKey: string) {
 }
 
 // Function to update a subaccount
-async function updateSubaccount(subaccountCode: string, updates: any, paystackSecretKey: string) {
+async function updateSubaccount(subaccountCode: string, updates: any) {
   try {
-    const response = await fetch(`${PAYSTACK_API_URL}/subaccount/${subaccountCode}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${paystackSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
+    const response = await makePaystackRequest(`/subaccount/${subaccountCode}`, 'PUT', updates);
+    const result = await response.json();
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Paystack API error:', errorData);
-      throw new Error(`Failed to update subaccount: ${errorData.message || response.statusText}`);
+      console.error('Paystack API error:', result);
+      throw new Error(`Failed to update subaccount: ${result.message || 'Unknown error'}`);
     }
     
-    const data = await response.json();
-    return data.data;
+    return result.data;
   } catch (error) {
     console.error('Error updating subaccount:', error);
     throw error;
@@ -175,25 +176,17 @@ async function updateSubaccount(subaccountCode: string, updates: any, paystackSe
 }
 
 // Function to update a transaction split
-async function updateSplit(splitCode: string, updates: any, paystackSecretKey: string) {
+async function updateSplit(splitCode: string, updates: any) {
   try {
-    const response = await fetch(`${PAYSTACK_API_URL}/split/${splitCode}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${paystackSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
+    const response = await makePaystackRequest(`/split/${splitCode}`, 'PUT', updates);
+    const result = await response.json();
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Paystack API error:', errorData);
-      throw new Error(`Failed to update split: ${errorData.message || response.statusText}`);
+      console.error('Paystack API error:', result);
+      throw new Error(`Failed to update split: ${result.message || 'Unknown error'}`);
     }
     
-    const data = await response.json();
-    return data.data;
+    return result.data;
   } catch (error) {
     console.error('Error updating split:', error);
     throw error;
@@ -432,7 +425,7 @@ serve(async (req) => {
       
       // Create the subaccount
       try {
-        const subaccountData = await createSubaccount(producer, paystackSecretKey);
+        const subaccountData = await createSubaccount(producer);
         
         // Update producer record with subaccount code
         await supabase
@@ -444,7 +437,7 @@ serve(async (req) => {
           .eq('id', producerId);
         
         // Create transaction split
-        const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code, paystackSecretKey);
+        const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code);
         
         // Save split code to producer record
         await supabase
@@ -564,7 +557,7 @@ serve(async (req) => {
         
         try {
           // Create the subaccount
-          const subaccountData = await createSubaccount(updatedProducer, paystackSecretKey);
+          const subaccountData = await createSubaccount(updatedProducer);
           
           // Update producer record with subaccount code
           await supabase
@@ -576,7 +569,7 @@ serve(async (req) => {
             .eq('id', producerId);
           
           // Create transaction split
-          const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code, paystackSecretKey);
+          const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code);
           
           // Save split code to producer record
           await supabase
@@ -628,8 +621,7 @@ serve(async (req) => {
         
         const updatedSubaccount = await updateSubaccount(
           producer.paystack_subaccount_code, 
-          updates, 
-          paystackSecretKey
+          updates
         );
         
         // Update producer record with new bank details
@@ -736,8 +728,7 @@ serve(async (req) => {
       
       const updatedSplit = await updateSplit(
         producer.paystack_split_code, 
-        updates, 
-        paystackSecretKey
+        updates
       );
       
       return new Response(
@@ -754,7 +745,7 @@ serve(async (req) => {
     
     // Fetch all subaccounts for admin
     if (action === 'subaccounts' && req.method === 'GET') {
-      const subaccounts = await fetchSubaccounts(paystackSecretKey);
+      const subaccounts = await fetchSubaccounts();
       
       return new Response(
         JSON.stringify({ 
@@ -770,7 +761,7 @@ serve(async (req) => {
     
     // Fetch all splits for admin
     if (action === 'splits' && req.method === 'GET') {
-      const splits = await fetchSplits(paystackSecretKey);
+      const splits = await fetchSplits();
       
       return new Response(
         JSON.stringify({ 
