@@ -1,364 +1,212 @@
+import { useState, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_PROGRAM_ID, transfer } from "@solana/spl-token";
+import { clusterApiUrl, Connection, Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { useRouter } from "next/navigation";
+import { SOLANA_NETWORK } from "@/config";
+import { v4 as uuidv4 } from 'uuid';
+import { supabase } from "@/integrations/supabase/client";
+import { useSolanaNotifications } from "./useSolanaNotifications";
 
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import { processUSDCPayment, isValidSolanaAddress, processMultipleUSDCPayments } from '@/utils/payment/usdcTransactions';
-import { supabase } from '@/integrations/supabase/client';
-
-interface ProductData {
-  id: string;
-  title: string;
-  price: number;
-}
-
-export const useSolanaPayment = () => {
-  const { connection } = useConnection();
-  const wallet = useWallet();
+export function useSolanaPayment() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastTransactionSignature, setLastTransactionSignature] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(true);
-  
-  // Force devnet for testing phase
-  const network = 'devnet';
-  
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      setIsMounted(false);
-    };
-  }, []);
+  const { toast } = useToast();
+  const { clearCart, cart } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
+  const [order, setOrder] = useState<any>(null);
+  const { notifyBuyerPaymentSuccess, notifyProducerSale } = useSolanaNotifications();
 
-  const validatePaymentInputs = useCallback((amount: number, producerWalletAddress: string) => {
-    // Validate wallet connection
-    if (!wallet.connected || !wallet.publicKey) {
-      throw new Error("WALLET_NOT_CONNECTED: Please connect your wallet first");
-    }
-    
-    // Validate amount
-    if (!amount || amount <= 0) {
-      throw new Error("INVALID_AMOUNT: Payment amount must be positive");
-    }
-    
-    // Validate producer wallet address
-    if (!producerWalletAddress) {
-      throw new Error("MISSING_ADDRESS: Producer wallet address is required");
-    }
-    
-    if (!isValidSolanaAddress(producerWalletAddress)) {
-      throw new Error("INVALID_ADDRESS: Creator wallet address is invalid");
-    }
-    
-    return true;
-  }, [wallet]);
-  
-  const makePayment = async (
-    amount: number,
-    producerWalletAddress: string,
-    onSuccess?: (signature: string) => void,
-    onError?: (error: any) => void,
-    productData?: ProductData
-  ) => {
-    if (isProcessing) {
-      toast.warning("Please wait for current transaction to complete");
+  const establishConnection = useCallback(async () => {
+    try {
+      const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), 'confirmed');
+      const version = await connection.getVersion();
+      console.log('Connection to cluster established:', version);
+      return connection;
+    } catch (error) {
+      console.error("Error establishing connection:", error);
+      toast({
+        title: "Error",
+        description: "Failed to connect to Solana network.",
+        variant: "destructive",
+      });
       return null;
     }
+  }, [toast]);
 
-    setIsProcessing(true);
-    
+  const airdropSolIfNeeded = useCallback(async (connection: Connection, publicKey: PublicKey) => {
     try {
-      // Validate inputs
-      validatePaymentInputs(amount, producerWalletAddress);
-
-      console.log(`💳 Processing USDC payment: $${amount} to ${producerWalletAddress} on ${network}`);
-
-      // Process USDC payment using the connection from provider
-      const signature = await processUSDCPayment(
-        amount,
-        producerWalletAddress,
-        connection,
-        wallet,
-        network
-      );
-
-      // Wait for confirmation with better error handling
-      let confirmationAttempts = 0;
-      const maxAttempts = 30; // 60 seconds with 2-second intervals
-      
-      while (confirmationAttempts < maxAttempts) {
-        try {
-          const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-          if (confirmation.value) {
-            if (confirmation.value.err) {
-              throw new Error(`TRANSACTION_FAILED: ${confirmation.value.err.toString()}`);
-            }
-            break;
-          }
-        } catch (error) {
-          console.warn(`Confirmation attempt ${confirmationAttempts + 1} failed:`, error);
-        }
-        
-        confirmationAttempts++;
-        if (confirmationAttempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-      
-      if (confirmationAttempts >= maxAttempts) {
-        throw new Error("TRANSACTION_TIMEOUT: Transaction confirmation timed out");
-      }
-
-      if (isMounted) {
-        setLastTransactionSignature(signature);
-      }
-      
-      // Handle product purchase record if applicable (non-blocking)
-      if (productData) {
-        try {
-          // Get current user for buyer_id
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          
-          if (userError || !user) {
-            console.error("Could not get user for order recording:", userError);
-            // Don't throw - payment was successful, just log the issue
-          } else {
-            // Create order record with buyer_id
-            const { data: orderData, error: orderError } = await supabase
-              .from('orders')
-              .insert({
-                buyer_id: user.id,
-                total_price: amount,
-                status: 'completed',
-                transaction_signatures: [signature],
-                payment_method: 'solana_usdc',
-                currency_used: 'USDC'
-              })
-              .select()
-              .single();
-
-            if (orderError) {
-              console.error("Order creation failed:", orderError);
-              // Don't throw - payment was successful, just log the issue
-            } else {
-              // Create order item record
-              const { error: itemError } = await supabase
-                .from('order_items')
-                .insert({
-                  order_id: orderData.id,
-                  product_id: productData.id,
-                  title: productData.title,
-                  price: productData.price,
-                  quantity: 1,
-                });
-
-              if (itemError) {
-                console.error("Order item creation failed:", itemError);
-                // Attempt to clean up the order if items fail
-                await supabase.from('orders').delete().eq('id', orderData.id);
-              } else {
-                // CRITICAL: Create user_purchased_beats record so it shows in library
-                const { error: purchasedBeatError } = await supabase
-                  .from('user_purchased_beats')
-                  .insert({
-                    user_id: user.id,
-                    beat_id: productData.id,
-                    order_id: orderData.id,
-                    license_type: 'basic', // Default license type for single purchases
-                    currency_code: 'USDC'
-                  });
-
-                if (purchasedBeatError) {
-                  console.error("Failed to create purchased beat record:", purchasedBeatError);
-                  // This is critical for library display but don't fail the payment
-                }
-              }
-            }
-          }
-        } catch (dbError) {
-          console.error("Database recording failed after successful payment:", dbError);
-          // Payment was successful, don't fail the entire operation
-        }
-      }
-      
-      if (isMounted) {
-        toast.success("✅ USDC payment successful!", {
-          description: `Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}`
+      const balance = await connection.getBalance(publicKey);
+      console.log("account balance:", balance);
+      if (balance < 0.5 * LAMPORTS_PER_SOL) {
+        console.log("Airdropping SOL...");
+        const airdropSignature = await connection.requestAirdrop(
+          publicKey,
+          2 * LAMPORTS_PER_SOL,
+        );
+        const result = await connection.confirmTransaction(airdropSignature);
+        console.log(`Airdrop confirmed: ${result}`);
+        toast({
+          title: "Airdrop Successful",
+          description: "Successfully airdropped SOL to your account.",
         });
+      } else {
+        console.log("Sufficient SOL balance, skipping airdrop.");
       }
-      onSuccess?.(signature);
-      return signature;
-    } catch (error: any) {
-      console.error("❌ USDC payment error:", error);
-      const message = error.message.includes(':') 
-        ? error.message.split(':').pop().trim() 
-        : "Payment failed";
-      
-      if (isMounted) {
-        toast.error(`Payment failed: ${message}`);
-      }
-      onError?.(error);
-      throw error;
-    } finally {
-      if (isMounted) {
-        setIsProcessing(false);
-      }
+    } catch (error) {
+      console.error("Error airdropping SOL:", error);
+      toast({
+        title: "Airdrop Failed",
+        description: "Failed to airdrop SOL to your account.",
+        variant: "destructive",
+      });
     }
-  };
+  }, [toast]);
 
-  const makeMultiplePayments = async (
-    items: { price: number, producerWallet: string, id?: string, title?: string }[],
-    onSuccess?: (signatures: string[]) => void,
-    onError?: (error: any) => void,
-    maxRetries = 2
-  ) => {
-    if (isProcessing) {
-      toast.warning("Please wait for current transaction to complete");
+  const createOrder = useCallback(async () => {
+    if (!user || !cart) {
+      toast({
+        title: "Error",
+        description: "User or cart data not available.",
+        variant: "destructive",
+      });
       return null;
     }
 
-    if (!items || items.length === 0) {
-      toast.error("No payment items provided");
-      return null;
-    }
+    const orderId = uuidv4();
+    const paymentReference = uuidv4();
 
-    // Validate all items have valid wallet addresses
-    const invalidItems = items.filter(item => 
-      !item.producerWallet || !isValidSolanaAddress(item.producerWallet)
-    );
-    
-    if (invalidItems.length > 0) {
-      const errorMessage = `${invalidItems.length} items have invalid wallet addresses`;
-      toast.error(errorMessage);
-      onError?.({ message: `INVALID_ADDRESSES: ${errorMessage}` });
-      return null;
-    }
-
-    setIsProcessing(true);
-    
     try {
-      if (!wallet.connected || !wallet.publicKey) {
-        throw new Error("WALLET_NOT_CONNECTED: Please connect your wallet first");
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert([
+          {
+            id: orderId,
+            buyer_id: user.id,
+            total_price: cart.total,
+            currency_used: 'USD',
+            payment_method: 'solana',
+            payment_reference: paymentReference,
+            status: 'pending',
+          },
+        ])
+        .select()
+
+      if (orderError) {
+        console.error("Error creating order:", orderError);
+        toast({
+          title: "Error",
+          description: "Failed to create order.",
+          variant: "destructive",
+        });
+        return null;
       }
 
-      console.log(`💳 Processing ${items.length} USDC payments on ${network} network`);
+      const lineItems = cart.cart_items.map((item) => ({
+        order_id: orderId,
+        beat_id: item.beat_id,
+        quantity: item.quantity,
+      }));
 
-      // Process multiple USDC payments with retry logic
-      let retries = 0;
-      let lastError;
-      let signatures: string[] = [];
+      const { error: lineItemError } = await supabase
+        .from('line_items')
+        .insert(lineItems)
 
-      while (retries <= maxRetries) {
-        try {
-          signatures = await processMultipleUSDCPayments(items, connection, wallet, network);
-          break;
-        } catch (error) {
-          lastError = error;
-          retries++;
-          if (retries <= maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
-            if (isMounted) {
-              toast.info(`Retrying payments (attempt ${retries} of ${maxRetries})...`);
-            }
+      if (lineItemError) {
+        console.error("Error creating line items:", lineItemError);
+        toast({
+          title: "Error",
+          description: "Failed to create line items.",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      toast({
+        title: "Order Created",
+        description: "Order successfully created.",
+      });
+
+      setOrder(orderData[0]);
+      return { orderId, paymentReference };
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create order.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  }, [toast, user, cart]);
+
+  const handlePaymentSuccess = async (signature: string, orderId: string) => {
+    try {
+      setIsProcessing(true);
+      
+      // Update order status to 'completed'
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status: 'completed', transaction_signature: signature })
+        .eq('id', orderId);
+
+      if (updateError) {
+        console.error("Error updating order status:", updateError);
+        toast({
+          title: "Error",
+          description: "Failed to update order status.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Send notifications after successful payment
+      if (user && order && order.line_items) {
+        // Notify buyer
+        await notifyBuyerPaymentSuccess(
+          orderId,
+          order.total_price,
+          order.line_items.length
+        );
+
+        // Notify producers
+        for (const lineItem of order.line_items) {
+          if (lineItem.beats && lineItem.beats.producer_id) {
+            await notifyProducerSale(
+              lineItem.beats.producer_id,
+              lineItem.beats.title,
+              lineItem.beats.basic_license_price_diaspora || 0,
+              lineItem.beats.id
+            );
           }
         }
       }
 
-      if (!signatures.length) {
-        throw lastError || new Error("PAYMENT_FAILED: All retries exhausted");
-      }
-
-      // Record transaction details in database (non-blocking)
-      try {
-        // Get current user for buyer_id  
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          console.error("Could not get user for order recording:", userError);
-        } else {
-          // Create order record with buyer_id
-          const { data: orderData, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-              buyer_id: user.id,
-              total_price: items.reduce((total, item) => total + item.price, 0),
-              status: 'completed',
-              transaction_signatures: signatures,
-              payment_method: 'solana_usdc',
-              currency_used: 'USDC'
-            })
-            .select()
-            .single();
-            
-          if (!orderError && orderData) {
-            // Create order items
-            const orderItems = items.map(item => ({
-              order_id: orderData.id,
-              product_id: item.id || 'unknown',
-              title: item.title || 'Beat purchase',
-              price: item.price,
-              quantity: 1,
-            }));
-            
-            const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-            
-            if (!itemsError) {
-              // CRITICAL: Create user_purchased_beats records for library display
-              const purchasedBeatsRecords = items.map(item => ({
-                user_id: user.id,
-                beat_id: item.id || '',
-                order_id: orderData.id,
-                license_type: 'basic', // Default license type
-                currency_code: 'USDC'
-              })).filter(record => record.beat_id); // Only insert valid beat IDs
-              
-              if (purchasedBeatsRecords.length > 0) {
-                const { error: purchasedBeatsError } = await supabase
-                  .from('user_purchased_beats')
-                  .insert(purchasedBeatsRecords);
-                
-                if (purchasedBeatsError) {
-                  console.error("Failed to create purchased beats records:", purchasedBeatsError);
-                  // Critical for library display but don't fail the payment
-                }
-              }
-            }
-          }
-        }
-      } catch (dbError) {
-        // Don't fail the transaction if database recording fails
-        console.error("Failed to record transaction in database:", dbError);
-      }
-
-      if (isMounted) {
-        setLastTransactionSignature(signatures[signatures.length - 1]);
-        toast.success(`✅ ${signatures.length} USDC payments completed successfully!`);
-      }
-      onSuccess?.(signatures);
-      return signatures;
-    } catch (error: any) {
-      console.error("❌ Multiple USDC payments error:", error);
-      const message = error.message.includes(':') 
-        ? error.message.split(':').pop().trim() 
-        : "Payments failed";
-        
-      if (isMounted) {
-        toast.error(`Payments failed: ${message}`);
-      }
-      onError?.(error);
-      throw error;
+      toast({
+        title: "Payment Successful",
+        description: "Your payment was successfully processed.",
+      });
+      clearCart();
+      router.push(`/profile/${user?.id}/purchases`);
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      toast({
+        title: "Payment Error",
+        description: "An error occurred while processing your payment.",
+        variant: "destructive",
+      });
     } finally {
-      if (isMounted) {
-        setIsProcessing(false);
-      }
+      setIsProcessing(false);
     }
   };
 
   return {
-    makePayment,
-    makeMultiplePayments,
     isProcessing,
-    lastTransactionSignature,
-    isWalletConnected: wallet.connected,
-    walletAddress: wallet.publicKey?.toString(),
-    network
+    establishConnection,
+    airdropSolIfNeeded,
+    createOrder,
+    handlePaymentSuccess,
   };
-};
+}
