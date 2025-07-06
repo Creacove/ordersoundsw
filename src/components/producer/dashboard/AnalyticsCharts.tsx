@@ -63,7 +63,7 @@ export function AnalyticsCharts({ stats, isLoadingStats, currency }: AnalyticsCh
                   <YAxis 
                     fontSize={12}
                     tick={{ fill: '#6b7280' }}
-                    tickFormatter={(value) => formatCurrency(Number(value), currency, true)}
+                    tickFormatter={(value) => formatCurrency(Number(value), currency)}
                   />
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <Tooltip 
