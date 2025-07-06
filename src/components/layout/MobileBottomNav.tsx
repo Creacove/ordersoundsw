@@ -1,3 +1,4 @@
+
 import { Home, Search, ShoppingCart, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -8,10 +9,10 @@ export function MobileBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { cart } = useCart();
+  const { cartItems } = useCart();
 
   // Calculate total items in cart
-  const cartItemsCount = cart?.cart_items?.reduce((total, item) => total + (item.quantity || 1), 0) || 0;
+  const cartItemsCount = cartItems?.length || 0;
 
   const menuItems = [
     {

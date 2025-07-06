@@ -1,21 +1,23 @@
+
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_PROGRAM_ID, transfer } from "@solana/spl-token";
 import { clusterApiUrl, Connection, Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { useRouter } from "next/navigation";
-import { SOLANA_NETWORK } from "@/config";
+import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/integrations/supabase/client";
 import { useSolanaNotifications } from "./useSolanaNotifications";
 
+const SOLANA_NETWORK = 'devnet';
+
 export function useSolanaPayment() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { clearCart, cart } = useCart();
+  const { clearCart, cartItems } = useCart();
   const { user } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<any>(null);
   const { notifyBuyerPaymentSuccess, notifyProducerSale } = useSolanaNotifications();
 
@@ -66,7 +68,7 @@ export function useSolanaPayment() {
   }, [toast]);
 
   const createOrder = useCallback(async () => {
-    if (!user || !cart) {
+    if (!user || !cartItems) {
       toast({
         title: "Error",
         description: "User or cart data not available.",
@@ -79,13 +81,29 @@ export function useSolanaPayment() {
     const paymentReference = uuidv4();
 
     try {
+      const totalAmount = cartItems.reduce((sum, item) => {
+        const beat = item.beat;
+        const licenseType = item.licenseType || 'basic';
+        let price = 0;
+        
+        if (licenseType === 'basic') {
+          price = beat.basic_license_price_diaspora || 0;
+        } else if (licenseType === 'premium') {
+          price = beat.premium_license_price_diaspora || 0;
+        } else if (licenseType === 'exclusive') {
+          price = beat.exclusive_license_price_diaspora || 0;
+        }
+        
+        return sum + price;
+      }, 0);
+
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([
           {
             id: orderId,
             buyer_id: user.id,
-            total_price: cart.total,
+            total_price: totalAmount,
             currency_used: 'USD',
             payment_method: 'solana',
             payment_reference: paymentReference,
@@ -104,10 +122,24 @@ export function useSolanaPayment() {
         return null;
       }
 
-      const lineItems = cart.cart_items.map((item) => ({
+      const lineItems = cartItems.map((item) => ({
         order_id: orderId,
-        beat_id: item.beat_id,
-        quantity: item.quantity,
+        beat_id: item.beatId,
+        currency_code: 'USD',
+        price_charged: (() => {
+          const beat = item.beat;
+          const licenseType = item.licenseType || 'basic';
+          
+          if (licenseType === 'basic') {
+            return beat.basic_license_price_diaspora || 0;
+          } else if (licenseType === 'premium') {
+            return beat.premium_license_price_diaspora || 0;
+          } else if (licenseType === 'exclusive') {
+            return beat.exclusive_license_price_diaspora || 0;
+          }
+          return 0;
+        })(),
+        quantity: 1,
       }));
 
       const { error: lineItemError } = await supabase
@@ -140,7 +172,7 @@ export function useSolanaPayment() {
       });
       return null;
     }
-  }, [toast, user, cart]);
+  }, [toast, user, cartItems]);
 
   const handlePaymentSuccess = async (signature: string, orderId: string) => {
     try {
@@ -162,24 +194,57 @@ export function useSolanaPayment() {
         return;
       }
 
-      // Send notifications after successful payment
-      if (user && order && order.line_items) {
-        // Notify buyer
-        await notifyBuyerPaymentSuccess(
-          orderId,
-          order.total_price,
-          order.line_items.length
-        );
+      // Create user_purchased_beats records
+      if (cartItems && cartItems.length > 0) {
+        const purchasedBeatsRecords = cartItems.map(item => ({
+          user_id: user?.id,
+          beat_id: item.beatId,
+          order_id: orderId,
+          license_type: item.licenseType || 'basic',
+          currency_code: 'USD'
+        }));
 
-        // Notify producers
-        for (const lineItem of order.line_items) {
-          if (lineItem.beats && lineItem.beats.producer_id) {
-            await notifyProducerSale(
-              lineItem.beats.producer_id,
-              lineItem.beats.title,
-              lineItem.beats.basic_license_price_diaspora || 0,
-              lineItem.beats.id
-            );
+        const { error: purchasedBeatsError } = await supabase
+          .from('user_purchased_beats')
+          .insert(purchasedBeatsRecords);
+
+        if (purchasedBeatsError) {
+          console.error("Failed to create purchased beats records:", purchasedBeatsError);
+        }
+
+        // Send notifications after successful payment
+        if (user && order) {
+          // Notify buyer
+          await notifyBuyerPaymentSuccess(
+            orderId,
+            order.total_price,
+            cartItems.length
+          );
+
+          // Notify producers
+          for (const item of cartItems) {
+            if (item.beat && item.beat.producer_id) {
+              const price = (() => {
+                const beat = item.beat;
+                const licenseType = item.licenseType || 'basic';
+                
+                if (licenseType === 'basic') {
+                  return beat.basic_license_price_diaspora || 0;
+                } else if (licenseType === 'premium') {
+                  return beat.premium_license_price_diaspora || 0;
+                } else if (licenseType === 'exclusive') {
+                  return beat.exclusive_license_price_diaspora || 0;
+                }
+                return 0;
+              })();
+
+              await notifyProducerSale(
+                item.beat.producer_id,
+                item.beat.title,
+                price,
+                item.beat.id
+              );
+            }
           }
         }
       }
@@ -189,7 +254,7 @@ export function useSolanaPayment() {
         description: "Your payment was successfully processed.",
       });
       clearCart();
-      router.push(`/profile/${user?.id}/purchases`);
+      navigate(`/profile/${user?.id}/purchases`);
     } catch (error) {
       console.error("Payment processing error:", error);
       toast({
