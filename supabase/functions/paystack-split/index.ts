@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -12,6 +13,7 @@ const PAYSTACK_API_URL = "https://api.paystack.co";
 const PLATFORM_SHARE_PERCENT = 10; // 10% of the beat price goes to the platform
 const PRODUCER_SHARE_PERCENT = 90; // 90% goes to the producer
 
+// Function for external API calls (returns Response wrapper for endpoint responses)
 async function makePaystackRequest(endpoint: string, method: string, body?: any) {
   const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
   const url = `https://api.paystack.co${endpoint}`;
@@ -47,6 +49,38 @@ async function makePaystackRequest(endpoint: string, method: string, body?: any)
   );
 }
 
+// Function for internal use (returns raw Paystack data)
+async function makePaystackApiCall(endpoint: string, method: string, body?: any) {
+  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
+  const url = `https://api.paystack.co${endpoint}`;
+  
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${paystackSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+  };
+  
+  if (body && (method === 'POST' || method === 'PUT')) {
+    options.body = JSON.stringify(body);
+  }
+  
+  console.log(`Making internal Paystack API call: ${method} ${url}`);
+  
+  const response = await fetch(url, options);
+  const result = await response.json();
+  
+  console.log(`Paystack API call completed - Status: ${response.status}, Success: ${result.status}`);
+  
+  if (!response.ok || !result.status) {
+    console.error('Paystack API error:', result);
+    throw new Error(`Paystack API error: ${result.message || 'Unknown error'}`);
+  }
+  
+  return result;
+}
+
 // Function to create a Paystack subaccount for a producer
 async function createSubaccount(producer: any) {
   try {
@@ -62,13 +96,7 @@ async function createSubaccount(producer: any) {
       primary_contact_name: producer.full_name,
     };
     
-    const response = await makePaystackRequest('/subaccount', 'POST', body);
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Paystack API error:', result);
-      throw new Error(`Failed to create subaccount: ${result.message || 'Unknown error'}`);
-    }
+    const result = await makePaystackApiCall('/subaccount', 'POST', body);
     
     console.log('Subaccount created successfully:', result.data.subaccount_code);
     
@@ -102,13 +130,7 @@ async function createTransactionSplit(producerId: string, subaccountCode: string
       bearer_subaccount: null,
     };
     
-    const response = await makePaystackRequest('/split', 'POST', body);
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Paystack API error:', result);
-      throw new Error(`Failed to create transaction split: ${result.message || 'Unknown error'}`);
-    }
+    const result = await makePaystackApiCall('/split', 'POST', body);
     
     console.log('Transaction split created successfully:', result.data.split_code);
     
@@ -125,14 +147,7 @@ async function createTransactionSplit(producerId: string, subaccountCode: string
 // Function to fetch all subaccounts
 async function fetchSubaccounts() {
   try {
-    const response = await makePaystackRequest('/subaccount', 'GET');
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Paystack API error:', result);
-      throw new Error(`Failed to fetch subaccounts: ${result.message || 'Unknown error'}`);
-    }
-    
+    const result = await makePaystackApiCall('/subaccount', 'GET');
     return result.data;
   } catch (error) {
     console.error('Error fetching subaccounts:', error);
@@ -143,14 +158,7 @@ async function fetchSubaccounts() {
 // Function to fetch all transaction splits
 async function fetchSplits() {
   try {
-    const response = await makePaystackRequest('/split', 'GET');
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Paystack API error:', result);
-      throw new Error(`Failed to fetch splits: ${result.message || 'Unknown error'}`);
-    }
-    
+    const result = await makePaystackApiCall('/split', 'GET');
     return result.data;
   } catch (error) {
     console.error('Error fetching splits:', error);
@@ -161,14 +169,7 @@ async function fetchSplits() {
 // Function to update a subaccount
 async function updateSubaccount(subaccountCode: string, updates: any) {
   try {
-    const response = await makePaystackRequest(`/subaccount/${subaccountCode}`, 'PUT', updates);
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Paystack API error:', result);
-      throw new Error(`Failed to update subaccount: ${result.message || 'Unknown error'}`);
-    }
-    
+    const result = await makePaystackApiCall(`/subaccount/${subaccountCode}`, 'PUT', updates);
     return result.data;
   } catch (error) {
     console.error('Error updating subaccount:', error);
@@ -179,14 +180,7 @@ async function updateSubaccount(subaccountCode: string, updates: any) {
 // Function to update a transaction split
 async function updateSplit(splitCode: string, updates: any) {
   try {
-    const response = await makePaystackRequest(`/split/${splitCode}`, 'PUT', updates);
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Paystack API error:', result);
-      throw new Error(`Failed to update split: ${result.message || 'Unknown error'}`);
-    }
-    
+    const result = await makePaystackApiCall(`/split/${splitCode}`, 'PUT', updates);
     return result.data;
   } catch (error) {
     console.error('Error updating split:', error);
@@ -482,8 +476,16 @@ async function handleCreateSubaccount(requestData: any, supabase: any) {
   try {
     const subaccountData = await createSubaccount(producer);
     
+    console.log('Received subaccount data:', subaccountData);
+    
+    // Validate subaccount data before database update
+    if (!subaccountData.subaccount_code) {
+      console.error('No subaccount_code received from Paystack');
+      throw new Error('Invalid subaccount response from Paystack');
+    }
+    
     // Update producer record with subaccount code
-    await supabase
+    const { error: updateError1 } = await supabase
       .from('users')
       .update({ 
         paystack_subaccount_code: subaccountData.subaccount_code,
@@ -491,16 +493,38 @@ async function handleCreateSubaccount(requestData: any, supabase: any) {
       })
       .eq('id', producerId);
     
+    if (updateError1) {
+      console.error('Error updating producer with subaccount code:', updateError1);
+      throw new Error('Failed to save subaccount code to database');
+    }
+    
+    console.log(`Successfully saved subaccount_code: ${subaccountData.subaccount_code} to database`);
+    
     // Create transaction split
     const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code);
     
+    console.log('Received split data:', splitData);
+    
+    // Validate split data before database update
+    if (!splitData.split_code) {
+      console.error('No split_code received from Paystack');
+      throw new Error('Invalid split response from Paystack');
+    }
+    
     // Save split code to producer record
-    await supabase
+    const { error: updateError2 } = await supabase
       .from('users')
       .update({ 
         paystack_split_code: splitData.split_code,
       })
       .eq('id', producerId);
+    
+    if (updateError2) {
+      console.error('Error updating producer with split code:', updateError2);
+      throw new Error('Failed to save split code to database');
+    }
+    
+    console.log(`Successfully saved split_code: ${splitData.split_code} to database`);
     
     console.log('Subaccount and split created successfully in LIVE mode for producer:', producerId);
     
@@ -612,8 +636,16 @@ async function handleUpdateSubaccount(requestData: any, supabase: any) {
       // Create the subaccount
       const subaccountData = await createSubaccount(updatedProducer);
       
+      console.log('Received new subaccount data:', subaccountData);
+      
+      // Validate subaccount data before database update
+      if (!subaccountData.subaccount_code) {
+        console.error('No subaccount_code received from Paystack');
+        throw new Error('Invalid subaccount response from Paystack');
+      }
+      
       // Update producer record with subaccount code
-      await supabase
+      const { error: updateError1 } = await supabase
         .from('users')
         .update({ 
           paystack_subaccount_code: subaccountData.subaccount_code,
@@ -621,16 +653,38 @@ async function handleUpdateSubaccount(requestData: any, supabase: any) {
         })
         .eq('id', producerId);
       
+      if (updateError1) {
+        console.error('Error updating producer with new subaccount code:', updateError1);
+        throw new Error('Failed to save new subaccount code to database');
+      }
+      
+      console.log(`Successfully saved new subaccount_code: ${subaccountData.subaccount_code} to database`);
+      
       // Create transaction split
       const splitData = await createTransactionSplit(producerId, subaccountData.subaccount_code);
       
+      console.log('Received new split data:', splitData);
+      
+      // Validate split data before database update
+      if (!splitData.split_code) {
+        console.error('No split_code received from Paystack');
+        throw new Error('Invalid split response from Paystack');
+      }
+      
       // Save split code to producer record
-      await supabase
+      const { error: updateError2 } = await supabase
         .from('users')
         .update({ 
           paystack_split_code: splitData.split_code,
         })
         .eq('id', producerId);
+      
+      if (updateError2) {
+        console.error('Error updating producer with new split code:', updateError2);
+        throw new Error('Failed to save new split code to database');
+      }
+      
+      console.log(`Successfully saved new split_code: ${splitData.split_code} to database`);
       
       console.log('New subaccount and split created successfully in LIVE mode');
       
