@@ -2,5 +2,5 @@
 project_id = "uoezlwkxhbzajdivrlby"
 app_version = "v1"
 
-[functions.paystack-split]
+[functions.paystack-operations]
 verify_jwt = false
