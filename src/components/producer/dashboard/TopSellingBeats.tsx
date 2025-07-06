@@ -105,7 +105,7 @@ export function TopSellingBeats({ beats }: TopSellingBeatsProps) {
                 </div>
                 <div className="w-10 h-10 rounded overflow-hidden shrink-0">
                   <img
-                    src={beat.cover_image || '/placeholder.svg'}
+                    src={beat.cover_image_url || '/placeholder.svg'}
                     alt={beat.title}
                     className="w-full h-full object-cover"
                   />
