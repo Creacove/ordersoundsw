@@ -4,8 +4,20 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
+import { Dispatch, SetStateAction } from "react";
 
-export function MobileBottomNav() {
+interface MobileBottomNavProps {
+  activeBottomTab?: string;
+  user?: any;
+  itemCount?: number;
+  setIsOpen?: Dispatch<SetStateAction<boolean>>;
+  setActiveBottomTab?: Dispatch<SetStateAction<string>>;
+}
+
+export function MobileBottomNav({ 
+  activeBottomTab: propActiveBottomTab,
+  setActiveBottomTab: propSetActiveBottomTab 
+}: MobileBottomNavProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();

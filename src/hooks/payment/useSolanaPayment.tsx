@@ -83,17 +83,8 @@ export function useSolanaPayment() {
     try {
       const totalAmount = cartItems.reduce((sum, item) => {
         const beat = item.beat;
-        const licenseType = item.licenseType || 'basic';
-        let price = 0;
-        
-        if (licenseType === 'basic') {
-          price = beat.basic_license_price_diaspora || 0;
-        } else if (licenseType === 'premium') {
-          price = beat.premium_license_price_diaspora || 0;
-        } else if (licenseType === 'exclusive') {
-          price = beat.exclusive_license_price_diaspora || 0;
-        }
-        
+        // Default to basic license since CartItem doesn't have licenseType
+        let price = beat.basic_license_price_diaspora || 0;
         return sum + price;
       }, 0);
 
@@ -124,21 +115,9 @@ export function useSolanaPayment() {
 
       const lineItems = cartItems.map((item) => ({
         order_id: orderId,
-        beat_id: item.beatId,
+        beat_id: item.beat.id,
         currency_code: 'USD',
-        price_charged: (() => {
-          const beat = item.beat;
-          const licenseType = item.licenseType || 'basic';
-          
-          if (licenseType === 'basic') {
-            return beat.basic_license_price_diaspora || 0;
-          } else if (licenseType === 'premium') {
-            return beat.premium_license_price_diaspora || 0;
-          } else if (licenseType === 'exclusive') {
-            return beat.exclusive_license_price_diaspora || 0;
-          }
-          return 0;
-        })(),
+        price_charged: item.beat.basic_license_price_diaspora || 0,
         quantity: 1,
       }));
 
@@ -181,7 +160,7 @@ export function useSolanaPayment() {
       // Update order status to 'completed'
       const { error: updateError } = await supabase
         .from('orders')
-        .update({ status: 'completed', transaction_signature: signature })
+        .update({ status: 'completed', transaction_signatures: [signature] })
         .eq('id', orderId);
 
       if (updateError) {
@@ -198,9 +177,9 @@ export function useSolanaPayment() {
       if (cartItems && cartItems.length > 0) {
         const purchasedBeatsRecords = cartItems.map(item => ({
           user_id: user?.id,
-          beat_id: item.beatId,
+          beat_id: item.beat.id,
           order_id: orderId,
-          license_type: item.licenseType || 'basic',
+          license_type: 'basic', // Default license type
           currency_code: 'USD'
         }));
 
@@ -224,19 +203,7 @@ export function useSolanaPayment() {
           // Notify producers
           for (const item of cartItems) {
             if (item.beat && item.beat.producer_id) {
-              const price = (() => {
-                const beat = item.beat;
-                const licenseType = item.licenseType || 'basic';
-                
-                if (licenseType === 'basic') {
-                  return beat.basic_license_price_diaspora || 0;
-                } else if (licenseType === 'premium') {
-                  return beat.premium_license_price_diaspora || 0;
-                } else if (licenseType === 'exclusive') {
-                  return beat.exclusive_license_price_diaspora || 0;
-                }
-                return 0;
-              })();
+              const price = item.beat.basic_license_price_diaspora || 0;
 
               await notifyProducerSale(
                 item.beat.producer_id,
