@@ -1,3 +1,4 @@
+
 import { supabase } from "./supabase";
 import { calculatePercentageChange } from "./utils";
 
@@ -54,7 +55,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     // Calculate total favorites
     const totalFavorites = producerBeats.reduce((sum, beat) => sum + (beat.favorites_count || 0), 0);
     
-    // Get total sales and revenue from COMPLETED purchases only
+    // Get total sales and revenue from purchases linked to producer's beats
     const { data: salesData, error: salesError } = await supabase
       .from('user_purchased_beats')
       .select(`
@@ -62,20 +63,21 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
         beat_id, 
         purchase_date, 
         order_id, 
-        orders!inner(id, total_price, currency_used, payment_method, status)
+        orders(id, total_price, currency_used, payment_method, status)
       `)
-      .in('beat_id', beatIds)
-      .eq('orders.status', 'completed'); // Only get completed orders
+      .in('beat_id', beatIds);
     
     if (salesError) throw salesError;
     
-    // All sales are now guaranteed to be completed
-    const completedSales = salesData || [];
+    // Filter completed sales only
+    const completedSales = salesData.filter(sale => 
+      sale.orders && sale.orders.status === 'completed'
+    );
     
-    // Calculate total beats sold (count of completed sales)
+    // Calculate total beats sold
     const beatsSold = completedSales.length;
     
-    // Calculate total revenue from completed orders only
+    // Calculate total revenue from completed orders
     let totalRevenue = 0;
     let ngnCount = 0;
     let usdCount = 0;
@@ -85,11 +87,13 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     
     // Process sales data to calculate revenue
     completedSales.forEach(sale => {
+      // TypeScript safety: Check if orders property exists and handle it properly
       if (sale.orders) {
         const orderData = sale.orders as any;
         
-        // Only count each order once
-        if (orderData.id && !processedOrderIds.has(orderData.id)) {
+        // Only count each order once and check if it's completed
+        if (orderData.id && !processedOrderIds.has(orderData.id) && orderData.status === 'completed') {
+          // Add order total to revenue
           totalRevenue += (orderData.total_price || 0);
           processedOrderIds.add(orderData.id);
           
@@ -131,7 +135,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
       return purchaseDate >= previousMonthStart && purchaseDate < currentMonthStart;
     });
     
-    // Calculate plays and favorites changes (keep existing logic)
+    // Calculate plays for current month
     const { data: currentMonthPlayData } = await supabase
       .from('beats')
       .select('plays')
@@ -140,6 +144,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     
     const currentMonthPlays = currentMonthPlayData?.reduce((sum, beat) => sum + (beat.plays || 0), 0) || 0;
     
+    // Calculate plays for previous month
     const { data: previousMonthPlayData } = await supabase
       .from('beats')
       .select('plays')
@@ -149,6 +154,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     
     const previousMonthPlays = previousMonthPlayData?.reduce((sum, beat) => sum + (beat.plays || 0), 0) || 0;
     
+    // Calculate favorites for current month
     const { data: currentMonthFavData } = await supabase
       .from('beats')
       .select('favorites_count')
@@ -157,6 +163,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     
     const currentMonthFavorites = currentMonthFavData?.reduce((sum, beat) => sum + (beat.favorites_count || 0), 0) || 0;
     
+    // Calculate favorites for previous month
     const { data: previousMonthFavData } = await supabase
       .from('beats')
       .select('favorites_count')
@@ -166,7 +173,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     
     const previousMonthFavorites = previousMonthFavData?.reduce((sum, beat) => sum + (beat.favorites_count || 0), 0) || 0;
     
-    // Calculate revenue for current month (from unique completed orders)
+    // Calculate revenue for current month (from unique orders)
     let thisMonthRevenue = 0;
     const thisMonthOrderIds = new Set();
     
@@ -174,14 +181,14 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
       if (sale.orders) {
         const orderData = sale.orders as any;
         
-        if (orderData.id && !thisMonthOrderIds.has(orderData.id)) {
+        if (orderData.id && !thisMonthOrderIds.has(orderData.id) && orderData.status === 'completed') {
           thisMonthRevenue += (orderData.total_price || 0);
           thisMonthOrderIds.add(orderData.id);
         }
       }
     });
     
-    // Calculate revenue for last month (from unique completed orders)
+    // Calculate revenue for last month (from unique orders)
     let lastMonthRevenue = 0;
     const lastMonthOrderIds = new Set();
     
@@ -189,7 +196,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
       if (sale.orders) {
         const orderData = sale.orders as any;
         
-        if (orderData.id && !lastMonthOrderIds.has(orderData.id)) {
+        if (orderData.id && !lastMonthOrderIds.has(orderData.id) && orderData.status === 'completed') {
           lastMonthRevenue += (orderData.total_price || 0);
           lastMonthOrderIds.add(orderData.id);
         }
@@ -202,13 +209,13 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     const playsChange = calculatePercentageChange(currentMonthPlays, previousMonthPlays);
     const favoritesChange = calculatePercentageChange(currentMonthFavorites, previousMonthFavorites);
     
-    // Generate revenue by month data (only from completed orders)
-    const revenueByMonth = await generateMonthlyRevenueData(completedSales, 6);
+    // Generate revenue by month data
+    const revenueByMonth = await generateMonthlyRevenueData(salesData, 6);
     
     // Generate plays by month data
     const playsByMonth = await generateMonthlyPlaysData(producerId, 6);
     
-    // Generate genre distribution data (fixed to properly count genres)
+    // Generate genre distribution data
     const genreDistribution = generateGenreDistribution(producerBeats);
     
     return {
@@ -368,17 +375,13 @@ async function generateMonthlyPlaysData(producerId: string, monthsCount: number 
   }
 }
 
-// Fixed helper function to generate genre distribution data
+// Helper function to generate genre distribution data
 function generateGenreDistribution(beats: any[]): GenreDataPoint[] {
-  if (!beats || beats.length === 0) {
-    return [];
-  }
-
   const genreCounts: Record<string, number> = {};
   
   beats.forEach(beat => {
-    if (beat.genre && beat.genre.trim()) {
-      const genre = beat.genre.trim();
+    if (beat.genre) {
+      const genre = beat.genre;
       genreCounts[genre] = (genreCounts[genre] || 0) + 1;
     }
   });

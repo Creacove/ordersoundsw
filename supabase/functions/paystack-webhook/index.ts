@@ -69,7 +69,6 @@ serve(async (req) => {
           id,
           buyer_id,
           total_price,
-          currency_used,
           line_items (
             beat_id,
             beats (
@@ -82,11 +81,6 @@ serve(async (req) => {
                 stage_name
               )
             )
-          ),
-          users (
-            id,
-            full_name,
-            email
           )
         `)
         .eq('payment_reference', reference)
@@ -124,32 +118,6 @@ serve(async (req) => {
 
       if (paymentError) {
         console.error('Error creating payment record:', paymentError);
-      }
-
-      // Send notification to buyer
-      if (orderData.users) {
-        const buyer = orderData.users;
-        const currencySymbol = orderData.currency_used === 'NGN' ? '₦' : '$';
-        const beatCount = orderData.line_items?.length || 0;
-        
-        console.log(`Sending payment success notification to buyer: ${buyer.id}`);
-        
-        const { error: buyerNotificationError } = await supabase
-          .from('notifications')
-          .insert({
-            recipient_id: buyer.id,
-            title: 'Payment Successful',
-            body: `Your payment of ${currencySymbol}${(data.amount / 100).toLocaleString()} for ${beatCount} beat${beatCount > 1 ? 's' : ''} has been processed successfully.`,
-            notification_type: 'payment',
-            related_entity_type: 'order',
-            related_entity_id: orderData.id,
-          });
-
-        if (buyerNotificationError) {
-          console.error(`Error sending notification to buyer ${buyer.id}:`, buyerNotificationError);
-        } else {
-          console.log(`Payment notification sent successfully to buyer: ${buyer.full_name}`);
-        }
       }
 
       // Send notifications to producers for each beat sold
