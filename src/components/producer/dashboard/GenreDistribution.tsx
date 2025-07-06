@@ -6,7 +6,8 @@ import {
   Pie,
   Cell,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Tooltip
 } from "recharts";
 
 const COLORS = ["#7C3AED", "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE"];
@@ -17,33 +18,54 @@ interface GenreDistributionProps {
 }
 
 export function GenreDistribution({ stats, isLoadingStats }: GenreDistributionProps) {
+  const hasGenreData = stats?.genreDistribution && stats.genreDistribution.length > 0;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Genre Distribution</CardTitle>
-        <CardDescription>Sales by genre</CardDescription>
+        <CardDescription>Distribution of your beats by genre</CardDescription>
       </CardHeader>
       <CardContent className="h-[300px] flex items-center justify-center">
         {isLoadingStats ? (
-          <div>Loading...</div>
+          <div className="text-sm text-muted-foreground">Loading genre data...</div>
+        ) : !hasGenreData ? (
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">No genre data available</p>
+            <p className="text-xs text-muted-foreground">Add genres to your beats to see distribution</p>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <RechartsPieChart>
               <Pie
-                data={stats?.genreDistribution || []}
+                data={stats.genreDistribution}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => 
+                  `${name} ${(percent * 100).toFixed(0)}%`
+                }
               >
-                {stats?.genreDistribution?.map((entry, index) => (
+                {stats.genreDistribution.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Legend />
+              <Tooltip 
+                formatter={(value, name) => [value, `${name} beats`]}
+                contentStyle={{ 
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px'
+                }}
+              />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36}
+                wrapperStyle={{ fontSize: '12px' }}
+              />
             </RechartsPieChart>
           </ResponsiveContainer>
         )}
