@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { BeatSalesTable } from "@/components/producer/dashboard/BeatSalesTable";
 
 export default function Royalties() {
   const { user, currency } = useAuth();
@@ -193,8 +194,13 @@ export default function Royalties() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Beat Sales Performance Table */}
+        <div className="mt-6 md:mt-10">
+          <BeatSalesTable producerId={user?.id || ''} currency={currency} />
+        </div>
         
-        {/* Add margin-top on desktop to create spacing between stats and splits */}
+        {/* Add margin-top on desktop to create spacing between sales table and splits */}
         <Card className="mt-6 md:mt-10">
           <CardHeader>
             <CardTitle className="text-xl md:text-2xl">Royalty Splits</CardTitle>
