@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 // Get the secret key from environment variables
@@ -130,57 +129,10 @@ async function handleResolveAccount(data: any) {
     
     console.log(`Resolving account: ${account_number} for bank: ${bank_code}`)
     
-    // Directly call the resolve endpoint - let Paystack handle verification support
-    const response = await fetch('https://api.paystack.co/bank/resolve', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        account_number,
-        bank_code
-      })
-    })
-    
-    const result = await response.json()
-    
-    if (response.ok && result.status && result.data?.account_name) {
-      console.log('Account resolved successfully in LIVE mode:', result.data.account_name)
-      return new Response(
-        JSON.stringify(result),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    // Handle specific error cases from Paystack
-    if (!response.ok || !result.status) {
-      const errorMessage = result.message || 'Account resolution failed'
-      console.log(`Account resolution failed: ${errorMessage}`)
-      
-      // Check if it's a verification not supported error
-      if (errorMessage.toLowerCase().includes('verification') || 
-          errorMessage.toLowerCase().includes('not supported')) {
-        return new Response(
-          JSON.stringify({ 
-            status: false,
-            message: 'Bank does not support account verification',
-            data: null
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      // Return the actual error from Paystack
-      return new Response(
-        JSON.stringify(result),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    return new Response(
-      JSON.stringify(result),
-      { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // Use GET method with query parameters and the makePaystackRequest helper
+    return await makePaystackRequest(
+      `/bank/resolve?account_number=${account_number}&bank_code=${bank_code}`,
+      'GET'
     )
   } catch (error) {
     console.error('Error resolving account:', error)
