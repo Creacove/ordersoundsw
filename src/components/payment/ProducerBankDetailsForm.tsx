@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -184,21 +185,6 @@ export function ProducerBankDetailsForm({
         throw new Error("Failed to update bank details in database");
       }
 
-      // Create updated user object immutably
-      const updatedUser = {
-        ...user,
-        bank_code: values.bank_code,
-        account_number: values.account_number,
-        verified_account_name: finalAccountName,
-      };
-
-      // Update local user context
-      if (updateUserInfo) {
-        updateUserInfo(updatedUser);
-      } else if (updateProfile) {
-        await updateProfile(updatedUser);
-      }
-
       // Try to create/update Paystack subaccount with live key
       try {
         console.log('Creating/updating Paystack subaccount in LIVE mode');
@@ -207,8 +193,63 @@ export function ProducerBankDetailsForm({
           accountNumber: values.account_number,
         });
         
-        if (result && result.success) {
+        if (result && result.success && result.data) {
           console.log('Subaccount operation completed successfully in LIVE mode:', result);
+          
+          // CRITICAL FIX: Save the Paystack codes to the database
+          if (result.data.subaccount_code && result.data.split_code) {
+            console.log('Saving Paystack codes to database:', {
+              subaccount_code: result.data.subaccount_code,
+              split_code: result.data.split_code
+            });
+            
+            const { error: codesError } = await supabase
+              .from("users")
+              .update({
+                paystack_subaccount_code: result.data.subaccount_code,
+                paystack_split_code: result.data.split_code,
+              })
+              .eq("id", producerId);
+
+            if (codesError) {
+              console.error("Error saving Paystack codes to database:", codesError);
+              // Don't throw here, we still want to update the user context
+            } else {
+              console.log('Paystack codes saved successfully to database');
+            }
+
+            // Update local user context with all the new data including Paystack codes
+            const updatedUser = {
+              ...user,
+              bank_code: values.bank_code,
+              account_number: values.account_number,
+              verified_account_name: finalAccountName,
+              paystack_subaccount_code: result.data.subaccount_code,
+              paystack_split_code: result.data.split_code,
+            };
+
+            if (updateUserInfo) {
+              updateUserInfo(updatedUser);
+            } else if (updateProfile) {
+              await updateProfile(updatedUser);
+            }
+          } else {
+            console.warn('Missing Paystack codes in result:', result.data);
+            
+            // Still update user context with bank details
+            const updatedUser = {
+              ...user,
+              bank_code: values.bank_code,
+              account_number: values.account_number,
+              verified_account_name: finalAccountName,
+            };
+
+            if (updateUserInfo) {
+              updateUserInfo(updatedUser);
+            } else if (updateProfile) {
+              await updateProfile(updatedUser);
+            }
+          }
           
           toast({
             title: "Success",
@@ -216,6 +257,21 @@ export function ProducerBankDetailsForm({
           });
         } else {
           console.warn('Subaccount operation completed with warnings:', result);
+          
+          // Still update user context with bank details only
+          const updatedUser = {
+            ...user,
+            bank_code: values.bank_code,
+            account_number: values.account_number,
+            verified_account_name: finalAccountName,
+          };
+
+          if (updateUserInfo) {
+            updateUserInfo(updatedUser);
+          } else if (updateProfile) {
+            await updateProfile(updatedUser);
+          }
+          
           toast({
             title: "Success",
             description: "Bank details saved. Paystack integration may need manual review.",
@@ -224,7 +280,21 @@ export function ProducerBankDetailsForm({
         }
       } catch (splitError) {
         console.error("Error updating Paystack split account:", splitError);
+        
         // Continue even if Paystack update fails - we've updated the database
+        const updatedUser = {
+          ...user,
+          bank_code: values.bank_code,
+          account_number: values.account_number,
+          verified_account_name: finalAccountName,
+        };
+
+        if (updateUserInfo) {
+          updateUserInfo(updatedUser);
+        } else if (updateProfile) {
+          await updateProfile(updatedUser);
+        }
+        
         toast({
           title: "Warning",
           description: `Bank details saved but Paystack integration failed: ${splitError.message}`,
