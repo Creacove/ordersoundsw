@@ -1,4 +1,3 @@
-
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { Connection, Transaction, PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 import { 
@@ -11,6 +10,11 @@ import {
   TokenInvalidAccountOwnerError
 } from '@solana/spl-token';
 import { toast } from 'sonner';
+import { 
+  processSmartContractPayment, 
+  processMultipleSmartContractPayments,
+  isPlatformInitialized 
+} from './smartContractPayments';
 
 // USDC Mint addresses for different networks
 const USDC_MINT_ADDRESSES = {
@@ -134,7 +138,7 @@ const addPriorityFee = (transaction: Transaction, microLamports: number = 10000)
   transaction.instructions.unshift(priorityFeeInstruction);
 };
 
-// Process a single USDC payment - FORCE DEVNET
+// Enhanced process USDC payment with smart contract integration
 export const processUSDCPayment = async (
   usdAmount: number,
   recipientAddress: string, 
@@ -148,10 +152,33 @@ export const processUSDCPayment = async (
     
     // FORCE DEVNET - Override any network parameter
     const forceDevnet = 'devnet';
+    console.log(`💰 Processing DEVNET USDC payment: $${usdAmount} to ${recipientAddress}`);
+    
+    // Check if smart contract is initialized and use it if available
+    const useSmartContract = await isPlatformInitialized(connection);
+    
+    if (useSmartContract) {
+      console.log('🔥 Using smart contract for payment splitting (80/20)');
+      try {
+        return await processSmartContractPayment(
+          usdAmount,
+          recipientAddress,
+          connection,
+          wallet,
+          forceDevnet
+        );
+      } catch (smartContractError) {
+        console.warn('⚠️ Smart contract payment failed, falling back to direct transfer:', smartContractError);
+        toast.warning('Smart contract unavailable, processing direct payment');
+        // Fall through to direct payment
+      }
+    } else {
+      console.log('📋 Smart contract not initialized, using direct transfer');
+    }
+    
     const usdcMint = getUSDCMint(forceDevnet);
     const usdcAmount = usdToUSDCUnits(usdAmount);
     
-    console.log(`💰 Processing DEVNET USDC payment: $${usdAmount} (${usdcAmount.toString()} USDC units) to ${recipientAddress}`);
     console.log(`🌐 FORCED Network: ${forceDevnet}, USDC Mint: ${usdcMint.toString()}`);
     
     // Check sender's USDC balance first
@@ -254,6 +281,7 @@ export const processUSDCPayment = async (
     
     console.log('✅ DEVNET USDC transaction confirmed successfully');
     return signature;
+    
   } catch (error: any) {
     console.error("❌ Error in DEVNET USDC transaction:", error);
     
@@ -272,7 +300,7 @@ export const processUSDCPayment = async (
   }
 };
 
-// Process multiple USDC payments in batch - FORCE DEVNET
+// Enhanced process multiple USDC payments with smart contract integration
 export const processMultipleUSDCPayments = async (
   items: { price: number, producerWallet: string, id?: string, title?: string }[],
   connection: Connection, 
@@ -282,6 +310,31 @@ export const processMultipleUSDCPayments = async (
   try {
     if (!wallet.publicKey) throw new Error("Wallet not connected");
     
+    // FORCE DEVNET
+    const forceDevnet = 'devnet';
+    console.log(`💰 Processing ${items.length} DEVNET USDC payments`);
+    
+    // Check if smart contract is initialized and use it if available
+    const useSmartContract = await isPlatformInitialized(connection);
+    
+    if (useSmartContract) {
+      console.log('🔥 Using smart contract for payment splitting (80/20)');
+      try {
+        return await processMultipleSmartContractPayments(
+          items,
+          connection,
+          wallet,
+          forceDevnet
+        );
+      } catch (smartContractError) {
+        console.warn('⚠️ Smart contract payment failed, falling back to direct transfers:', smartContractError);
+        toast.warning('Smart contract unavailable, processing direct payments');
+        // Fall through to direct payments
+      }
+    } else {
+      console.log('📋 Smart contract not initialized, using direct transfers');
+    }
+    
     // Validate all recipient addresses first
     for (const item of items) {
       if (!isValidSolanaAddress(item.producerWallet)) {
@@ -290,8 +343,6 @@ export const processMultipleUSDCPayments = async (
     }
     
     const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
-    // FORCE DEVNET
-    const forceDevnet = 'devnet';
     const usdcMint = getUSDCMint(forceDevnet);
     
     // Check total USDC balance before processing any transactions
@@ -309,8 +360,6 @@ export const processMultipleUSDCPayments = async (
     if (availableUSDC < totalAmount) {
       throw new Error(`Insufficient DEVNET USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${totalAmount.toFixed(2)} USDC.`);
     }
-    
-    console.log(`💰 Processing ${items.length} DEVNET USDC payments, total: $${totalAmount}`);
     
     const signatures: string[] = [];
     
@@ -341,6 +390,7 @@ export const processMultipleUSDCPayments = async (
     
     console.log(`✅ All ${items.length} DEVNET USDC payments completed successfully`);
     return signatures;
+    
   } catch (error: any) {
     console.error("❌ Error processing multiple DEVNET USDC payments:", error);
     throw new Error(error.message || "Failed to process DEVNET USDC payments");
