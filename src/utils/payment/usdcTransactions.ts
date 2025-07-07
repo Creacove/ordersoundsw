@@ -128,14 +128,8 @@ const simulateTransaction = async (
 
 // Add priority fee to transaction for faster confirmation
 const addPriorityFee = (transaction: Transaction, microLamports: number = 10000) => {
-  const priorityFeeInstruction = SystemProgram.transfer({
-    fromPubkey: transaction.feePayer!,
-    toPubkey: transaction.feePayer!,
-    lamports: 0
-  });
-  
-  // Add as first instruction for priority processing
-  transaction.instructions.unshift(priorityFeeInstruction);
+  // Remove the invalid priority fee instruction that was causing AccountNotFound error
+  // Priority fees should be handled by the RPC endpoint configuration instead
 };
 
 // Enhanced process USDC payment with smart contract integration
@@ -239,9 +233,6 @@ export const processUSDCPayment = async (
     const { blockhash } = await connection.getLatestBlockhash('confirmed');
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
-    
-    // Add priority fee for faster confirmation
-    addPriorityFee(transaction, 15000);
     
     // Simulate transaction before sending
     const simulation = await simulateTransaction(connection, transaction);
