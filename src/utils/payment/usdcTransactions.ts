@@ -10,11 +10,7 @@ import {
   TokenInvalidAccountOwnerError
 } from '@solana/spl-token';
 import { toast } from 'sonner';
-import { 
-  processSmartContractPayment, 
-  processMultipleSmartContractPayments,
-  isPlatformInitialized 
-} from './smartContractPayments';
+// Smart contract imports removed for direct transfer with platform fee
 
 // USDC Mint addresses for different networks
 const USDC_MINT_ADDRESSES = {
@@ -132,7 +128,10 @@ const addPriorityFee = (transaction: Transaction, microLamports: number = 10000)
   // Priority fees should be handled by the RPC endpoint configuration instead
 };
 
-// Enhanced process USDC payment with smart contract integration
+// Platform wallet for receiving 20% fee (DEVNET)
+const PLATFORM_WALLET = new PublicKey('7eKuBq7Gya8QUDXoWuKeQr1Km7onLQ8EWqiwHm7RzTGk');
+
+// Process USDC payment with 80/20 split
 export const processUSDCPayment = async (
   usdAmount: number,
   recipientAddress: string, 
@@ -146,34 +145,59 @@ export const processUSDCPayment = async (
     
     // FORCE DEVNET - Override any network parameter
     const forceDevnet = 'devnet';
-    console.log(`💰 Processing DEVNET USDC payment: $${usdAmount} to ${recipientAddress}`);
+    console.log(`💰 Processing DEVNET USDC payment with 80/20 split: $${usdAmount} to ${recipientAddress}`);
     
-    // Check if smart contract is initialized and use it if available
-    const useSmartContract = await isPlatformInitialized(connection);
+    // Calculate splits: 80% to producer, 20% to platform
+    const producerAmount = usdAmount * 0.8;
+    const platformAmount = usdAmount * 0.2;
     
-    if (useSmartContract) {
-      console.log('🔥 Using smart contract for payment splitting (80/20)');
-      try {
-        return await processSmartContractPayment(
-          usdAmount,
-          recipientAddress,
-          connection,
-          wallet,
-          forceDevnet
-        );
-      } catch (smartContractError) {
-        console.warn('⚠️ Smart contract payment failed, falling back to direct transfer:', smartContractError);
-        toast.warning('Smart contract unavailable, processing direct payment');
-        // Fall through to direct payment
-      }
-    } else {
-      console.log('📋 Smart contract not initialized, using direct transfer');
-    }
+    console.log(`🎯 Producer gets: $${producerAmount.toFixed(2)} (80%)`);
+    console.log(`🏢 Platform gets: $${platformAmount.toFixed(2)} (20%)`);
     
-    const usdcMint = getUSDCMint(forceDevnet);
+    // Process producer payment first
+    const producerSignature = await processSingleDirectTransfer(
+      producerAmount,
+      recipientAddress,
+      connection,
+      wallet,
+      forceDevnet,
+      'producer'
+    );
+    
+    // Process platform fee payment
+    const platformSignature = await processSingleDirectTransfer(
+      platformAmount,
+      PLATFORM_WALLET.toString(),
+      connection,
+      wallet,
+      forceDevnet,
+      'platform'
+    );
+    
+    console.log(`✅ Split payment completed - Producer: ${producerSignature}, Platform: ${platformSignature}`);
+    return producerSignature; // Return producer signature as primary
+  } catch (error: any) {
+    console.error("❌ Error in split USDC payment:", error);
+    throw new Error(error.message || "Failed to process split payment");
+  }
+};
+
+// Single direct transfer helper function
+const processSingleDirectTransfer = async (
+  usdAmount: number,
+  recipientAddress: string,
+  connection: Connection,
+  wallet: WalletContextState,
+  network: string,
+  recipient: 'producer' | 'platform'
+): Promise<string> => {
+  try {
+    if (!wallet.publicKey) throw new Error("Wallet not connected");
+    
+    const usdcMint = getUSDCMint(network);
     const usdcAmount = usdToUSDCUnits(usdAmount);
     
-    console.log(`🌐 FORCED Network: ${forceDevnet}, USDC Mint: ${usdcMint.toString()}`);
+    console.log(`🌐 FORCED Network: ${network}, USDC Mint: ${usdcMint.toString()}`);
     
     // Check sender's USDC balance first
     const { balance: senderBalance, hasAccount: senderHasAccount } = await checkUSDCBalance(
@@ -291,7 +315,7 @@ export const processUSDCPayment = async (
   }
 };
 
-// Enhanced process multiple USDC payments with smart contract integration
+// Process multiple USDC payments with 80/20 split
 export const processMultipleUSDCPayments = async (
   items: { price: number, producerWallet: string, id?: string, title?: string }[],
   connection: Connection, 
@@ -303,28 +327,7 @@ export const processMultipleUSDCPayments = async (
     
     // FORCE DEVNET
     const forceDevnet = 'devnet';
-    console.log(`💰 Processing ${items.length} DEVNET USDC payments`);
-    
-    // Check if smart contract is initialized and use it if available
-    const useSmartContract = await isPlatformInitialized(connection);
-    
-    if (useSmartContract) {
-      console.log('🔥 Using smart contract for payment splitting (80/20)');
-      try {
-        return await processMultipleSmartContractPayments(
-          items,
-          connection,
-          wallet,
-          forceDevnet
-        );
-      } catch (smartContractError) {
-        console.warn('⚠️ Smart contract payment failed, falling back to direct transfers:', smartContractError);
-        toast.warning('Smart contract unavailable, processing direct payments');
-        // Fall through to direct payments
-      }
-    } else {
-      console.log('📋 Smart contract not initialized, using direct transfers');
-    }
+    console.log(`💰 Processing ${items.length} DEVNET USDC payments with 80/20 split`);
     
     // Validate all recipient addresses first
     for (const item of items) {
