@@ -126,9 +126,6 @@ export function Topbar({ sidebarVisible = false }) {
                 className="h-36 w-auto"
               />
             )}
-            <div className="flex flex-col items-start">
-              <Badge variant="outline" className="text-purple-600 border-purple-600 text-[10px] xs:text-xs font-medium">BETA</Badge>
-            </div>
           </Link>
         </div>
         
