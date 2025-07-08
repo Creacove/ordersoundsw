@@ -276,12 +276,22 @@ const processSingleDirectTransfer = async (
     const recipientPublicKey = new PublicKey(recipientAddress);
     const owners = [wallet.publicKey, recipientPublicKey];
     
-    console.log(`🔍 Checking ATAs for sender: ${wallet.publicKey.toString()} and recipient: ${recipientPublicKey.toString()}`);
+    console.log(`🔍 Checking ATAs for sender: ${wallet.publicKey.toString()} and ${recipient}: ${recipientPublicKey.toString()}`);
     
     const ataCreationSignature = await createMissingATAs(connection, wallet, usdcMint, owners);
     if (ataCreationSignature) {
-      console.log(`⏳ Waiting 2s for ATA creation to settle...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`⏳ Waiting for ATA creation to settle...`);
+      // Wait for confirmation and verify ATAs exist
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Verify ATAs actually exist now
+      for (const owner of owners) {
+        const { exists } = await checkATAExists(connection, usdcMint, owner);
+        if (!exists) {
+          throw new Error(`Failed to create ATA for ${owner.toString()}`);
+        }
+      }
+      console.log(`✅ All ATAs confirmed to exist`);
     }
     
     // STEP 2: Get ATA addresses (now guaranteed to exist)
