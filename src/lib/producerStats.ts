@@ -31,7 +31,7 @@ export interface ProducerStats {
   genreDistribution: GenreDataPoint[];
 }
 
-export async function getProducerStats(producerId: string): Promise<ProducerStats> {
+export async function getProducerStats(producerId: string, selectedCurrency?: 'NGN' | 'USD'): Promise<ProducerStats> {
   try {
     // Get producer's beats with basic info
     const { data: producerBeats, error: beatsError } = await supabase
@@ -45,7 +45,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     const beatIds = producerBeats?.map(beat => beat.id) || [];
     
     if (beatIds.length === 0) {
-      return getDefaultStats();
+      return getDefaultStats(selectedCurrency);
     }
 
     // Calculate total plays and favorites
@@ -53,7 +53,7 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     const totalFavorites = producerBeats.reduce((sum, beat) => sum + (beat.favorites_count || 0), 0);
     
     // Get completed sales data with optimized query
-    const { data: salesData, error: salesError } = await supabase
+    let salesQuery = supabase
       .from('user_purchased_beats')
       .select(`
         id, 
@@ -70,6 +70,14 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
       `)
       .in('beat_id', beatIds)
       .eq('orders.status', 'completed');
+
+    // Apply currency filter if specified
+    if (selectedCurrency) {
+      const currencyFilter = selectedCurrency === 'NGN' ? 'NGN' : 'USDC';
+      salesQuery = salesQuery.eq('orders.currency_used', currencyFilter);
+    }
+
+    const { data: salesData, error: salesError } = await salesQuery;
     
     if (salesError) throw salesError;
     
@@ -95,14 +103,14 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
         
         if (orderData.currency_used === 'NGN') {
           ngnCount++;
-        } else if (orderData.currency_used === 'USD') {
+        } else if (orderData.currency_used === 'USD' || orderData.currency_used === 'USDC') {
           usdCount++;
         }
       }
     });
     
-    // Determine primary currency
-    const primaryCurrency = ngnCount >= usdCount ? 'NGN' : 'USD';
+    // Determine primary currency (use selected currency if provided, otherwise determine from data)
+    const primaryCurrency = selectedCurrency || (ngnCount >= usdCount ? 'NGN' : 'USD');
     
     // Calculate monthly metrics
     const currentDate = new Date();
@@ -182,19 +190,19 @@ export async function getProducerStats(producerId: string): Promise<ProducerStat
     };
   } catch (error) {
     console.error("Error getting producer stats:", error);
-    return getDefaultStats();
+    return getDefaultStats(selectedCurrency);
   }
 }
 
 // Helper function to generate default stats
-function getDefaultStats(): ProducerStats {
+function getDefaultStats(selectedCurrency?: 'NGN' | 'USD'): ProducerStats {
   return {
     totalRevenue: 0,
     monthlyRevenue: 0,
     beatsSold: 0,
     revenueChange: 0,
     salesChange: 0,
-    primaryCurrency: 'NGN',
+    primaryCurrency: selectedCurrency || 'NGN',
     totalPlays: 0,
     playsChange: 0,
     totalFavorites: 0,

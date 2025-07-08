@@ -72,7 +72,8 @@ export default function ProducerDashboard() {
 
       try {
         setIsLoadingStats(true);
-        const producerStats = await getProducerStats(user.id);
+        const selectedCurrency = currency === 'NGN' ? 'NGN' : 'USD';
+        const producerStats = await getProducerStats(user.id, selectedCurrency);
         setStats(producerStats);
       } catch (error) {
         console.error("Error fetching producer stats:", error);
@@ -82,7 +83,7 @@ export default function ProducerDashboard() {
     };
 
     fetchStats();
-  }, [user]); // Only dependency is user, no refresh trigger
+  }, [user, currency]); // Include currency to refetch when it changes
 
   // Remove the interval that was causing periodic refreshes
 
