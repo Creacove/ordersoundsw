@@ -209,7 +209,58 @@ export const processUSDCPayment = async (
     console.log(`🎯 Producer gets: $${producerAmount.toFixed(2)} (80%)`);
     console.log(`🏢 Platform gets: $${platformAmount.toFixed(2)} (20%)`);
     
-    // Process producer payment first
+    const usdcMint = getUSDCMint(forceDevnet);
+    const producerPublicKey = new PublicKey(recipientAddress);
+    
+    // CRITICAL: Check and create ALL THREE ATAs before any transfers
+    const allWallets = [wallet.publicKey, producerPublicKey, PLATFORM_WALLET];
+    const walletLabels = ['sender', 'producer', 'platform'];
+    
+    console.log(`🔍 Checking ATAs for all 3 wallets:`);
+    console.log(`  💳 Sender: ${wallet.publicKey.toString()}`);
+    console.log(`  🎵 Producer: ${producerPublicKey.toString()}`);
+    console.log(`  🏢 Platform: ${PLATFORM_WALLET.toString()}`);
+    
+    // Check which ATAs are missing
+    const missingATAs: { owner: PublicKey; ata: PublicKey; label: string }[] = [];
+    
+    for (let i = 0; i < allWallets.length; i++) {
+      const owner = allWallets[i];
+      const label = walletLabels[i];
+      const { exists, address } = await checkATAExists(connection, usdcMint, owner);
+      
+      if (!exists) {
+        missingATAs.push({ owner, ata: address, label });
+        console.log(`❌ Missing ATA for ${label}: ${address.toString()}`);
+      } else {
+        console.log(`✅ ATA exists for ${label}: ${address.toString()}`);
+      }
+    }
+    
+    // Create missing ATAs if needed
+    if (missingATAs.length > 0) {
+      console.log(`🏗️  Creating ${missingATAs.length} missing ATAs...`);
+      const ataCreationSignature = await createMissingATAs(connection, wallet, usdcMint, allWallets);
+      
+      if (ataCreationSignature) {
+        console.log(`⏳ Waiting for ATA creation to settle...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Verify all ATAs exist now
+        for (let i = 0; i < allWallets.length; i++) {
+          const owner = allWallets[i];
+          const label = walletLabels[i];
+          const { exists, address } = await checkATAExists(connection, usdcMint, owner);
+          
+          if (!exists) {
+            throw new Error(`Failed to create ${label} ATA for ${owner.toString()} (expected at ${address.toString()})`);
+          }
+          console.log(`✅ Verified ${label} ATA exists: ${address.toString()}`);
+        }
+      }
+    }
+    
+    // Now process payments with all ATAs guaranteed to exist
     const producerSignature = await processSingleDirectTransfer(
       producerAmount,
       recipientAddress,
@@ -219,7 +270,6 @@ export const processUSDCPayment = async (
       'producer'
     );
     
-    // Process platform fee payment
     const platformSignature = await processSingleDirectTransfer(
       platformAmount,
       PLATFORM_WALLET.toString(),
