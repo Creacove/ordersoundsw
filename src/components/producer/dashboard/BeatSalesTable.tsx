@@ -40,7 +40,7 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
       setLoading(true);
       try {
         // Get beats with completed sales using optimized query
-        const { data: beatSales, error } = await supabase
+        let salesQuery = supabase
           .from('user_purchased_beats')
           .select(`
             beat_id,
@@ -65,6 +65,15 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
           .eq('beats.producer_id', producerId)
           .eq('orders.status', 'completed')
           .order('purchase_date', { ascending: false });
+
+        // Apply currency filter
+        if (currency === 'NGN') {
+          salesQuery = salesQuery.eq('orders.currency_used', 'NGN');
+        } else {
+          salesQuery = salesQuery.in('orders.currency_used', ['USD', 'USDC']);
+        }
+
+        const { data: beatSales, error } = await salesQuery;
 
         if (error) {
           console.error('Error fetching beat sales:', error);
@@ -130,7 +139,7 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
     };
 
     fetchBeatSalesData();
-  }, [producerId]);
+  }, [producerId, currency]);
 
   if (loading) {
     return (
