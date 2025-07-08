@@ -62,36 +62,89 @@ const checkUSDCBalance = async (
   }
 };
 
-// Honest account creation - no lies, no race conditions
-const ensureAssociatedTokenAccount = async (
+// Check if Associated Token Account exists on-chain
+const checkATAExists = async (
   connection: Connection,
-  payer: PublicKey,
   mint: PublicKey,
-  owner: PublicKey,
-  transaction: Transaction
-): Promise<PublicKey> => {
+  owner: PublicKey
+): Promise<{ exists: boolean; address: PublicKey }> => {
   const associatedTokenAddress = await getAssociatedTokenAddress(mint, owner);
   
   try {
-    // Actually check if account exists
     await getAccount(connection, associatedTokenAddress);
-    console.log(`✓ Token account confirmed: ${associatedTokenAddress.toString()}`);
-    return associatedTokenAddress;
+    return { exists: true, address: associatedTokenAddress };
   } catch (error) {
     if (error instanceof TokenAccountNotFoundError) {
-      // Account doesn't exist - add creation instruction
-      console.log(`➕ Adding creation instruction for: ${owner.toString()}`);
-      const createAccountInstruction = createAssociatedTokenAccountInstruction(
-        payer,
-        associatedTokenAddress,
-        owner,
-        mint
-      );
-      transaction.add(createAccountInstruction);
-      return associatedTokenAddress;
+      return { exists: false, address: associatedTokenAddress };
     }
     throw error;
   }
+};
+
+// Create missing Associated Token Accounts in a separate transaction
+const createMissingATAs = async (
+  connection: Connection,
+  wallet: WalletContextState,
+  mint: PublicKey,
+  owners: PublicKey[]
+): Promise<string | null> => {
+  if (!wallet.publicKey) throw new Error("Wallet not connected");
+  
+  const missingATAs: { owner: PublicKey; ata: PublicKey }[] = [];
+  
+  // Check which ATAs are missing
+  for (const owner of owners) {
+    const { exists, address } = await checkATAExists(connection, mint, owner);
+    if (!exists) {
+      missingATAs.push({ owner, ata: address });
+      console.log(`🔍 Missing ATA for ${owner.toString()}: ${address.toString()}`);
+    } else {
+      console.log(`✅ ATA exists for ${owner.toString()}: ${address.toString()}`);
+    }
+  }
+  
+  if (missingATAs.length === 0) {
+    console.log('✨ All ATAs already exist, no creation needed');
+    return null;
+  }
+  
+  console.log(`🏗️  Creating ${missingATAs.length} missing ATAs...`);
+  
+  // Create transaction for ATA creation
+  const transaction = new Transaction();
+  
+  for (const { owner, ata } of missingATAs) {
+    const createInstruction = createAssociatedTokenAccountInstruction(
+      wallet.publicKey, // payer
+      ata,              // ata address
+      owner,            // owner
+      mint              // mint
+    );
+    transaction.add(createInstruction);
+  }
+  
+  // Get latest blockhash
+  const { blockhash } = await connection.getLatestBlockhash('confirmed');
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = wallet.publicKey;
+  
+  console.log('🚀 Sending ATA creation transaction...');
+  
+  // Send ATA creation transaction
+  const signature = await wallet.sendTransaction(transaction, connection, {
+    maxRetries: 5,
+    skipPreflight: false,
+    preflightCommitment: 'confirmed'
+  });
+  
+  // Wait for confirmation
+  const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+  if (confirmation.value.err) {
+    throw new Error(`ATA creation failed: ${confirmation.value.err.toString()}`);
+  }
+  
+  console.log(`✅ Created ${missingATAs.length} ATAs successfully: ${signature}`);
+  return signature;
 };
 
 // Simulate transaction to catch errors early
@@ -219,31 +272,28 @@ const processSingleDirectTransfer = async (
       throw new Error(`Insufficient DEVNET USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${usdAmount} USDC.`);
     }
     
-    const transaction = new Transaction();
-    
-    // Get sender's USDC token account
-    const senderTokenAccount = await ensureAssociatedTokenAccount(
-      connection,
-      wallet.publicKey,
-      usdcMint,
-      wallet.publicKey,
-      transaction
-    );
-    
-    // Get recipient's USDC token account
+    // STEP 1: Create missing ATAs first
     const recipientPublicKey = new PublicKey(recipientAddress);
-    const recipientTokenAccount = await ensureAssociatedTokenAccount(
-      connection,
-      wallet.publicKey, // Payer for account creation
-      usdcMint,
-      recipientPublicKey,
-      transaction
-    );
+    const owners = [wallet.publicKey, recipientPublicKey];
+    
+    console.log(`🔍 Checking ATAs for sender: ${wallet.publicKey.toString()} and recipient: ${recipientPublicKey.toString()}`);
+    
+    const ataCreationSignature = await createMissingATAs(connection, wallet, usdcMint, owners);
+    if (ataCreationSignature) {
+      console.log(`⏳ Waiting 2s for ATA creation to settle...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    // STEP 2: Get ATA addresses (now guaranteed to exist)
+    const senderTokenAccount = await getAssociatedTokenAddress(usdcMint, wallet.publicKey);
+    const recipientTokenAccount = await getAssociatedTokenAddress(usdcMint, recipientPublicKey);
     
     console.log(`📤 From: ${senderTokenAccount.toString()}`);
     console.log(`📥 To: ${recipientTokenAccount.toString()}`);
     
-    // Create transfer instruction
+    // STEP 3: Create transfer transaction (no ATA creation needed)
+    const transaction = new Transaction();
+    
     const transferInstruction = createTransferInstruction(
       senderTokenAccount,
       recipientTokenAccount,
@@ -266,7 +316,7 @@ const processSingleDirectTransfer = async (
       throw new Error(simulation.error || "Transaction simulation failed");
     }
     
-    console.log('🚀 Sending DEVNET USDC transaction...');
+    console.log('🚀 Sending DEVNET USDC transfer transaction...');
     
     // Sign and send the transaction
     const signature = await wallet.sendTransaction(transaction, connection, {
@@ -296,11 +346,11 @@ const processSingleDirectTransfer = async (
       throw new Error(`Transaction failed to confirm: ${confirmation?.value.err?.toString() || 'Timeout'}`);
     }
     
-    console.log('✅ DEVNET USDC transaction confirmed successfully');
+    console.log('✅ DEVNET USDC transfer confirmed successfully');
     return signature;
     
   } catch (error: any) {
-    console.error("❌ Error in DEVNET USDC transaction:", error);
+    console.error("❌ Error in DEVNET USDC transfer:", error);
     
     // Provide specific error messages for common issues
     if (error.message.includes('0x1')) {
@@ -313,7 +363,7 @@ const processSingleDirectTransfer = async (
       throw new Error("Insufficient DEVNET USDC balance for this transaction.");
     }
     
-    throw new Error(error.message || "Failed to process DEVNET USDC payment");
+    throw new Error(error.message || "Failed to process DEVNET USDC transfer");
   }
 };
 
