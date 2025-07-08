@@ -128,8 +128,10 @@ const addPriorityFee = (transaction: Transaction, microLamports: number = 10000)
   // Priority fees should be handled by the RPC endpoint configuration instead
 };
 
-// Platform wallet for receiving 20% fee (DEVNET)
-const PLATFORM_WALLET = new PublicKey('7eKuBq7Gya8QUDXoWuKeQr1Km7onLQ8EWqiwHm7RzTGk');
+// Platform wallet for receiving 20% fee (from environment variable)
+const PLATFORM_WALLET = new PublicKey(
+  import.meta.env.VITE_PLATFORM_WALLET || '2knSANp9pvHTmJL3HATQNY5CeQxtT9iRHmRPY5Fse9aC'
+);
 
 // Process USDC payment with 80/20 split
 export const processUSDCPayment = async (
