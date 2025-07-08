@@ -347,6 +347,83 @@ export const SolanaCheckoutDialog = ({
                   toast.warning("Order created but beats may not appear in library immediately");
                 } else {
                   console.log("Successfully created purchased beats records for library");
+                  
+                  // Create notifications for buyer and producers
+                  try {
+                    // Notification for buyer
+                    const { error: buyerNotificationError } = await supabase
+                      .from('notifications')
+                      .insert({
+                        recipient_id: user.id,
+                        title: 'Beat Purchase Complete',
+                        body: `Your purchase of ${successfulItems.length} beat${successfulItems.length > 1 ? 's' : ''} is complete. You can now download from your library.`,
+                        notification_type: 'purchase',
+                        is_read: false,
+                      });
+
+                    if (buyerNotificationError) {
+                      console.error('Error creating buyer notification:', buyerNotificationError);
+                    } else {
+                      console.log('Buyer notification created successfully');
+                    }
+
+                    // Create notifications for producers (grouped by producer)
+                    const producerNotifications = new Map<string, { producerId: string; beatTitles: string[]; totalAmount: number }>();
+                    
+                    // Group successful items by producer
+                    for (const result of successfulPayments) {
+                      for (const item of result.items) {
+                        // Get producer info for this beat
+                        const { data: beatData, error: beatError } = await supabase
+                          .from('beats')
+                          .select('producer_id, users(id, full_name, stage_name)')
+                          .eq('id', item.id)
+                          .single();
+                          
+                        if (!beatError && beatData) {
+                          const producerId = beatData.producer_id;
+                          if (!producerNotifications.has(producerId)) {
+                            producerNotifications.set(producerId, {
+                              producerId,
+                              beatTitles: [],
+                              totalAmount: 0
+                            });
+                          }
+                          
+                          const notification = producerNotifications.get(producerId)!;
+                          notification.beatTitles.push(item.title);
+                          notification.totalAmount += item.price;
+                        }
+                      }
+                    }
+
+                    // Send notifications to each producer
+                    for (const [_, notification] of producerNotifications) {
+                      const beatList = notification.beatTitles.length > 1 
+                        ? `${notification.beatTitles.slice(0, -1).join(', ')} and ${notification.beatTitles[notification.beatTitles.length - 1]}`
+                        : notification.beatTitles[0];
+                        
+                      const { error: producerNotificationError } = await supabase
+                        .from('notifications')
+                        .insert({
+                          recipient_id: notification.producerId,
+                          title: 'Beat Sale - USDC Payment Received',
+                          body: `Your beat${notification.beatTitles.length > 1 ? 's' : ''} "${beatList}" ha${notification.beatTitles.length > 1 ? 've' : 's'} been purchased! Payment of $${notification.totalAmount.toFixed(2)} USDC has been processed.`,
+                          notification_type: 'sale',
+                          related_entity_type: 'beat',
+                          is_read: false,
+                        });
+
+                      if (producerNotificationError) {
+                        console.error(`Error creating producer notification for ${notification.producerId}:`, producerNotificationError);
+                      } else {
+                        console.log(`Producer notification sent successfully to: ${notification.producerId}`);
+                      }
+                    }
+                  } catch (notificationError) {
+                    console.error('Error creating notifications:', notificationError);
+                    // Don't fail the entire checkout for notification errors
+                  }
                 }
               }
             }
