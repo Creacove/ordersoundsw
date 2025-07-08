@@ -1,3 +1,4 @@
+
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { Connection, Transaction, PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 import { 
@@ -10,7 +11,6 @@ import {
   TokenInvalidAccountOwnerError
 } from '@solana/spl-token';
 import { toast } from 'sonner';
-// Smart contract imports removed for direct transfer with platform fee
 
 // USDC Mint addresses for different networks
 const USDC_MINT_ADDRESSES = {
@@ -62,8 +62,8 @@ const checkUSDCBalance = async (
   }
 };
 
-// Honest account creation - no lies, no race conditions
-const ensureAssociatedTokenAccount = async (
+// Create or get associated token account
+const getOrCreateAssociatedTokenAccount = async (
   connection: Connection,
   payer: PublicKey,
   mint: PublicKey,
@@ -73,14 +73,14 @@ const ensureAssociatedTokenAccount = async (
   const associatedTokenAddress = await getAssociatedTokenAddress(mint, owner);
   
   try {
-    // Actually check if account exists
+    // Check if account exists
     await getAccount(connection, associatedTokenAddress);
-    console.log(`✓ Token account confirmed: ${associatedTokenAddress.toString()}`);
+    console.log(`✓ USDC token account exists: ${associatedTokenAddress.toString()}`);
     return associatedTokenAddress;
   } catch (error) {
     if (error instanceof TokenAccountNotFoundError) {
-      // Account doesn't exist - add creation instruction
-      console.log(`➕ Adding creation instruction for: ${owner.toString()}`);
+      // Account doesn't exist, create it
+      console.log(`Creating USDC token account for: ${owner.toString()}`);
       const createAccountInstruction = createAssociatedTokenAccountInstruction(
         payer,
         associatedTokenAddress,
@@ -124,16 +124,17 @@ const simulateTransaction = async (
 
 // Add priority fee to transaction for faster confirmation
 const addPriorityFee = (transaction: Transaction, microLamports: number = 10000) => {
-  // Remove the invalid priority fee instruction that was causing AccountNotFound error
-  // Priority fees should be handled by the RPC endpoint configuration instead
+  const priorityFeeInstruction = SystemProgram.transfer({
+    fromPubkey: transaction.feePayer!,
+    toPubkey: transaction.feePayer!,
+    lamports: 0
+  });
+  
+  // Add as first instruction for priority processing
+  transaction.instructions.unshift(priorityFeeInstruction);
 };
 
-// Platform wallet for receiving 20% fee (from environment variable)
-const PLATFORM_WALLET = new PublicKey(
-  import.meta.env.VITE_PLATFORM_WALLET || '2knSANp9pvHTmJL3HATQNY5CeQxtT9iRHmRPY5Fse9aC'
-);
-
-// Process USDC payment with 80/20 split
+// Process a single USDC payment - FORCE DEVNET
 export const processUSDCPayment = async (
   usdAmount: number,
   recipientAddress: string, 
@@ -147,59 +148,11 @@ export const processUSDCPayment = async (
     
     // FORCE DEVNET - Override any network parameter
     const forceDevnet = 'devnet';
-    console.log(`💰 Processing DEVNET USDC payment with 80/20 split: $${usdAmount} to ${recipientAddress}`);
-    
-    // Calculate splits: 80% to producer, 20% to platform
-    const producerAmount = usdAmount * 0.8;
-    const platformAmount = usdAmount * 0.2;
-    
-    console.log(`🎯 Producer gets: $${producerAmount.toFixed(2)} (80%)`);
-    console.log(`🏢 Platform gets: $${platformAmount.toFixed(2)} (20%)`);
-    
-    // Process producer payment first
-    const producerSignature = await processSingleDirectTransfer(
-      producerAmount,
-      recipientAddress,
-      connection,
-      wallet,
-      forceDevnet,
-      'producer'
-    );
-    
-    // Process platform fee payment
-    const platformSignature = await processSingleDirectTransfer(
-      platformAmount,
-      PLATFORM_WALLET.toString(),
-      connection,
-      wallet,
-      forceDevnet,
-      'platform'
-    );
-    
-    console.log(`✅ Split payment completed - Producer: ${producerSignature}, Platform: ${platformSignature}`);
-    return producerSignature; // Return producer signature as primary
-  } catch (error: any) {
-    console.error("❌ Error in split USDC payment:", error);
-    throw new Error(error.message || "Failed to process split payment");
-  }
-};
-
-// Single direct transfer helper function
-const processSingleDirectTransfer = async (
-  usdAmount: number,
-  recipientAddress: string,
-  connection: Connection,
-  wallet: WalletContextState,
-  network: string,
-  recipient: 'producer' | 'platform'
-): Promise<string> => {
-  try {
-    if (!wallet.publicKey) throw new Error("Wallet not connected");
-    
-    const usdcMint = getUSDCMint(network);
+    const usdcMint = getUSDCMint(forceDevnet);
     const usdcAmount = usdToUSDCUnits(usdAmount);
     
-    console.log(`🌐 FORCED Network: ${network}, USDC Mint: ${usdcMint.toString()}`);
+    console.log(`💰 Processing DEVNET USDC payment: $${usdAmount} (${usdcAmount.toString()} USDC units) to ${recipientAddress}`);
+    console.log(`🌐 FORCED Network: ${forceDevnet}, USDC Mint: ${usdcMint.toString()}`);
     
     // Check sender's USDC balance first
     const { balance: senderBalance, hasAccount: senderHasAccount } = await checkUSDCBalance(
@@ -222,7 +175,7 @@ const processSingleDirectTransfer = async (
     const transaction = new Transaction();
     
     // Get sender's USDC token account
-    const senderTokenAccount = await ensureAssociatedTokenAccount(
+    const senderTokenAccount = await getOrCreateAssociatedTokenAccount(
       connection,
       wallet.publicKey,
       usdcMint,
@@ -232,7 +185,7 @@ const processSingleDirectTransfer = async (
     
     // Get recipient's USDC token account
     const recipientPublicKey = new PublicKey(recipientAddress);
-    const recipientTokenAccount = await ensureAssociatedTokenAccount(
+    const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
       connection,
       wallet.publicKey, // Payer for account creation
       usdcMint,
@@ -259,6 +212,9 @@ const processSingleDirectTransfer = async (
     const { blockhash } = await connection.getLatestBlockhash('confirmed');
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
+    
+    // Add priority fee for faster confirmation
+    addPriorityFee(transaction, 15000);
     
     // Simulate transaction before sending
     const simulation = await simulateTransaction(connection, transaction);
@@ -298,7 +254,6 @@ const processSingleDirectTransfer = async (
     
     console.log('✅ DEVNET USDC transaction confirmed successfully');
     return signature;
-    
   } catch (error: any) {
     console.error("❌ Error in DEVNET USDC transaction:", error);
     
@@ -317,7 +272,7 @@ const processSingleDirectTransfer = async (
   }
 };
 
-// Process multiple USDC payments with 80/20 split
+// Process multiple USDC payments in batch - FORCE DEVNET
 export const processMultipleUSDCPayments = async (
   items: { price: number, producerWallet: string, id?: string, title?: string }[],
   connection: Connection, 
@@ -327,10 +282,6 @@ export const processMultipleUSDCPayments = async (
   try {
     if (!wallet.publicKey) throw new Error("Wallet not connected");
     
-    // FORCE DEVNET
-    const forceDevnet = 'devnet';
-    console.log(`💰 Processing ${items.length} DEVNET USDC payments with 80/20 split`);
-    
     // Validate all recipient addresses first
     for (const item of items) {
       if (!isValidSolanaAddress(item.producerWallet)) {
@@ -339,6 +290,8 @@ export const processMultipleUSDCPayments = async (
     }
     
     const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
+    // FORCE DEVNET
+    const forceDevnet = 'devnet';
     const usdcMint = getUSDCMint(forceDevnet);
     
     // Check total USDC balance before processing any transactions
@@ -356,6 +309,8 @@ export const processMultipleUSDCPayments = async (
     if (availableUSDC < totalAmount) {
       throw new Error(`Insufficient DEVNET USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${totalAmount.toFixed(2)} USDC.`);
     }
+    
+    console.log(`💰 Processing ${items.length} DEVNET USDC payments, total: $${totalAmount}`);
     
     const signatures: string[] = [];
     
@@ -386,7 +341,6 @@ export const processMultipleUSDCPayments = async (
     
     console.log(`✅ All ${items.length} DEVNET USDC payments completed successfully`);
     return signatures;
-    
   } catch (error: any) {
     console.error("❌ Error processing multiple DEVNET USDC payments:", error);
     throw new Error(error.message || "Failed to process DEVNET USDC payments");
