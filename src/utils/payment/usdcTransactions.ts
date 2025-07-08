@@ -186,6 +186,131 @@ const PLATFORM_WALLET = new PublicKey(
   import.meta.env.VITE_PLATFORM_WALLET || '2knSANp9pvHTmJL3HATQNY5CeQxtT9iRHmRPY5Fse9aC'
 );
 
+// Process atomic split payment - single transaction with two transfers
+const processAtomicSplitPayment = async (
+  producerAmount: number,
+  platformAmount: number,
+  connection: Connection,
+  wallet: WalletContextState,
+  network: string,
+  atas: { senderATA: PublicKey; producerATA: PublicKey; platformATA: PublicKey }
+): Promise<string> => {
+  try {
+    if (!wallet.publicKey) throw new Error("Wallet not connected");
+    
+    const usdcMint = getUSDCMint(network);
+    const producerUSDCAmount = usdToUSDCUnits(producerAmount);
+    const platformUSDCAmount = usdToUSDCUnits(platformAmount);
+    
+    console.log(`🔄 Creating atomic split transaction:`);
+    console.log(`  🎵 Producer: ${producerAmount} USDC (${producerUSDCAmount.toString()} units)`);
+    console.log(`  🏢 Platform: ${platformAmount} USDC (${platformUSDCAmount.toString()} units)`);
+    
+    // Check sender's USDC balance
+    const { balance: senderBalance, hasAccount: senderHasAccount } = await checkUSDCBalance(
+      connection, 
+      wallet.publicKey, 
+      usdcMint
+    );
+    
+    const totalAmount = producerUSDCAmount + platformUSDCAmount;
+    if (!senderHasAccount || senderBalance < totalAmount) {
+      const availableUSDC = Number(senderBalance) / 1_000_000;
+      const requiredUSDC = Number(totalAmount) / 1_000_000;
+      throw new Error(`Insufficient DEVNET USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${requiredUSDC.toFixed(2)} USDC.`);
+    }
+    
+    // Create single transaction with two transfer instructions
+    const transaction = new Transaction();
+    
+    // Producer transfer instruction (80%)
+    const producerTransfer = createTransferInstruction(
+      atas.senderATA,
+      atas.producerATA,
+      wallet.publicKey,
+      producerUSDCAmount,
+      [],
+      TOKEN_PROGRAM_ID
+    );
+    
+    // Platform transfer instruction (20%)
+    const platformTransfer = createTransferInstruction(
+      atas.senderATA,
+      atas.platformATA,
+      wallet.publicKey,
+      platformUSDCAmount,
+      [],
+      TOKEN_PROGRAM_ID
+    );
+    
+    // Add both instructions to single transaction
+    transaction.add(producerTransfer);
+    transaction.add(platformTransfer);
+    
+    // Set transaction metadata
+    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
+    
+    console.log(`🧪 Transaction contains ${transaction.instructions.length} instructions`);
+    
+    // Simulate transaction before sending
+    const simulation = await simulateTransaction(connection, transaction);
+    if (!simulation.success) {
+      throw new Error(simulation.error || "Atomic transaction simulation failed");
+    }
+    
+    console.log('🚀 Sending atomic split transaction (single authorization)...');
+    
+    // Sign and send the transaction (user authorizes once for both transfers)
+    const signature = await wallet.sendTransaction(transaction, connection, {
+      maxRetries: 5,
+      skipPreflight: false,
+      preflightCommitment: 'confirmed'
+    });
+    
+    console.log(`📋 Atomic split transaction signature: ${signature}`);
+    
+    // Wait for confirmation with timeout
+    const confirmationStart = Date.now();
+    const confirmationTimeout = 60000; // 60 seconds
+    
+    let confirmation;
+    while (Date.now() - confirmationStart < confirmationTimeout) {
+      try {
+        confirmation = await connection.confirmTransaction(signature, 'confirmed');
+        if (confirmation.value) break;
+      } catch (error) {
+        console.warn('Confirmation check failed, retrying...', error);
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    if (!confirmation || confirmation.value.err) {
+      throw new Error(`Atomic transaction failed to confirm: ${confirmation?.value.err?.toString() || 'Timeout'}`);
+    }
+    
+    console.log('✅ Atomic split transaction confirmed - both transfers completed');
+    return signature;
+    
+  } catch (error: any) {
+    console.error("❌ Error in atomic split payment:", error);
+    
+    // Provide specific error messages
+    if (error.message.includes('0x1')) {
+      throw new Error("Insufficient SOL balance for transaction fees. Please add SOL to your wallet.");
+    }
+    if (error.message.includes('TokenAccountNotFoundError')) {
+      throw new Error("DEVNET USDC token account not found. Please ensure you have DEVNET USDC in your wallet.");
+    }
+    if (error.message.includes('insufficient funds')) {
+      throw new Error("Insufficient DEVNET USDC balance for this transaction.");
+    }
+    
+    throw new Error(error.message || "Failed to process atomic split payment");
+  }
+};
+
 // Process USDC payment with 80/20 split
 export const processUSDCPayment = async (
   usdAmount: number,
@@ -270,29 +395,18 @@ export const processUSDCPayment = async (
     console.log(`  🎵 Producer ATA: ${producerATA.toString()}`);
     console.log(`  🏢 Platform ATA: ${platformATA.toString()}`);
     
-    // Now process payments with all ATAs guaranteed to exist
-    const producerSignature = await processSingleDirectTransfer(
+    // Process atomic split payment with single authorization
+    const signature = await processAtomicSplitPayment(
       producerAmount,
-      recipientAddress,
-      connection,
-      wallet,
-      forceDevnet,
-      'producer',
-      { senderATA, recipientATA: producerATA }
-    );
-    
-    const platformSignature = await processSingleDirectTransfer(
       platformAmount,
-      PLATFORM_WALLET.toString(),
       connection,
       wallet,
       forceDevnet,
-      'platform',
-      { senderATA, recipientATA: platformATA }
+      { senderATA, producerATA, platformATA }
     );
     
-    console.log(`✅ Split payment completed - Producer: ${producerSignature}, Platform: ${platformSignature}`);
-    return producerSignature; // Return producer signature as primary
+    console.log(`✅ Atomic split payment completed: ${signature}`);
+    return signature;
   } catch (error: any) {
     console.error("❌ Error in split USDC payment:", error);
     throw new Error(error.message || "Failed to process split payment");
