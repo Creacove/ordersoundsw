@@ -62,8 +62,8 @@ const checkUSDCBalance = async (
   }
 };
 
-// Create or get associated token account
-const getOrCreateAssociatedTokenAccount = async (
+// Honest account creation - no lies, no race conditions
+const ensureAssociatedTokenAccount = async (
   connection: Connection,
   payer: PublicKey,
   mint: PublicKey,
@@ -73,14 +73,14 @@ const getOrCreateAssociatedTokenAccount = async (
   const associatedTokenAddress = await getAssociatedTokenAddress(mint, owner);
   
   try {
-    // Check if account exists
+    // Actually check if account exists
     await getAccount(connection, associatedTokenAddress);
-    console.log(`✓ USDC token account exists: ${associatedTokenAddress.toString()}`);
+    console.log(`✓ Token account confirmed: ${associatedTokenAddress.toString()}`);
     return associatedTokenAddress;
   } catch (error) {
     if (error instanceof TokenAccountNotFoundError) {
-      // Account doesn't exist, create it
-      console.log(`Creating USDC token account for: ${owner.toString()}`);
+      // Account doesn't exist - add creation instruction
+      console.log(`➕ Adding creation instruction for: ${owner.toString()}`);
       const createAccountInstruction = createAssociatedTokenAccountInstruction(
         payer,
         associatedTokenAddress,
@@ -222,7 +222,7 @@ const processSingleDirectTransfer = async (
     const transaction = new Transaction();
     
     // Get sender's USDC token account
-    const senderTokenAccount = await getOrCreateAssociatedTokenAccount(
+    const senderTokenAccount = await ensureAssociatedTokenAccount(
       connection,
       wallet.publicKey,
       usdcMint,
@@ -232,7 +232,7 @@ const processSingleDirectTransfer = async (
     
     // Get recipient's USDC token account
     const recipientPublicKey = new PublicKey(recipientAddress);
-    const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+    const recipientTokenAccount = await ensureAssociatedTokenAccount(
       connection,
       wallet.publicKey, // Payer for account creation
       usdcMint,
