@@ -260,6 +260,16 @@ export const processUSDCPayment = async (
       }
     }
     
+    // Get pre-computed ATA addresses (guaranteed to exist)
+    const senderATA = await getAssociatedTokenAddress(usdcMint, wallet.publicKey);
+    const producerATA = await getAssociatedTokenAddress(usdcMint, producerPublicKey);
+    const platformATA = await getAssociatedTokenAddress(usdcMint, PLATFORM_WALLET);
+    
+    console.log(`📍 Using verified ATAs:`);
+    console.log(`  💳 Sender ATA: ${senderATA.toString()}`);
+    console.log(`  🎵 Producer ATA: ${producerATA.toString()}`);
+    console.log(`  🏢 Platform ATA: ${platformATA.toString()}`);
+    
     // Now process payments with all ATAs guaranteed to exist
     const producerSignature = await processSingleDirectTransfer(
       producerAmount,
@@ -267,7 +277,8 @@ export const processUSDCPayment = async (
       connection,
       wallet,
       forceDevnet,
-      'producer'
+      'producer',
+      { senderATA, recipientATA: producerATA }
     );
     
     const platformSignature = await processSingleDirectTransfer(
@@ -276,7 +287,8 @@ export const processUSDCPayment = async (
       connection,
       wallet,
       forceDevnet,
-      'platform'
+      'platform',
+      { senderATA, recipientATA: platformATA }
     );
     
     console.log(`✅ Split payment completed - Producer: ${producerSignature}, Platform: ${platformSignature}`);
@@ -294,7 +306,8 @@ const processSingleDirectTransfer = async (
   connection: Connection,
   wallet: WalletContextState,
   network: string,
-  recipient: 'producer' | 'platform'
+  recipient: 'producer' | 'platform',
+  precomputedATAs?: { senderATA: PublicKey; recipientATA: PublicKey }
 ): Promise<string> => {
   try {
     if (!wallet.publicKey) throw new Error("Wallet not connected");
@@ -322,31 +335,22 @@ const processSingleDirectTransfer = async (
       throw new Error(`Insufficient DEVNET USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${usdAmount} USDC.`);
     }
     
-    // STEP 1: Create missing ATAs first
-    const recipientPublicKey = new PublicKey(recipientAddress);
-    const owners = [wallet.publicKey, recipientPublicKey];
+    // Use precomputed ATAs if provided, otherwise compute them
+    let senderTokenAccount: PublicKey;
+    let recipientTokenAccount: PublicKey;
     
-    console.log(`🔍 Checking ATAs for sender: ${wallet.publicKey.toString()} and ${recipient}: ${recipientPublicKey.toString()}`);
-    
-    const ataCreationSignature = await createMissingATAs(connection, wallet, usdcMint, owners);
-    if (ataCreationSignature) {
-      console.log(`⏳ Waiting for ATA creation to settle...`);
-      // Wait for confirmation and verify ATAs exist
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Verify ATAs actually exist now
-      for (const owner of owners) {
-        const { exists } = await checkATAExists(connection, usdcMint, owner);
-        if (!exists) {
-          throw new Error(`Failed to create ATA for ${owner.toString()}`);
-        }
-      }
-      console.log(`✅ All ATAs confirmed to exist`);
+    if (precomputedATAs) {
+      // Use the pre-verified ATAs from parent function
+      senderTokenAccount = precomputedATAs.senderATA;
+      recipientTokenAccount = precomputedATAs.recipientATA;
+      console.log(`🎯 Using precomputed ATAs for ${recipient} payment`);
+    } else {
+      // Fallback: compute ATAs (for backward compatibility)
+      const recipientPublicKey = new PublicKey(recipientAddress);
+      senderTokenAccount = await getAssociatedTokenAddress(usdcMint, wallet.publicKey);
+      recipientTokenAccount = await getAssociatedTokenAddress(usdcMint, recipientPublicKey);
+      console.log(`⚠️  Computing ATAs on-the-fly for ${recipient} payment`);
     }
-    
-    // STEP 2: Get ATA addresses (now guaranteed to exist)
-    const senderTokenAccount = await getAssociatedTokenAddress(usdcMint, wallet.publicKey);
-    const recipientTokenAccount = await getAssociatedTokenAddress(usdcMint, recipientPublicKey);
     
     console.log(`📤 From: ${senderTokenAccount.toString()}`);
     console.log(`📥 To: ${recipientTokenAccount.toString()}`);
