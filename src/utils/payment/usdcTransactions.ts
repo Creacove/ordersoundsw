@@ -19,11 +19,12 @@ const USDC_MINT_ADDRESSES = {
   'testnet': new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
 };
 
-// Get current network's USDC mint - FORCE DEVNET FOR NOW
+// Get current network's USDC mint - dynamic selection
 const getUSDCMint = (network: string = 'devnet'): PublicKey => {
-  // Force devnet usage for testing
-  console.log(`🌐 Forcing DEVNET for USDC transactions (requested: ${network})`);
-  return USDC_MINT_ADDRESSES.devnet;
+  const normalizedNetwork = network === 'mainnet' ? 'mainnet-beta' : network;
+  const mint = USDC_MINT_ADDRESSES[normalizedNetwork as keyof typeof USDC_MINT_ADDRESSES] || USDC_MINT_ADDRESSES.devnet;
+  console.log(`🌐 Using ${normalizedNetwork} USDC mint: ${mint.toString()}`);
+  return mint;
 };
 
 // Check if a string is a valid Solana address
@@ -181,10 +182,15 @@ const addPriorityFee = (transaction: Transaction, microLamports: number = 10000)
   // Priority fees should be handled by the RPC endpoint configuration instead
 };
 
-// Platform wallet for receiving 20% fee (from environment variable)
-const PLATFORM_WALLET = new PublicKey(
-  import.meta.env.VITE_PLATFORM_WALLET || '2knSANp9pvHTmJL3HATQNY5CeQxtT9iRHmRPY5Fse9aC'
-);
+// Platform wallet for receiving 20% fee (dynamic selection)
+const getPlatformWallet = (network: string = 'devnet'): PublicKey => {
+  const isMainnet = network === 'mainnet' || network === 'mainnet-beta';
+  const walletAddress = isMainnet 
+    ? (import.meta.env.VITE_PLATFORM_WALLET_MAINNET || import.meta.env.VITE_PLATFORM_WALLET || '9SqtDXzFnisGKMrhwUt81BCUixC7BnuA7ppQ3vPiAFpf')
+    : (import.meta.env.VITE_PLATFORM_WALLET || '9SqtDXzFnisGKMrhwUt81BCUixC7BnuA7ppQ3vPiAFpf');
+  console.log(`🏢 Using ${network} platform wallet: ${walletAddress}`);
+  return new PublicKey(walletAddress);
+};
 
 // Process atomic split payment - single transaction with two transfers
 const processAtomicSplitPayment = async (
@@ -217,7 +223,8 @@ const processAtomicSplitPayment = async (
     if (!senderHasAccount || senderBalance < totalAmount) {
       const availableUSDC = Number(senderBalance) / 1_000_000;
       const requiredUSDC = Number(totalAmount) / 1_000_000;
-      throw new Error(`Insufficient DEVNET USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${requiredUSDC.toFixed(2)} USDC.`);
+      const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
+      throw new Error(`Insufficient ${networkLabel} USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${requiredUSDC.toFixed(2)} USDC.`);
     }
     
     // Create single transaction with two transfer instructions
@@ -301,10 +308,12 @@ const processAtomicSplitPayment = async (
       throw new Error("Insufficient SOL balance for transaction fees. Please add SOL to your wallet.");
     }
     if (error.message.includes('TokenAccountNotFoundError')) {
-      throw new Error("DEVNET USDC token account not found. Please ensure you have DEVNET USDC in your wallet.");
+      const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
+      throw new Error(`${networkLabel} USDC token account not found. Please ensure you have ${networkLabel} USDC in your wallet.`);
     }
     if (error.message.includes('insufficient funds')) {
-      throw new Error("Insufficient DEVNET USDC balance for this transaction.");
+      const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
+      throw new Error(`Insufficient ${networkLabel} USDC balance for this transaction.`);
     }
     
     throw new Error(error.message || "Failed to process atomic split payment");
@@ -323,9 +332,9 @@ export const processUSDCPayment = async (
     if (!wallet.publicKey) throw new Error("Wallet not connected");
     if (!isValidSolanaAddress(recipientAddress)) throw new Error("Invalid recipient address");
     
-    // FORCE DEVNET - Override any network parameter
-    const forceDevnet = 'devnet';
-    console.log(`💰 Processing DEVNET USDC payment with 80/20 split: $${usdAmount} to ${recipientAddress}`);
+    // Use provided network or environment default
+    const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+    console.log(`💰 Processing ${activeNetwork.toUpperCase()} USDC payment with 80/20 split: $${usdAmount} to ${recipientAddress}`);
     
     // Calculate splits: 80% to producer, 20% to platform
     const producerAmount = usdAmount * 0.8;
@@ -334,14 +343,15 @@ export const processUSDCPayment = async (
     console.log(`🎯 Producer gets: $${producerAmount.toFixed(2)} (80%)`);
     console.log(`🏢 Platform gets: $${platformAmount.toFixed(2)} (20%)`);
     
-    const usdcMint = getUSDCMint(forceDevnet);
+    const usdcMint = getUSDCMint(activeNetwork);
     const producerPublicKey = new PublicKey(recipientAddress);
+    const PLATFORM_WALLET = getPlatformWallet(activeNetwork);
     
     // CRITICAL: Check and create ALL THREE ATAs before any transfers
     const allWallets = [wallet.publicKey, producerPublicKey, PLATFORM_WALLET];
     const walletLabels = ['sender', 'producer', 'platform'];
     
-    console.log(`🔍 Checking ATAs for all 3 wallets:`);
+    console.log(`🔍 Checking ATAs for all 3 wallets on ${activeNetwork}:`);
     console.log(`  💳 Sender: ${wallet.publicKey.toString()}`);
     console.log(`  🎵 Producer: ${producerPublicKey.toString()}`);
     console.log(`  🏢 Platform: ${PLATFORM_WALLET.toString()}`);
@@ -401,7 +411,7 @@ export const processUSDCPayment = async (
       platformAmount,
       connection,
       wallet,
-      forceDevnet,
+      activeNetwork,
       { senderATA, producerATA, platformATA }
     );
     
@@ -441,12 +451,14 @@ const processSingleDirectTransfer = async (
     console.log(`💳 Sender USDC balance: ${senderBalance.toString()} units (${Number(senderBalance) / 1_000_000} USDC)`);
     
     if (!senderHasAccount) {
-      throw new Error("You don't have a USDC token account. Please fund your wallet with DEVNET USDC first.");
+      const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
+      throw new Error(`You don't have a USDC token account. Please fund your wallet with ${networkLabel} USDC first.`);
     }
     
     if (senderBalance < usdcAmount) {
       const availableUSDC = Number(senderBalance) / 1_000_000;
-      throw new Error(`Insufficient DEVNET USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${usdAmount} USDC.`);
+      const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
+      throw new Error(`Insufficient ${networkLabel} USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${usdAmount} USDC.`);
     }
     
     // Use precomputed ATAs if provided, otherwise compute them

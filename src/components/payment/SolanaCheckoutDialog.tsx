@@ -544,8 +544,8 @@ export const SolanaCheckoutDialog = ({
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">Order Summary</h3>
-                <Badge variant="outline" className="text-xs">
-                  Test Mode
+          <Badge variant="outline" className="text-xs">
+                  {network === 'mainnet' ? 'Mainnet' : 'Devnet'}
                 </Badge>
               </div>
               

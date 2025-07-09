@@ -18,8 +18,8 @@ export const useSolanaPayment = () => {
   const [lastTransactionSignature, setLastTransactionSignature] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(true);
   
-  // Force devnet for testing phase
-  const network = 'devnet';
+  // Dynamic network selection from environment
+  const network = import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
   
   // Cleanup on unmount
   useEffect(() => {

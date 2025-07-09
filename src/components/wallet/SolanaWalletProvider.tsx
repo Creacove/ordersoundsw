@@ -19,17 +19,22 @@ interface SolanaWalletProviderProps {
 }
 
 const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({ children }) => {
-    // FORCE DEVNET for all transactions
+    // Dynamic network selection from environment
     const network = useMemo(() => {
-        console.log('🌐 Forcing DEVNET network for all Solana operations');
-        return WalletAdapterNetwork.Devnet;
+        const envNetwork = import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+        const solanaNetwork = envNetwork === 'mainnet' ? WalletAdapterNetwork.Mainnet : WalletAdapterNetwork.Devnet;
+        console.log(`🌐 Using ${envNetwork} network for Solana operations`);
+        return solanaNetwork;
     }, []);
 
-    // Use QuickNode RPC endpoint for devnet
+    // Dynamic RPC endpoint selection
     const endpoint = useMemo(() => {
-        const devnetEndpoint = 'https://greatest-proportionate-hill.solana-devnet.quiknode.pro/41e5bfe38a70eea3949938349ff08bed95d6290b/';
-        console.log('🔗 Using DEVNET RPC endpoint:', devnetEndpoint);
-        return devnetEndpoint;
+        const envNetwork = import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+        const rpcEndpoint = envNetwork === 'mainnet' 
+            ? (import.meta.env.VITE_MAINNET_RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com')
+            : (import.meta.env.VITE_DEVNET_RPC_ENDPOINT || 'https://greatest-proportionate-hill.solana-devnet.quiknode.pro/41e5bfe38a70eea3949938349ff08bed95d6290b/');
+        console.log(`🔗 Using ${envNetwork} RPC endpoint:`, rpcEndpoint);
+        return rpcEndpoint;
     }, []);
 
     // Configure wallet adapters for DEVNET
