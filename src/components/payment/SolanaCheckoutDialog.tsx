@@ -503,7 +503,6 @@ export const SolanaCheckoutDialog = ({
                   <Wallet className="h-5 w-5 text-primary flex-shrink-0" />
                   <div>
                     <div className="font-medium">Connected: {wallet.publicKey?.toString().slice(0, 8)}...{wallet.publicKey?.toString().slice(-8)}</div>
-                    <div className="text-sm text-muted-foreground">Network: {network}</div>
                   </div>
                 </div>
               </CardContent>
