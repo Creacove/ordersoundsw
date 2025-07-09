@@ -9,6 +9,7 @@ import {
   TokenAccountNotFoundError,
   TokenInvalidAccountOwnerError
 } from '@solana/spl-token';
+import { createMemoInstruction } from '@solana/spl-memo';
 import { toast } from 'sonner';
 // Smart contract imports removed for direct transfer with platform fee
 
@@ -227,8 +228,16 @@ const processAtomicSplitPayment = async (
       throw new Error(`Insufficient ${networkLabel} USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${requiredUSDC.toFixed(2)} USDC.`);
     }
     
-    // Create single transaction with two transfer instructions
+    // Create single transaction with memo + two transfer instructions
     const transaction = new Transaction();
+    
+    // Add memo instruction FIRST for wallet preview clarity
+    const totalUSDC = (producerAmount + platformAmount).toFixed(2);
+    const memoText = `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer + $${platformAmount.toFixed(2)} platform fee)`;
+    const memoInstruction = createMemoInstruction(memoText, [wallet.publicKey]);
+    transaction.add(memoInstruction);
+    
+    console.log(`📝 Added memo: ${memoText}`);
     
     // Producer transfer instruction (80%)
     const producerTransfer = createTransferInstruction(
@@ -250,7 +259,7 @@ const processAtomicSplitPayment = async (
       TOKEN_PROGRAM_ID
     );
     
-    // Add both instructions to single transaction
+    // Add both transfer instructions to transaction
     transaction.add(producerTransfer);
     transaction.add(platformTransfer);
     
@@ -259,7 +268,7 @@ const processAtomicSplitPayment = async (
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
     
-    console.log(`🧪 Transaction contains ${transaction.instructions.length} instructions`);
+    console.log(`🧪 Transaction contains ${transaction.instructions.length} instructions (1 memo + 2 transfers)`);
     
     // Simulate transaction before sending
     const simulation = await simulateTransaction(connection, transaction);

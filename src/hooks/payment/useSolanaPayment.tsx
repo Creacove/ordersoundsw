@@ -180,8 +180,10 @@ export const useSolanaPayment = () => {
       }
       
       if (isMounted) {
+        const platformFee = (amount * 0.2).toFixed(2);
+        const producerAmount = (amount * 0.8).toFixed(2);
         toast.success("✅ USDC payment successful!", {
-          description: `Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}`
+          description: `$${amount} paid ($${producerAmount} to producer + $${platformFee} platform fee)`
         });
       }
       onSuccess?.(signature);
@@ -330,7 +332,12 @@ export const useSolanaPayment = () => {
 
       if (isMounted) {
         setLastTransactionSignature(signatures[signatures.length - 1]);
-        toast.success(`✅ ${signatures.length} USDC payments completed successfully!`);
+        const totalAmount = items.reduce((total, item) => total + item.price, 0);
+        const platformFee = (totalAmount * 0.2).toFixed(2);
+        const producerAmount = (totalAmount * 0.8).toFixed(2);
+        toast.success(`✅ ${signatures.length} USDC payments completed successfully!`, {
+          description: `Total: $${totalAmount.toFixed(2)} ($${producerAmount} to producers + $${platformFee} platform fee)`
+        });
       }
       onSuccess?.(signatures);
       return signatures;

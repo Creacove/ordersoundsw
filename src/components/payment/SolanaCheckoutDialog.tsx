@@ -544,7 +544,7 @@ export const SolanaCheckoutDialog = ({
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">Order Summary</h3>
-          <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs">
                   {network === 'mainnet' ? 'Mainnet' : 'Devnet'}
                 </Badge>
               </div>
@@ -554,6 +554,19 @@ export const SolanaCheckoutDialog = ({
                   <span>Total</span>
                   <span>${totalPrice.toFixed(2)} USDC</span>
                 </div>
+                
+                {/* Payment breakdown */}
+                <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">To Producers (80%)</span>
+                    <span>${(totalPrice * 0.8).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Platform Fee (20%)</span>
+                    <span>${(totalPrice * 0.2).toFixed(2)}</span>
+                  </div>
+                </div>
+                
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Info className="h-3 w-3" />
                   Secure payment powered by Solana
