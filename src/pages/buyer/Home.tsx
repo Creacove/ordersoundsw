@@ -10,6 +10,7 @@ import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
 import { NewBeats } from "@/components/marketplace/NewBeats";
 import { FeaturedBeat } from "@/components/marketplace/FeaturedBeat";
 import { GenreQuickLinks } from "@/components/marketplace/GenreQuickLinks";
+import { GamingBeats } from "@/components/marketplace/GamingBeats";
 
 const Home = () => {
   return (
@@ -23,6 +24,7 @@ const Home = () => {
         <NewBeats />
         <FeaturedPlaylists />
         <RecommendedBeats />
+        <GamingBeats />
         <ProducerOfWeek />
         <PremiumSection />
       </div>
