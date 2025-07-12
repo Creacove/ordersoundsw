@@ -79,7 +79,7 @@ export default function UploadBeat() {
         .select(`
           id, title, description, genre, track_type, bpm, key,
           producer_id, audio_file, audio_preview, cover_image, 
-          tags, status, license_type, license_terms, stems_url,
+          tags, status, license_type, license_terms, stems_url, category,
           basic_license_price_local, basic_license_price_diaspora,
           premium_license_price_local, premium_license_price_diaspora,
           exclusive_license_price_local, exclusive_license_price_diaspora,
@@ -125,6 +125,7 @@ export default function UploadBeat() {
         exclusiveLicensePriceDiaspora: beatData.exclusive_license_price_diaspora || 0,
         customLicensePriceLocal: beatData.custom_license_price_local || 0,
         customLicensePriceDiaspora: beatData.custom_license_price_diaspora || 0,
+        category: beatData.category || 'Music Beat',
       });
       
       if (beatData.tags && Array.isArray(beatData.tags)) {
@@ -253,6 +254,7 @@ export default function UploadBeat() {
         bpm: beatDetails.bpm,
         key: beatDetails.key,
         tags: tags,
+        category: beatDetails.category,
         basic_license_price_local: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceLocal : 0,
         basic_license_price_diaspora: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceDiaspora : 0,
         premium_license_price_local: selectedLicenseTypes.includes('premium') ? beatDetails.premiumLicensePriceLocal : 0,
@@ -389,6 +391,7 @@ export default function UploadBeat() {
         bpm: beatDetails.bpm,
         key: beatDetails.key,
         tags: tags,
+        category: beatDetails.category,
         basic_license_price_local: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceLocal : 0,
         basic_license_price_diaspora: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceDiaspora : 0,
         premium_license_price_local: selectedLicenseTypes.includes('premium') ? beatDetails.premiumLicensePriceLocal : 0,

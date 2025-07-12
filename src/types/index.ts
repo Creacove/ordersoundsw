@@ -52,6 +52,7 @@ export interface Beat {
   description?: string;
   created_at: string;
   updated_at?: string;
+  category?: string; // Add category field
   favorites_count: number;
   purchase_count: number;
   status: 'draft' | 'published';

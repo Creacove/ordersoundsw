@@ -21,6 +21,7 @@ import ProducerActivation from "./pages/auth/ProducerActivation";
 import Library from "./pages/buyer/Library";
 import Trending from "./pages/buyer/Trending";
 import New from "./pages/buyer/New";
+import GamingSoundtrack from "./pages/buyer/GamingSoundtrack";
 import Playlists from "./pages/buyer/Playlists";
 import Genres from "./pages/buyer/Genres";
 import Producers from "./pages/buyer/Producers";
@@ -87,6 +88,7 @@ const AppContent = () => (
             <Route path="/" element={<Home />} />
             <Route path="/trending" element={<Trending />} />
             <Route path="/new" element={<New />} />
+            <Route path="/gaming-soundtrack" element={<GamingSoundtrack />} />
             <Route path="/playlists" element={<Playlists />} />
             <Route path="/playlists/:playlistId" element={<Playlists />} />
             <Route path="/playlist/:playlistId" element={<PlaylistRedirect />} />

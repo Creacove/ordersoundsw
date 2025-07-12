@@ -33,6 +33,7 @@ export type BeatDetails = {
   licenseTerms: string;
   customLicensePriceLocal: number;
   customLicensePriceDiaspora: number;
+  category: string;
 };
 
 export type Collaborator = {
@@ -84,6 +85,7 @@ export function useBeatUpload() {
     licenseTerms: "",
     customLicensePriceLocal: 15000,
     customLicensePriceDiaspora: 40,
+    category: "Music Beat",
   });
 
   const [collaborators, setCollaborators] = useState<Collaborator[]>([
@@ -472,6 +474,11 @@ export function useBeatUpload() {
     
     if (!beatDetails.trackType) {
       toast.error("Track type is required");
+      return false;
+    }
+    
+    if (!beatDetails.category) {
+      toast.error("Category is required");
       return false;
     }
     

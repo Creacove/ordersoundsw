@@ -34,4 +34,5 @@ export interface SupabaseBeat {
   is_trending?: boolean | null;
   is_featured?: boolean | null;
   is_weekly_pick?: boolean | null;
+  category?: string | null;
 }

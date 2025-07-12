@@ -51,6 +51,23 @@ export const DetailTab = ({
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4">
         <div>
+          <Label htmlFor="category">Category *</Label>
+          <Select 
+            name="category" 
+            onValueChange={(value) => setBeatDetails({...beatDetails, category: value})}
+            value={beatDetails.category}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Music Beat">Music Beat</SelectItem>
+              <SelectItem value="Gaming & Soundtrack">Gaming & Soundtrack</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
           <Label htmlFor="title">Beat Title *</Label>
           <Input 
             id="title" 

@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Beat } from "@/types";
 import { RecommendedBeats } from "@/components/marketplace/RecommendedBeats";
 import { ProducerOfWeek } from "@/components/marketplace/ProducerOfWeek";
+import { GamingBeats } from "@/components/marketplace/GamingBeats";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -200,6 +201,17 @@ export default function IndexPage() {
         </section>
 
         <RecommendedBeats />
+
+        <section className="mb-6">
+          <SectionTitle 
+            title="🎮 Gaming & Soundtrack Beats" 
+            icon={<Star className="h-5 w-5" />}
+            badge="Latest"
+          />
+          <div className="mt-3">
+            <GamingBeats />
+          </div>
+        </section>
 
         <section className="mb-6">
           <SectionTitle 
