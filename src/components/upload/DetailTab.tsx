@@ -3,9 +3,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Gamepad2, Music3 } from "lucide-react";
 import { BeatDetails } from "@/hooks/useBeatUpload";
 
 type DetailTabProps = {
@@ -52,19 +53,31 @@ export const DetailTab = ({
       <div className="grid grid-cols-1 gap-4">
         <div>
           <Label htmlFor="category">Category *</Label>
-          <Select 
-            name="category" 
-            onValueChange={(value) => setBeatDetails({...beatDetails, category: value})}
+          <ToggleGroup 
+            type="single" 
             value={beatDetails.category}
+            onValueChange={(value) => {
+              if (value) {
+                setBeatDetails({...beatDetails, category: value});
+              }
+            }}
+            className="w-full justify-start mt-2"
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Music Beat">Music Beat</SelectItem>
-              <SelectItem value="Gaming & Soundtrack">Gaming & Soundtrack</SelectItem>
-            </SelectContent>
-          </Select>
+            <ToggleGroupItem 
+              value="Music Beat" 
+              className="flex items-center gap-2 flex-1 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <Music3 size={16} />
+              Music Beat
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="Gaming & Soundtrack" 
+              className="flex items-center gap-2 flex-1 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <Gamepad2 size={16} />
+              Gaming & Soundtrack
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         <div>

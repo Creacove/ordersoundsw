@@ -31,6 +31,7 @@ export const mapSupabaseBeatToBeat = (beat: SupabaseBeat): Beat => {
     custom_license_price_local: beat.custom_license_price_local || 0,
     custom_license_price_diaspora: beat.custom_license_price_diaspora || 0,
     genre: beat.genre || '',
+    category: beat.category || 'Music Beat', // Add category mapping
     track_type: beat.track_type || 'Beat',
     bpm: beat.bpm || 0,
     tags: beat.tags || [],

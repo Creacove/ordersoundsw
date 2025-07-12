@@ -17,6 +17,7 @@ type UploadBeatData = {
   title: string;
   description?: string;
   genre: string;
+  category?: string; // Fix: Add missing category field to type
   track_type: string;
   bpm: number;
   key: string;
@@ -146,6 +147,7 @@ export const uploadBeat = async (
       title: beatData.title,
       description: beatData.description || "",
       genre: beatData.genre,
+      category: beatData.category || "Music Beat", // Fix: Add missing category field
       track_type: beatData.track_type,
       bpm: beatData.bpm,
       key: beatData.key || 'C Major',

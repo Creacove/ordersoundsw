@@ -393,7 +393,22 @@ const BeatDetail = () => {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <h1 className="text-2xl font-bold mb-1 truncate">{beat?.title}</h1>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                    <h1 className="text-2xl font-bold truncate">{beat?.title}</h1>
+                    {beat?.category && (
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "text-xs px-2 py-1 shrink-0",
+                          beat.category === "Gaming & Soundtrack" 
+                            ? "bg-blue-600/20 text-blue-400 border-blue-600/30" 
+                            : "bg-purple-600/20 text-purple-400 border-purple-600/30"
+                        )}
+                      >
+                        {beat.category === "Gaming & Soundtrack" ? "🎮 Gaming" : "🎵 Music"}
+                      </Badge>
+                    )}
+                  </div>
                   <Link 
                     to={`/producer/${beat?.producer_id}`} 
                     className="text-sm font-medium text-primary hover:text-primary/80 transition-colors inline-block"

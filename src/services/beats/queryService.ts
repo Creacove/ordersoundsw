@@ -194,6 +194,7 @@ export async function fetchWeeklyPicksBeats(limit: number = 8): Promise<Beat[]> 
         basic_license_price_local,
         basic_license_price_diaspora,
         genre,
+        category,
         bpm,
         producer_id,
         upload_date,
