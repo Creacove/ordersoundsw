@@ -16,7 +16,8 @@ import {
   Search,
   ShoppingCart,
   KeyRound,
-  Users
+  Users,
+  Gamepad2
 } from "lucide-react";
 import { User as UserType } from "@/types";
 
@@ -38,6 +39,7 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       items: [
         { icon: Home, title: "Explore", href: "/" },
         { icon: TrendingUp, title: "Trending", href: "/trending" },
+        { icon: Gamepad2, title: "Gaming & Soundtrack", href: "/gaming-soundtrack" },
         { icon: Heart, title: "Favorites", href: "/favorites" },
         { icon: ShoppingCart, title: "Cart", href: "/cart" },
         { icon: Users, title: "Producers", href: "/producers" },
@@ -50,6 +52,7 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
         { icon: Home, title: "Home", href: "/" },
         { icon: TrendingUp, title: "Trending", href: "/trending" },
         { icon: Clock, title: "New", href: "/new" },
+        { icon: Gamepad2, title: "Gaming & Soundtrack", href: "/gaming-soundtrack" },
         { icon: List, title: "Playlists", href: "/playlists" },
         { icon: Disc, title: "Genres", href: "/genres" },
         { icon: Users, title: "Producers", href: "/producers" },
