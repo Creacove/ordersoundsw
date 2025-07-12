@@ -393,28 +393,47 @@ const BeatDetail = () => {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                  <div className="space-y-2">
                     <h1 className="text-2xl font-bold truncate">{beat?.title}</h1>
-                    {beat?.category && (
-                      <Badge 
-                        variant="secondary" 
-                        className={cn(
-                          "text-xs px-2 py-1 shrink-0",
-                          beat.category === "Gaming & Soundtrack" 
-                            ? "bg-blue-600/20 text-blue-400 border-blue-600/30" 
-                            : "bg-purple-600/20 text-purple-400 border-purple-600/30"
-                        )}
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <Link 
+                        to={`/producer/${beat?.producer_id}`} 
+                        className="text-sm font-medium text-primary hover:text-primary/80 transition-colors inline-block order-2 sm:order-1"
                       >
-                        {beat.category === "Gaming & Soundtrack" ? "🎮 Gaming" : "🎵 Music"}
-                      </Badge>
-                    )}
+                        {beat?.producer_name}
+                      </Link>
+                      
+                      {beat?.category && (
+                        <div className="order-1 sm:order-2 flex justify-center sm:justify-start">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 hover:scale-105",
+                              "bg-gradient-to-r backdrop-blur-sm shadow-sm",
+                              beat.category === "Gaming & Soundtrack" 
+                                ? "from-blue-500/10 to-cyan-500/10 border-blue-500/30 text-blue-400 hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-400/50" 
+                                : "from-purple-500/10 to-pink-500/10 border-purple-500/30 text-purple-400 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-400/50"
+                            )}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              {beat.category === "Gaming & Soundtrack" ? (
+                                <>
+                                  <span className="text-blue-300">🎮</span>
+                                  <span>Gaming & Soundtrack</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-purple-300">🎵</span>
+                                  <span>Music Beat</span>
+                                </>
+                              )}
+                            </span>
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <Link 
-                    to={`/producer/${beat?.producer_id}`} 
-                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors inline-block"
-                  >
-                    {beat?.producer_name}
-                  </Link>
                   
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-3">
                     <div className="flex items-center gap-2 text-sm">
