@@ -1,10 +1,5 @@
 import { Link } from "react-router-dom";
 import { Play, ShoppingCart } from "lucide-react";
-import { SectionTitle } from "@/components/ui/SectionTitle";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { mapSupabaseBeatToBeat } from "@/services/beats/utils";
-import { SupabaseBeat } from "@/services/beats/types";
 import { Badge } from "@/components/ui/badge";
 import { usePlayer } from "@/context/PlayerContext";
 import { Button } from "@/components/ui/button";
@@ -12,47 +7,15 @@ import { ToggleFavoriteButton } from "@/components/buttons/ToggleFavoriteButton"
 import { PriceTag } from "@/components/ui/PriceTag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/context/CartContext";
+import { useBeatsQuery } from "@/hooks/useBeatsQuery";
 
 export const WeeklyPicks = () => {
   const { currentBeat, isPlaying, playBeat } = usePlayer();
   const { toggleCartItem } = useCart();
+  const { weeklyPicks, isLoading } = useBeatsQuery();
   
-  const { data: weeklyPicks = [], isLoading } = useQuery({
-    queryKey: ['weekly-picks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('beats')
-        .select(`
-          id,
-          title,
-          producer_id,
-          users (
-            full_name,
-            stage_name
-          ),
-          cover_image,
-          audio_preview,
-          basic_license_price_local,
-          basic_license_price_diaspora,
-          genre,
-          track_type,
-          bpm,
-          tags,
-          upload_date,
-          favorites_count,
-          purchase_count,
-          status,
-          is_weekly_pick
-        `)
-        .eq('status', 'published')
-        .eq('is_weekly_pick', true)
-        .limit(6);
-
-      if (error) throw error;
-
-      return data.map(beat => mapSupabaseBeatToBeat(beat as SupabaseBeat));
-    }
-  });
+  // Use isLoading state from useBeatsQuery since it aggregates all loading states
+  const isLoadingWeeklyPicks = isLoading;
 
   return (
     <section className="w-full bg-[#111]/80 backdrop-blur-sm p-6 rounded-lg border border-white/[0.02]">
@@ -63,7 +26,7 @@ export const WeeklyPicks = () => {
         </Badge>
       </div>
 
-      {isLoading ? (
+      {isLoadingWeeklyPicks ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => (
             <div key={i} className="flex gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.02]">

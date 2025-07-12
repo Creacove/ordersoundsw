@@ -28,7 +28,7 @@ export const setQueryClient = (client: any) => {
 export const clearBeatsCache = () => {
   if (queryClient) {
     queryClient.invalidateQueries({ queryKey: ['beats'] });
-    queryClient.invalidateQueries({ queryKey: ['trending-beats'] });
+    queryClient.invalidateQueries({ queryKey: ['curated-trending-beats'] });
     queryClient.invalidateQueries({ queryKey: ['metrics-trending-beats'] });
     queryClient.invalidateQueries({ queryKey: ['new-beats'] });
     queryClient.invalidateQueries({ queryKey: ['weekly-picks'] });
@@ -179,9 +179,57 @@ export async function fetchNewBeats(limit: number = 20): Promise<Beat[]> {
   }
 }
 
+export async function fetchWeeklyPicksBeats(limit: number = 8): Promise<Beat[]> {
+  try {
+    console.log('Fetching weekly picks beats using optimized query...');
+    
+    // Lean query with essential fields for weekly picks
+    const { data, error } = await supabase
+      .from('beats')
+      .select(`
+        id,
+        title,
+        cover_image,
+        audio_preview,
+        basic_license_price_local,
+        basic_license_price_diaspora,
+        genre,
+        bpm,
+        producer_id,
+        upload_date,
+        status,
+        is_weekly_pick,
+        users!beats_producer_id_fkey (
+          stage_name,
+          full_name
+        )
+      `)
+      .eq('status', 'published')
+      .eq('is_weekly_pick', true)
+      .order('upload_date', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching weekly picks beats:', error);
+      throw error;
+    }
+
+    const beats = (data || []).map(beat => ({
+      ...mapSupabaseBeatToBeat(beat),
+      producer_name: beat.users?.stage_name || beat.users?.full_name || 'Unknown Producer'
+    }));
+    
+    console.log(`Successfully fetched ${beats.length} weekly picks beats`);
+    return beats;
+  } catch (error) {
+    console.error('Failed to fetch weekly picks beats:', error);
+    throw error;
+  }
+}
+
 export async function fetchRandomBeats(limit: number = 8): Promise<Beat[]> {
   try {
-    console.log('Fetching random beats for weekly picks...');
+    console.log('Fetching random beats...');
     
     // Use optimized query with our indexes
     const { data, error } = await supabase

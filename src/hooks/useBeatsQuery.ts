@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Beat } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { 
-  fetchAllBeats, fetchTrendingBeats, fetchMetricBasedTrending, fetchRandomBeats, fetchNewBeats,
+  fetchAllBeats, fetchTrendingBeats, fetchMetricBasedTrending, fetchWeeklyPicksBeats, fetchNewBeats,
   fetchBeatById, clearBeatsCache
 } from '@/services/beats';
 
@@ -74,13 +74,13 @@ export function useBeatsQuery() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Weekly picks query (using random beats)
+  // Weekly picks query (curated beats with is_weekly_pick = true)
   const { 
     data: weeklyPicks = [], 
     isLoading: isLoadingWeekly 
   } = useQuery({
     queryKey: ['weekly-picks'],
-    queryFn: () => fetchRandomBeats(8),
+    queryFn: () => fetchWeeklyPicksBeats(8),
     staleTime: 60 * 60 * 1000, // Keep weekly picks for 1 hour
   });
 
