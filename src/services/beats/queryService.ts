@@ -172,7 +172,25 @@ export async function fetchFeaturedBeats(limit: number = 1): Promise<Beat[]> {
 export async function fetchNewBeats(limit: number = 20): Promise<Beat[]> {
   try {
     console.log('Fetching new beats using optimized query...');
-    return await getNewBeatsOptimized(limit);
+    
+    // Direct query as fallback with category filter
+    const { data, error } = await supabase
+      .from('beats')
+      .select(`
+        *,
+        users!beats_producer_id_fkey(stage_name, full_name, profile_picture)
+      `)
+      .eq('status', 'published')
+      .neq('category', 'Gaming & Soundtrack')
+      .order('upload_date', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return (data || []).map(beat => ({
+      ...mapSupabaseBeatToBeat(beat),
+      producer_name: beat.users?.stage_name || beat.users?.full_name || 'Unknown Producer'
+    }));
   } catch (error) {
     console.error('Failed to fetch new beats:', error);
     throw error;

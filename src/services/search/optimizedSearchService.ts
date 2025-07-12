@@ -189,6 +189,7 @@ export async function getNewBeatsOptimized(limit = 20): Promise<Beat[]> {
         users!beats_producer_id_fkey(stage_name, full_name, profile_picture)
       `)
       .eq('status', 'published')
+      .neq('category', 'Gaming & Soundtrack')
       .order('upload_date', { ascending: false })
       .limit(limit);
 
