@@ -37,7 +37,7 @@ const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({ children }) => {
         return rpcEndpoint;
     }, []);
 
-    // Configure wallet adapters for DEVNET
+    // Configure wallet adapters dynamically based on network
     const wallets = useMemo(
         () => [
             new PhantomWalletAdapter(),
