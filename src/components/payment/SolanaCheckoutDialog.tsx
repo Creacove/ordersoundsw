@@ -146,10 +146,10 @@ export const SolanaCheckoutDialog = ({
           return !hasWallet;
         });
         
+        // Allow checkout even with missing producer wallets - log for platform tracking
         if (missingWallets.length > 0) {
-          console.error("Items missing wallet addresses:", missingWallets);
-          setValidationError(`Cannot process payment: ${producersWithoutWallets.join(', ')} ${producersWithoutWallets.length === 1 ? 'has' : 'have'} not set up ${producersWithoutWallets.length === 1 ? 'their' : 'their'} Solana wallet address yet.`);
-          return;
+          console.log("Items with missing wallet addresses will use platform fallback:", missingWallets);
+          console.log("Producers without wallets:", producersWithoutWallets);
         }
         
         setValidatedItems(updatedItems);
@@ -175,17 +175,16 @@ export const SolanaCheckoutDialog = ({
     
     itemsToUse.forEach(item => {
       const producerWallet = item.producer_wallet || '';
-      if (!producerWallet) {
-        console.error(`Missing wallet address for item: ${item.title}`);
-        return;
+      
+      // Use special key for items with missing producer wallets
+      const walletKey = producerWallet || 'PLATFORM_FALLBACK';
+      
+      if (!groupedItems[walletKey]) {
+        groupedItems[walletKey] = { items: [], total: 0 };
       }
       
-      if (!groupedItems[producerWallet]) {
-        groupedItems[producerWallet] = { items: [], total: 0 };
-      }
-      
-      groupedItems[producerWallet].items.push(item);
-      groupedItems[producerWallet].total += item.price * item.quantity;
+      groupedItems[walletKey].items.push(item);
+      groupedItems[walletKey].total += item.price * item.quantity;
     });
     
     return Object.entries(groupedItems).map(([wallet, data]) => ({
@@ -202,7 +201,7 @@ export const SolanaCheckoutDialog = ({
     }
     
     if (!validationComplete) {
-      toast.error("Please wait for wallet validation to complete");
+      toast.error("Please wait for payment validation to complete");
       return;
     }
     
@@ -218,7 +217,10 @@ export const SolanaCheckoutDialog = ({
       for (let i = 0; i < groupedItems.length; i++) {
         const group = groupedItems[i];
         
-        if (!group.producerWallet) {
+        // Handle fallback for missing producer wallets
+        const isFallbackPayment = group.producerWallet === 'PLATFORM_FALLBACK';
+        
+        if (!group.producerWallet && !isFallbackPayment) {
           paymentResults.push({
             success: false,
             error: `Missing producer wallet address for ${group.items[0].title}`,
@@ -231,23 +233,37 @@ export const SolanaCheckoutDialog = ({
         }
         
         try {
-          console.log(`Processing USDC payment of $${group.total} to wallet ${group.producerWallet}`);
+          let signature: string | null = null;
           
-          const signature = await makePayment(
-            group.total,
-            group.producerWallet
-          );
+          if (isFallbackPayment) {
+            console.log(`Processing platform fallback payment of $${group.total} (producer wallet missing)`);
+            
+            signature = await makePayment(
+              group.total,
+              null, // Signal fallback payment
+              undefined,
+              undefined,
+              { items: group.items } // Pass items for database tracking
+            );
+          } else {
+            console.log(`Processing USDC payment of $${group.total} to wallet ${group.producerWallet}`);
+            
+            signature = await makePayment(
+              group.total,
+              group.producerWallet
+            );
+          }
           
           if (signature) {
             paymentResults.push({
               success: true,
               signature,
               groupIndex: i,
-              producerWallet: group.producerWallet,
+              producerWallet: isFallbackPayment ? 'PLATFORM_FALLBACK' : group.producerWallet,
               amount: group.total,
               items: group.items
             });
-            console.log(`USDC payment successful: ${signature}`);
+            console.log(`Payment successful: ${signature}`);
           } else {
             paymentResults.push({
               success: false,

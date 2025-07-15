@@ -329,6 +329,39 @@ const processAtomicSplitPayment = async (
   }
 };
 
+// Process platform-only payment (100% to platform wallet)
+export const processPlatformOnlyPayment = async (
+  usdAmount: number,
+  connection: Connection,
+  wallet: WalletContextState,
+  network: string = 'devnet'
+): Promise<string> => {
+  try {
+    if (!wallet.publicKey) throw new Error("Wallet not connected");
+    
+    const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+    console.log(`💰 Processing ${activeNetwork.toUpperCase()} platform-only payment: $${usdAmount}`);
+    
+    const PLATFORM_WALLET = getPlatformWallet(activeNetwork);
+    
+    // Use direct transfer to platform wallet
+    const signature = await processSingleDirectTransfer(
+      usdAmount,
+      PLATFORM_WALLET.toString(),
+      connection,
+      wallet,
+      activeNetwork,
+      'platform'
+    );
+    
+    console.log(`✅ Platform-only payment completed: ${signature}`);
+    return signature;
+  } catch (error: any) {
+    console.error("❌ Error in platform-only payment:", error);
+    throw new Error(error.message || "Failed to process platform-only payment");
+  }
+};
+
 // Process USDC payment with 80/20 split
 export const processUSDCPayment = async (
   usdAmount: number,
@@ -337,13 +370,20 @@ export const processUSDCPayment = async (
   wallet: WalletContextState,
   network: string = 'devnet'
 ): Promise<string> => {
-  try {
-    if (!wallet.publicKey) throw new Error("Wallet not connected");
-    if (!isValidSolanaAddress(recipientAddress)) throw new Error("Invalid recipient address");
-    
-    // Use provided network or environment default
-    const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
-    console.log(`💰 Processing ${activeNetwork.toUpperCase()} USDC payment with 80/20 split: $${usdAmount} to ${recipientAddress}`);
+    try {
+      if (!wallet.publicKey) throw new Error("Wallet not connected");
+      
+      // Handle missing producer wallet by using platform-only payment
+      if (!recipientAddress || recipientAddress.trim() === '') {
+        console.log(`⚠️  Missing producer wallet, using platform-only payment for $${usdAmount}`);
+        return await processPlatformOnlyPayment(usdAmount, connection, wallet, network);
+      }
+      
+      if (!isValidSolanaAddress(recipientAddress)) throw new Error("Invalid recipient address");
+      
+      // Use provided network or environment default
+      const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+      console.log(`💰 Processing ${activeNetwork.toUpperCase()} USDC payment with 80/20 split: $${usdAmount} to ${recipientAddress}`);
     
     // Calculate splits: 80% to producer, 20% to platform
     const producerAmount = usdAmount * 0.8;
@@ -580,11 +620,12 @@ export const processMultipleUSDCPayments = async (
     const forceDevnet = 'devnet';
     console.log(`💰 Processing ${items.length} DEVNET USDC payments with 80/20 split`);
     
-    // Validate all recipient addresses first
-    for (const item of items) {
-      if (!isValidSolanaAddress(item.producerWallet)) {
-        throw new Error(`Invalid recipient address: ${item.producerWallet}`);
-      }
+    // Validate recipient addresses and separate fallback items
+    const validItems = items.filter(item => item.producerWallet && isValidSolanaAddress(item.producerWallet));
+    const fallbackItems = items.filter(item => !item.producerWallet);
+    
+    if (fallbackItems.length > 0) {
+      console.log(`${fallbackItems.length} items will require platform fallback payment`);
     }
     
     const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
@@ -608,27 +649,46 @@ export const processMultipleUSDCPayments = async (
     
     const signatures: string[] = [];
     
-    // Process sequentially to avoid nonce conflicts
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+    // Process valid items with normal 80/20 split
+    for (let i = 0; i < validItems.length; i++) {
+      const item = validItems[i];
       try {
-        console.log(`📦 Processing DEVNET payment ${i + 1}/${items.length}: $${item.price} to ${item.producerWallet}`);
+        console.log(`📦 Processing DEVNET payment ${i + 1}/${validItems.length}: $${item.price} to ${item.producerWallet}`);
         
         const signature = await processUSDCPayment(
           item.price,
-          item.producerWallet,
+          item.producerWallet!,
           connection,
           wallet,
-          forceDevnet // Force devnet
+          forceDevnet
         );
         signatures.push(signature);
         
-        // Small delay between transactions to avoid rate limiting
-        if (i < items.length - 1) {
+        // Small delay between transactions
+        if (i < validItems.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error: any) {
         console.error(`❌ Failed DEVNET USDC payment to ${item.producerWallet}:`, error);
+        throw error;
+      }
+    }
+    
+    // Process fallback items with platform-only payment
+    if (fallbackItems.length > 0) {
+      const fallbackAmount = fallbackItems.reduce((sum, item) => sum + item.price, 0);
+      console.log(`📦 Processing platform fallback payment: $${fallbackAmount} for ${fallbackItems.length} items`);
+      
+      try {
+        const fallbackSignature = await processPlatformOnlyPayment(
+          fallbackAmount,
+          connection,
+          wallet,
+          forceDevnet
+        );
+        signatures.push(fallbackSignature);
+      } catch (error: any) {
+        console.error(`❌ Failed platform fallback payment:`, error);
         throw error;
       }
     }

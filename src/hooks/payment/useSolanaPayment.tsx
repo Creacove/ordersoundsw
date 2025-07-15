@@ -1,4 +1,3 @@
-
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
@@ -10,6 +9,63 @@ interface ProductData {
   title: string;
   price: number;
 }
+
+// Helper function to record fallback payments in database
+const recordFallbackPayment = async (amount: number, signature: string, productData?: ProductData | { items: any[] }) => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error("Could not get user for fallback payment recording:", userError);
+      return;
+    }
+
+    // Create a temporary order to link payment to
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        buyer_id: user.id,
+        total_price: amount,
+        status: 'completed',
+        currency_used: 'USDC',
+        payment_method: 'solana_usdc',
+        transaction_signatures: [signature]
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error("Failed to create fallback order:", orderError);
+      return;
+    }
+
+    // Record payment with 100% platform share and fallback metadata
+    const { data: paymentData, error: paymentError } = await supabase
+      .from('payments')
+      .insert({
+        amount,
+        order_id: orderData.id,
+        payment_method: 'solana_usdc',
+        status: 'completed',
+        transaction_reference: signature,
+        platform_share: amount, // 100% to platform
+        producer_share: 0, // 0% to producer (missing wallet)
+        payment_details: {
+          fallback_reason: 'missing_producer_wallet',
+          transaction_signature: signature,
+          items: 'items' in (productData || {}) ? (productData as { items: any[] }).items : [productData]
+        }
+      });
+
+    if (paymentError) {
+      console.error("Failed to record fallback payment:", paymentError);
+    } else {
+      console.log("Recorded fallback payment for manual distribution:", paymentData);
+    }
+  } catch (error) {
+    console.error("Error recording fallback payment:", error);
+  }
+};
 
 export const useSolanaPayment = () => {
   const { connection } = useConnection();
@@ -53,10 +109,10 @@ export const useSolanaPayment = () => {
   
   const makePayment = async (
     amount: number,
-    producerWalletAddress: string,
+    producerWalletAddress: string | null,
     onSuccess?: (signature: string) => void,
     onError?: (error: any) => void,
-    productData?: ProductData
+    productData?: ProductData | { items: any[] }
   ) => {
     if (isProcessing) {
       toast.warning("Please wait for current transaction to complete");
@@ -66,7 +122,33 @@ export const useSolanaPayment = () => {
     setIsProcessing(true);
     
     try {
-      // Validate inputs
+      // Handle fallback payment when producer wallet is missing
+      if (producerWalletAddress === null) {
+        console.log(`💳 Processing platform fallback payment: $${amount} (producer wallet missing)`);
+        
+        // Use platform-only payment function
+        const { processPlatformOnlyPayment } = await import('@/utils/payment/usdcTransactions');
+        const signature = await processPlatformOnlyPayment(
+          amount,
+          connection,
+          wallet,
+          network
+        );
+        
+        // Record fallback payment details
+        await recordFallbackPayment(amount, signature, productData);
+        
+        if (isMounted) {
+          setLastTransactionSignature(signature);
+          toast.success("✅ Payment completed successfully!", {
+            description: `$${amount} payment processed`
+          });
+        }
+        onSuccess?.(signature);
+        return signature;
+      }
+
+      // Validate inputs for normal payment
       validatePaymentInputs(amount, producerWalletAddress);
 
       console.log(`💳 Processing USDC payment: $${amount} to ${producerWalletAddress} on ${network}`);
@@ -112,7 +194,7 @@ export const useSolanaPayment = () => {
       }
       
       // Handle product purchase record if applicable (non-blocking)
-      if (productData) {
+      if (productData && 'id' in productData) {
         try {
           // Get current user for buyer_id
           const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -207,7 +289,7 @@ export const useSolanaPayment = () => {
   };
 
   const makeMultiplePayments = async (
-    items: { price: number, producerWallet: string, id?: string, title?: string }[],
+    items: { price: number, producerWallet: string | null, id?: string, title?: string }[],
     onSuccess?: (signatures: string[]) => void,
     onError?: (error: any) => void,
     maxRetries = 2
@@ -222,16 +304,12 @@ export const useSolanaPayment = () => {
       return null;
     }
 
-    // Validate all items have valid wallet addresses
-    const invalidItems = items.filter(item => 
-      !item.producerWallet || !isValidSolanaAddress(item.producerWallet)
-    );
+    // Check for missing wallets and group fallback items
+    const validItems = items.filter(item => item.producerWallet && isValidSolanaAddress(item.producerWallet));
+    const fallbackItems = items.filter(item => !item.producerWallet);
     
-    if (invalidItems.length > 0) {
-      const errorMessage = `${invalidItems.length} items have invalid wallet addresses`;
-      toast.error(errorMessage);
-      onError?.({ message: `INVALID_ADDRESSES: ${errorMessage}` });
-      return null;
+    if (fallbackItems.length > 0) {
+      console.log(`${fallbackItems.length} items will use platform fallback payment`);
     }
 
     setIsProcessing(true);
@@ -241,31 +319,33 @@ export const useSolanaPayment = () => {
         throw new Error("WALLET_NOT_CONNECTED: Please connect your wallet first");
       }
 
-      console.log(`💳 Processing ${items.length} USDC payments on ${network} network`);
+      console.log(`💳 Processing ${items.length} USDC payments on ${network} network (${validItems.length} normal + ${fallbackItems.length} fallback)`);
 
-      // Process multiple USDC payments with retry logic
-      let retries = 0;
-      let lastError;
-      let signatures: string[] = [];
+      const signatures: string[] = [];
 
-      while (retries <= maxRetries) {
-        try {
-          signatures = await processMultipleUSDCPayments(items, connection, wallet, network);
-          break;
-        } catch (error) {
-          lastError = error;
-          retries++;
-          if (retries <= maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
-            if (isMounted) {
-              toast.info(`Retrying payments (attempt ${retries} of ${maxRetries})...`);
-            }
-          }
-        }
+      // Process normal payments first
+      if (validItems.length > 0) {
+        const normalSignatures = await processMultipleUSDCPayments(validItems, connection, wallet, network);
+        signatures.push(...normalSignatures);
       }
 
-      if (!signatures.length) {
-        throw lastError || new Error("PAYMENT_FAILED: All retries exhausted");
+      // Process fallback payment for items with missing producer wallets
+      if (fallbackItems.length > 0) {
+        const fallbackAmount = fallbackItems.reduce((total, item) => total + item.price, 0);
+        console.log(`Processing fallback payment of $${fallbackAmount} for ${fallbackItems.length} items`);
+        
+        const { processPlatformOnlyPayment } = await import('@/utils/payment/usdcTransactions');
+        const fallbackSignature = await processPlatformOnlyPayment(
+          fallbackAmount,
+          connection,
+          wallet,
+          network
+        );
+        
+        signatures.push(fallbackSignature);
+        
+        // Record fallback payment
+        await recordFallbackPayment(fallbackAmount, fallbackSignature, { items: fallbackItems });
       }
 
       // Record transaction details in database (non-blocking)
@@ -333,10 +413,8 @@ export const useSolanaPayment = () => {
       if (isMounted) {
         setLastTransactionSignature(signatures[signatures.length - 1]);
         const totalAmount = items.reduce((total, item) => total + item.price, 0);
-        const platformFee = (totalAmount * 0.2).toFixed(2);
-        const producerAmount = (totalAmount * 0.8).toFixed(2);
         toast.success(`✅ ${signatures.length} USDC payments completed successfully!`, {
-          description: `Total: $${totalAmount.toFixed(2)} ($${producerAmount} to producers + $${platformFee} platform fee)`
+          description: `Total: $${totalAmount.toFixed(2)} processed`
         });
       }
       onSuccess?.(signatures);
