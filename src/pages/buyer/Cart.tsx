@@ -230,15 +230,16 @@ export default function Cart() {
         });
       }
       
+      // Log producers without wallets for platform tracking (but don't block checkout)
       if (producersWithoutWallets.length > 0) {
-        throw new Error(`The following producers haven't set up their Solana wallet addresses: ${producersWithoutWallets.join(', ')}. Please remove these items or try again later.`);
+        console.log(`Producers without wallets (will use platform fallback): ${producersWithoutWallets.join(', ')}`);
       }
       
       const updatedCartItems = cartItems.map(item => ({
         ...item,
         beat: {
           ...item.beat,
-          producer_wallet_address: producerWallets[item.beat?.producer_id || '']
+          producer_wallet_address: producerWallets[item.beat?.producer_id || ''] || null
         }
       }));
       
