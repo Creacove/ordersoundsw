@@ -59,7 +59,12 @@ export const LicensingTab = ({
           </Alert>
         )}
       
-        {licenseOptions.map((option) => (
+        {licenseOptions.filter(option => {
+          if (beatDetails.category === "Gaming & Soundtrack") {
+            return option.value === "exclusive" || option.value === "custom";
+          }
+          return true;
+        }).map((option) => (
           <div key={option.value} className={`border rounded-lg p-4 ${
             selectedLicenseTypes.includes(option.value) ? "border-primary bg-primary/5" : ""
           }`}>
