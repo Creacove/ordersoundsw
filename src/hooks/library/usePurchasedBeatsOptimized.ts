@@ -108,29 +108,79 @@ export function usePurchasedBeatsOptimized() {
       }
 
       const fileUrl = downloadType === 'stems' ? beat.stems_url! : beat.full_track_url;
+      
+      // Show loading toast with progress feedback
+      const loadingToast = toast.loading(`Preparing ${downloadType === 'stems' ? 'stems' : 'track'} download...`);
+      
       const downloadUrl = await getDownloadUrl(beat.id, fileUrl, downloadType);
       
       if (!downloadUrl) {
+        toast.dismiss(loadingToast);
         toast.error(`Failed to generate ${downloadType} download link`);
         return;
       }
 
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      
+      // Create professional filename with proper sanitization
       const license = purchaseDetails[beat.id]?.licenseType || 'basic';
-      const fileExtension = downloadType === 'stems' ? 'zip' : 'mp3';
-      const fileTypeSuffix = downloadType === 'stems' ? '_stems' : '';
-      link.download = `${beat.title.replace(/\s+/g, '_')}_${license}${fileTypeSuffix}.${fileExtension}`;
+      const producerName = beat.producer_name?.replace(/[^\w\s-]/g, '') || 'Unknown_Producer';
+      const beatTitle = beat.title.replace(/[^\w\s-]/g, '');
+      const bpmInfo = beat.bpm ? `${beat.bpm}BPM` : '';
+      const keyInfo = beat.key ? beat.key.replace(/[^\w]/g, '') : '';
       
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Build filename parts
+      const filenameParts = [
+        producerName.replace(/\s+/g, '_'),
+        beatTitle.replace(/\s+/g, '_'),
+        bpmInfo,
+        keyInfo,
+        `${license.charAt(0).toUpperCase() + license.slice(1)}_License`
+      ].filter(Boolean);
       
-      toast.success(`${downloadType === 'stems' ? 'Stems' : 'Track'} download started!`);
+      const fileExtension = downloadType === 'stems' ? 'zip' : 'wav';
+      const professionalFilename = `${filenameParts.join(' - ')}.${fileExtension}`;
+
+      // Use fetch for better control over download process
+      try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error('Download failed');
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = professionalFilename;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up blob URL
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        
+        toast.dismiss(loadingToast);
+        toast.success(`${downloadType === 'stems' ? 'Stems' : 'Track'} download completed!`, {
+          description: `File: ${professionalFilename}`
+        });
+      } catch (fetchError) {
+        // Fallback to direct link if fetch fails
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = professionalFilename;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.dismiss(loadingToast);
+        toast.success(`${downloadType === 'stems' ? 'Stems' : 'Track'} download started!`);
+      }
     } catch (error) {
       console.error('Download error:', error);
-      toast.error('Failed to download file');
+      toast.error('Failed to download file. Please try again.');
     }
   };
 

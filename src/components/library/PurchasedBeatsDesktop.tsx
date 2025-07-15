@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { DownloadIcon, Play, Pause, ChevronDown } from 'lucide-react';
+import { DownloadIcon, Play, Pause, ChevronDown, FileMusic, Archive } from 'lucide-react';
 import { Beat } from '@/types';
 import { usePlayer } from '@/context/PlayerContext';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ interface PurchasedBeatsDesktopProps {
 
 export function PurchasedBeatsDesktop({ beats, purchaseDetails, onDownload }: PurchasedBeatsDesktopProps) {
   const { isPlaying, currentBeat, playBeat } = usePlayer();
+  const [downloadingItems, setDownloadingItems] = useState<Set<string>>(new Set());
 
   const handlePlayBeat = (beat: Beat) => {
     if (currentBeat?.id === beat.id) {
@@ -26,6 +27,21 @@ export function PurchasedBeatsDesktop({ beats, purchaseDetails, onDownload }: Pu
       }
     } else {
       playBeat(beat);
+    }
+  };
+
+  const handleDownloadWithFeedback = async (beat: Beat, downloadType?: 'track' | 'stems') => {
+    const itemKey = `${beat.id}-${downloadType}`;
+    setDownloadingItems(prev => new Set(prev).add(itemKey));
+    
+    try {
+      await onDownload(beat, downloadType);
+    } finally {
+      setDownloadingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
     }
   };
 
@@ -64,11 +80,20 @@ export function PurchasedBeatsDesktop({ beats, purchaseDetails, onDownload }: Pu
                   </div>
                   <div className="flex flex-col">
                     <div className="font-medium">{beat.title}</div>
-                    {beat.stems_url && (
-                      <Badge variant="secondary" className="text-xs w-fit mt-1">
-                        Stems Available
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      {beat.bpm && (
+                        <span className="text-xs text-muted-foreground">{beat.bpm} BPM</span>
+                      )}
+                      {beat.key && (
+                        <span className="text-xs text-muted-foreground">{beat.key}</span>
+                      )}
+                      {beat.stems_url && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Archive className="h-3 w-3 mr-1" />
+                          Stems Available
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </TableCell>
@@ -87,13 +112,25 @@ export function PurchasedBeatsDesktop({ beats, purchaseDetails, onDownload }: Pu
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onDownload(beat, 'track')}>
-                        <DownloadIcon className="h-4 w-4 mr-2" />
-                        Download Track
+                      <DropdownMenuItem 
+                        onClick={() => handleDownloadWithFeedback(beat, 'track')}
+                        disabled={downloadingItems.has(`${beat.id}-track`)}
+                      >
+                        <FileMusic className="h-4 w-4 mr-2" />
+                        Download Track (.wav)
+                        {downloadingItems.has(`${beat.id}-track`) && (
+                          <span className="ml-2 text-xs animate-pulse">Downloading...</span>
+                        )}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDownload(beat, 'stems')}>
-                        <DownloadIcon className="h-4 w-4 mr-2" />
-                        Download Stems
+                      <DropdownMenuItem 
+                        onClick={() => handleDownloadWithFeedback(beat, 'stems')}
+                        disabled={downloadingItems.has(`${beat.id}-stems`)}
+                      >
+                        <Archive className="h-4 w-4 mr-2" />
+                        Download Stems (.zip)
+                        {downloadingItems.has(`${beat.id}-stems`) && (
+                          <span className="ml-2 text-xs animate-pulse">Downloading...</span>
+                        )}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -101,11 +138,12 @@ export function PurchasedBeatsDesktop({ beats, purchaseDetails, onDownload }: Pu
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onDownload(beat, 'track')}
+                    onClick={() => handleDownloadWithFeedback(beat, 'track')}
+                    disabled={downloadingItems.has(`${beat.id}-track`)}
                     className="flex items-center gap-1"
                   >
-                    <DownloadIcon className="h-4 w-4" />
-                    Download
+                    <FileMusic className="h-4 w-4" />
+                    {downloadingItems.has(`${beat.id}-track`) ? 'Downloading...' : 'Download'}
                   </Button>
                 )}
               </TableCell>
