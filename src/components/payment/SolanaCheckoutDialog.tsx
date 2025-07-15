@@ -152,8 +152,10 @@ export const SolanaCheckoutDialog = ({
           console.log("Producers without wallets:", producersWithoutWallets);
         }
         
+        // Set validation complete regardless of missing wallets
         setValidatedItems(updatedItems);
         setValidationComplete(true);
+        setValidationError('');
       } catch (error: any) {
         console.error('Error validating wallet addresses:', error);
         setValidationError('Error validating producer payment information: ' + (error.message || 'Unknown error'));
@@ -525,20 +527,12 @@ export const SolanaCheckoutDialog = ({
             </Card>
           )}
           
-          {validationError ? (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <p className="font-medium">Validation Error</p>
-                <p className="text-sm mt-1">{validationError}</p>
-              </AlertDescription>
-            </Alert>
-          ) : validationComplete ? (
+          {validationComplete ? (
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
-                <p className="font-medium">Validation Complete</p>
-                <p className="text-sm mt-1">All producer wallet addresses verified</p>
+                <p className="font-medium">Payment Ready</p>
+                <p className="text-sm mt-1">Your order is ready for checkout</p>
               </AlertDescription>
             </Alert>
           ) : (
@@ -605,7 +599,7 @@ export const SolanaCheckoutDialog = ({
             className="w-full sm:w-auto" 
             variant="premium"
             onClick={handleCheckout} 
-            disabled={isCheckingOut || !wallet.connected || !validationComplete || !!validationError}
+            disabled={isCheckingOut || !wallet.connected || !validationComplete}
           >
             {isCheckingOut ? (
               <>
