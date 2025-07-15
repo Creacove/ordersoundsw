@@ -127,6 +127,10 @@ export function usePurchasedBeatsOptimized() {
       const bpmInfo = beat.bpm ? `${beat.bpm}BPM` : '';
       const keyInfo = beat.key ? beat.key.replace(/[^\w]/g, '') : '';
       
+      // Determine file extension from URL
+      const fileExtension = downloadType === 'stems' ? 'zip' : 
+        (fileUrl.toLowerCase().includes('.mp3') ? 'mp3' : 'wav');
+      
       // Build filename parts
       const filenameParts = [
         producerName.replace(/\s+/g, '_'),
@@ -136,7 +140,6 @@ export function usePurchasedBeatsOptimized() {
         `${license.charAt(0).toUpperCase() + license.slice(1)}_License`
       ].filter(Boolean);
       
-      const fileExtension = downloadType === 'stems' ? 'zip' : 'wav';
       const professionalFilename = `${filenameParts.join(' - ')}.${fileExtension}`;
 
       // Use fetch for better control over download process

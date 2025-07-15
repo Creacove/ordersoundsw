@@ -138,8 +138,9 @@ export function useBeatUpload() {
         return;
       }
       
-      const requiresWavFormat = selectedLicenseTypes.includes('premium') || 
-                              selectedLicenseTypes.includes('exclusive');
+      const requiresWavFormat = (selectedLicenseTypes.includes('premium') || 
+                               selectedLicenseTypes.includes('exclusive')) &&
+                               beatDetails.category !== 'Gaming & Soundtrack';
                               
       if (requiresWavFormat && file.type !== "audio/wav" && !file.name.endsWith('.wav')) {
         toast.error("Premium and exclusive licenses require WAV format");
@@ -439,7 +440,8 @@ export function useBeatUpload() {
     }
     
     if (uploadedFile) {
-      const requiresWavFormat = (value === 'premium' || value === 'exclusive') && isChecked;
+      const requiresWavFormat = (value === 'premium' || value === 'exclusive') && isChecked &&
+                               beatDetails.category !== 'Gaming & Soundtrack';
       
       if (isFile(uploadedFile)) {
         const hasWav = uploadedFile.type === "audio/wav" || uploadedFile.name.endsWith('.wav');
@@ -492,8 +494,9 @@ export function useBeatUpload() {
       return false;
     }
     
-    const requiresWavFormat = selectedLicenseTypes.includes('premium') || 
-                              selectedLicenseTypes.includes('exclusive');
+    const requiresWavFormat = (selectedLicenseTypes.includes('premium') || 
+                               selectedLicenseTypes.includes('exclusive')) &&
+                               beatDetails.category !== 'Gaming & Soundtrack';
     
     if (requiresWavFormat && uploadedFile && isFile(uploadedFile) &&
         uploadedFile.type !== "audio/wav" && 

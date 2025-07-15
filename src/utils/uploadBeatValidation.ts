@@ -20,6 +20,7 @@ type ValidationArgs = {
     exclusiveLicensePriceDiaspora: number;
     customLicensePriceLocal: number;
     customLicensePriceDiaspora: number;
+    category: string;
   };
   selectedLicenseTypes: string[];
   imageFile: FileOrUrl | null;
@@ -90,8 +91,10 @@ export const validateCurrentTab = ({
       }
       
       // Check WAV format requirement for premium/exclusive licenses
-      const requiresWavFormat = selectedLicenseTypes.includes('premium') || 
-                              selectedLicenseTypes.includes('exclusive');
+      // Exception: Gaming & Soundtrack category allows MP3 even for premium/exclusive
+      const requiresWavFormat = (selectedLicenseTypes.includes('premium') || 
+                               selectedLicenseTypes.includes('exclusive')) &&
+                               beatDetails.category !== 'Gaming & Soundtrack';
       
       if (requiresWavFormat && uploadedFile && isFile(uploadedFile) &&
           uploadedFile.type !== "audio/wav" && 

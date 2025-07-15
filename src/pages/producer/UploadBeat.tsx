@@ -611,6 +611,7 @@ export default function UploadBeat() {
                     handleStemsUpload={handleStemsUpload}
                     uploadError={uploadError}
                     stemsUrl={localStemsUrl || stemsUrl}
+                    beatDetails={beatDetails}
                   />
                 </TabsContent>
 

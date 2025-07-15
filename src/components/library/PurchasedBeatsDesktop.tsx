@@ -117,7 +117,7 @@ export function PurchasedBeatsDesktop({ beats, purchaseDetails, onDownload }: Pu
                         disabled={downloadingItems.has(`${beat.id}-track`)}
                       >
                         <FileMusic className="h-4 w-4 mr-2" />
-                        Download Track (.wav)
+                        Download Track ({beat.full_track_url?.toLowerCase().includes('.mp3') ? '.mp3' : '.wav'})
                         {downloadingItems.has(`${beat.id}-track`) && (
                           <span className="ml-2 text-xs animate-pulse">Downloading...</span>
                         )}
@@ -143,7 +143,7 @@ export function PurchasedBeatsDesktop({ beats, purchaseDetails, onDownload }: Pu
                     className="flex items-center gap-1"
                   >
                     <FileMusic className="h-4 w-4" />
-                    {downloadingItems.has(`${beat.id}-track`) ? 'Downloading...' : 'Download'}
+                    {downloadingItems.has(`${beat.id}-track`) ? 'Downloading...' : `Download (${beat.full_track_url?.toLowerCase().includes('.mp3') ? '.mp3' : '.wav'})`}
                   </Button>
                 )}
               </TableCell>

@@ -24,7 +24,7 @@ export async function fetchPurchasedBeatsOptimized(userId: string): Promise<Purc
           id,
           title,
           producer_id,
-          producer_name:users!beats_producer_id_fkey(stage_name),
+          producer_name:users!beats_producer_id_fkey(stage_name, full_name),
           cover_image,
           audio_preview,
           audio_file,
@@ -72,8 +72,8 @@ export async function fetchPurchasedBeatsOptimized(userId: string): Promise<Purc
           title: beatData.title || 'Untitled',
           producer_id: beatData.producer_id,
           producer_name: Array.isArray(beatData.producer_name) 
-            ? beatData.producer_name[0]?.stage_name || 'Unknown Producer'
-            : beatData.producer_name?.stage_name || 'Unknown Producer',
+            ? beatData.producer_name[0]?.stage_name || beatData.producer_name[0]?.full_name || 'Unknown Producer'
+            : beatData.producer_name?.stage_name || beatData.producer_name?.full_name || 'Unknown Producer',
           cover_image_url: beatData.cover_image || '',
           preview_url: beatData.audio_preview || '',
           full_track_url: beatData.audio_file || '',

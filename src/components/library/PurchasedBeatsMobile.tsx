@@ -93,13 +93,13 @@ export function PurchasedBeatsMobile({ beats, purchaseDetails, onDownload }: Pur
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem 
-                    onClick={() => handleDownloadWithFeedback(beat, 'track')}
-                    disabled={downloadingItems.has(`${beat.id}-track`)}
-                  >
-                    <FileMusic className="h-4 w-4 mr-2" />
-                    Track (.wav)
-                  </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleDownloadWithFeedback(beat, 'track')}
+                      disabled={downloadingItems.has(`${beat.id}-track`)}
+                    >
+                      <FileMusic className="h-4 w-4 mr-2" />
+                      Track ({beat.full_track_url?.toLowerCase().includes('.mp3') ? '.mp3' : '.wav'})
+                    </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handleDownloadWithFeedback(beat, 'stems')}
                     disabled={downloadingItems.has(`${beat.id}-stems`)}
@@ -137,13 +137,13 @@ export function PurchasedBeatsMobile({ beats, purchaseDetails, onDownload }: Pur
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem 
-                    onClick={() => handleDownloadWithFeedback(beat, 'track')}
-                    disabled={downloadingItems.has(`${beat.id}-track`)}
-                  >
-                    <FileMusic className="h-3 w-3 mr-1" />
-                    Track
-                  </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleDownloadWithFeedback(beat, 'track')}
+                      disabled={downloadingItems.has(`${beat.id}-track`)}
+                    >
+                      <FileMusic className="h-3 w-3 mr-1" />
+                      Track ({beat.full_track_url?.toLowerCase().includes('.mp3') ? '.mp3' : '.wav'})
+                    </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handleDownloadWithFeedback(beat, 'stems')}
                     disabled={downloadingItems.has(`${beat.id}-stems`)}
@@ -162,7 +162,7 @@ export function PurchasedBeatsMobile({ beats, purchaseDetails, onDownload }: Pur
                 className="h-6 text-xs text-primary"
               >
                 <FileMusic className="h-3 w-3 mr-1" />
-                {downloadingItems.has(`${beat.id}-track`) ? 'Downloading...' : 'Download'}
+                {downloadingItems.has(`${beat.id}-track`) ? 'Downloading...' : `Download (${beat.full_track_url?.toLowerCase().includes('.mp3') ? '.mp3' : '.wav'})`}
               </Button>
             )}
           </div>

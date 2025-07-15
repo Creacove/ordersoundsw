@@ -32,6 +32,7 @@ type FilesTabProps = {
   uploadError?: string | null;
   stemsUrl?: string | null;
   uploadedFileUrl?: string;
+  beatDetails: { category: string };
 };
 
 export const FilesTab = ({
@@ -56,7 +57,8 @@ export const FilesTab = ({
   handleStemsUpload,
   uploadError,
   stemsUrl,
-  uploadedFileUrl
+  uploadedFileUrl,
+  beatDetails
 }: FilesTabProps) => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -66,7 +68,8 @@ export const FilesTab = ({
   
   const hasExclusiveLicense = selectedLicenseTypes.includes('exclusive');
   const hasPremiumLicense = selectedLicenseTypes.includes('premium');
-  const requiresWavFormat = hasExclusiveLicense || hasPremiumLicense;
+  const requiresWavFormat = (hasExclusiveLicense || hasPremiumLicense) && 
+                           beatDetails.category !== 'Gaming & Soundtrack';
   
   const previewObjectUrl = previewFile && isFile(previewFile) 
     ? URL.createObjectURL(previewFile) 
