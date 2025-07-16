@@ -4,10 +4,16 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Crown, ChevronRight } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 
 export const TopProducers = () => {
   const { producers, isLoading } = useProducers();
-  const topProducers = producers?.slice(0, 10) || [];
+  const topProducers = useMemo(() => {
+    if (!producers) return [];
+    return [...producers]
+      .sort((a, b) => b.beatCount - a.beatCount)
+      .slice(0, 10);
+  }, [producers]);
 
   return (
     <section className="w-full">
