@@ -10,6 +10,7 @@ import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
 import { NewBeats } from "@/components/marketplace/NewBeats";
 import { FeaturedBeat } from "@/components/marketplace/FeaturedBeat";
 import { GenreQuickLinks } from "@/components/marketplace/GenreQuickLinks";
+import { HomepageSearch } from "@/components/marketplace/HomepageSearch";
 import { GamingBeats } from "@/components/marketplace/GamingBeats";
 
 const Home = () => {
@@ -18,6 +19,7 @@ const Home = () => {
       <div className="container mx-auto px-2 xs:px-4 sm:px-6 py-6 space-y-12">
         <FeaturedBeat />
         <GenreQuickLinks />
+        <HomepageSearch />
         <TrendingBeats />
         <TopProducers />
         <WeeklyPicks />
