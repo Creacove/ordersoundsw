@@ -23,8 +23,8 @@ export const HomepageSearch = () => {
   };
 
   return (
-    <section className="text-center space-y-2">
-      <div className="max-w-2xl mx-auto">
+    <section className="w-full">
+      <div className="w-full max-w-4xl mx-auto px-4">
         <div onKeyPress={handleKeyPress}>
           <SearchInput
             value={searchQuery}
@@ -33,7 +33,7 @@ export const HomepageSearch = () => {
             placeholder="Search beats, producers, genres..."
             suggestions={popularSearchTerms}
             showSuggestions={true}
-            className="w-full"
+            className="w-full h-12"
           />
         </div>
       </div>
