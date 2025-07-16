@@ -35,6 +35,7 @@ export function MobileBottomNav({
   if (user?.role === "producer") {
     mobileMenuItems = [
       { icon: <LayoutDashboard size={20} />, label: "Dashboard", to: "/producer/dashboard", id: "producer" },
+      { icon: <Home size={20} />, label: "Explore", to: "/", id: "explore" },
       { icon: <Music size={20} />, label: "My Beats", to: "/producer/beats", id: "beats" },
       { icon: <DollarSign size={20} />, label: "Royalties", to: "/producer/royalties", id: "royalties" },
       { icon: <MoreHorizontal size={20} />, label: "More", to: "#", id: "more", action: () => setIsOpen(true) },
