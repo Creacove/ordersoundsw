@@ -23,8 +23,7 @@ export const HomepageSearch = () => {
   };
 
   return (
-    <section className="text-center space-y-4">
-      
+    <section className="text-center space-y-2">
       <div className="max-w-2xl mx-auto">
         <div onKeyPress={handleKeyPress}>
           <SearchInput
