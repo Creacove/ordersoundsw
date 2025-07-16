@@ -31,7 +31,7 @@ export async function fetchBeatsByGenre(genre: string, limit: number = 100): Pro
         )
       `)
       .eq('status', 'published')
-      .eq('genre', genre)
+      .ilike('genre', genre)
       .order('upload_date', { ascending: false })
       .limit(limit);
 
