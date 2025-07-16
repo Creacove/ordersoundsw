@@ -24,14 +24,6 @@ export const HomepageSearch = () => {
 
   return (
     <section className="text-center space-y-4">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-foreground">
-          Find Your Perfect Beat
-        </h2>
-        <p className="text-muted-foreground text-sm">
-          Search thousands of beats from talented producers worldwide
-        </p>
-      </div>
       
       <div className="max-w-2xl mx-auto">
         <div onKeyPress={handleKeyPress}>
