@@ -42,6 +42,14 @@ export default function New() {
   };
 
   const hasMore = displayCount < allNewBeats.length;
+  
+  // Debug logging to check data loading
+  console.log('New beats debug:', {
+    allNewBeatsLength: allNewBeats.length,
+    displayCount,
+    hasMore,
+    isLoading
+  });
 
   return (
     <MainLayoutWithPlayer activeTab="new">
