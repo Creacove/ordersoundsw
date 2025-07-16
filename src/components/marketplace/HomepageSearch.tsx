@@ -24,7 +24,7 @@ export const HomepageSearch = () => {
 
   return (
     <section className="w-full">
-      <div className="w-full max-w-4xl mx-auto px-4">
+      <div className="w-full mx-auto px-4">
         <div onKeyPress={handleKeyPress}>
           <SearchInput
             value={searchQuery}
