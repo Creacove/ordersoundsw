@@ -26,6 +26,11 @@ export const GenreQuickLinks = () => {
     }
   };
 
+  const handleSuggestionClick = (suggestion: string) => {
+    // Navigate immediately when a suggestion is clicked
+    navigate(`/search?q=${encodeURIComponent(suggestion)}`);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch();
@@ -40,6 +45,7 @@ export const GenreQuickLinks = () => {
           value={searchQuery}
           onChange={setSearchQuery}
           onSubmit={handleSearch}
+          onSuggestionClick={handleSuggestionClick}
           placeholder="Search beats, producers, genres..."
           suggestions={popularSearchTerms}
           showSuggestions={true}

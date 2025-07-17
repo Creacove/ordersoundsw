@@ -9,6 +9,7 @@ interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit?: () => void;
+  onSuggestionClick?: (suggestion: string) => void;
   placeholder?: string;
   suggestions?: string[];
   showSuggestions?: boolean;
@@ -19,6 +20,7 @@ export function SearchInput({
   value, 
   onChange, 
   onSubmit,
+  onSuggestionClick,
   placeholder = "Search beats, producers, genres...",
   suggestions = [],
   showSuggestions = false,
@@ -34,6 +36,11 @@ export function SearchInput({
   const handleSuggestionClick = (suggestion: string) => {
     onChange(suggestion);
     setIsFocused(false);
+    // If onSuggestionClick is provided, call it (this will navigate)
+    // Otherwise just fill the input
+    if (onSuggestionClick) {
+      onSuggestionClick(suggestion);
+    }
   };
 
   const showSuggestionsDropdown = isFocused && showSuggestions && suggestions.length > 0 && !value;
@@ -53,15 +60,24 @@ export function SearchInput({
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             autoComplete="off"
           />
-          {value && (
+          {value ? (
             <Button 
               type="button"
               variant="ghost" 
               size="sm" 
-              className="absolute right-2 rounded-full h-8 w-8 p-0"
+              className="absolute right-2 h-8 w-8 p-0"
               onClick={() => onChange("")}
             >
               <X size={16} />
+            </Button>
+          ) : (
+            <Button 
+              type="submit"
+              variant="ghost" 
+              size="sm" 
+              className="absolute right-2 h-8 w-8 p-0"
+            >
+              <Search size={16} />
             </Button>
           )}
         </div>

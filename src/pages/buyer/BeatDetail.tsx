@@ -350,13 +350,13 @@ const BeatDetail = () => {
       <div className="relative">
         <div className="absolute top-0 inset-x-0 h-[20vh] bg-gradient-to-b from-primary/20 to-background -z-10" />
         
-        <div className="container max-w-4xl py-4 md:py-6 px-4">
+        <div className="container mx-auto px-2 xs:px-4 sm:px-6 py-4 md:py-6">
           <div className="flex items-center space-x-2 mb-4">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={handleGoBack}
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8"
             >
               <ArrowLeft size={16} />
             </Button>
@@ -456,7 +456,7 @@ const BeatDetail = () => {
                 <Button 
                   size={isMobile ? "sm" : "default"}
                   onClick={() => handlePlay()}
-                  className="flex-none sm:flex-none rounded-full"
+                  className="flex-none sm:flex-none"
                   variant={isCurrentlyPlaying ? "secondary" : "default"}
                 >
                   {isCurrentlyPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
@@ -468,7 +468,7 @@ const BeatDetail = () => {
                   size="icon"
                   onClick={handleToggleFavorite}
                   className={cn(
-                    "h-9 w-9 rounded-full",
+                    "h-9 w-9",
                     isBeatFavorite 
                       ? "text-purple-500 bg-purple-500/10 hover:bg-purple-500/20" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -481,7 +481,7 @@ const BeatDetail = () => {
                   variant="ghost"
                   size="icon"
                   onClick={handleShare}
-                  className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                  className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <Share2 size={18} />
                 </Button>
@@ -561,7 +561,7 @@ const BeatDetail = () => {
                       </li>
                     </ul>
                     <Button 
-                      className="w-full rounded-full"
+                      className="w-full"
                       size="sm"
                       onClick={() => {
                         handleSelectLicense('basic');
@@ -622,7 +622,7 @@ const BeatDetail = () => {
                       </li>
                     </ul>
                     <Button 
-                      className="w-full rounded-full"
+                      className="w-full"
                       size="sm"
                       onClick={() => {
                         handleSelectLicense('premium');
@@ -680,7 +680,7 @@ const BeatDetail = () => {
                       </li>
                     </ul>
                     <Button 
-                      className="w-full rounded-full"
+                      className="w-full"
                       size="sm"
                       onClick={() => {
                         handleSelectLicense('exclusive');
@@ -740,7 +740,7 @@ const BeatDetail = () => {
                       )}
                     </div>
                     <Button 
-                      className="w-full rounded-full"
+                      className="w-full"
                       size="sm"
                       onClick={() => {
                         handleSelectLicense('custom');
