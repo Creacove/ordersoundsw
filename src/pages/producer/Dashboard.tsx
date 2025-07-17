@@ -15,6 +15,7 @@ import { GenreDistribution } from "@/components/producer/dashboard/GenreDistribu
 import { RecentActivity } from "@/components/producer/dashboard/RecentActivity";
 import { TopSellingBeats } from "@/components/producer/dashboard/TopSellingBeats";
 import { BankDetailsCard } from "@/components/producer/dashboard/BankDetailsCard";
+import { WalletDetailsCard } from "@/components/producer/dashboard/WalletDetailsCard";
 
 export default function ProducerDashboard() {
   const { user, currency } = useAuth();
@@ -22,6 +23,7 @@ export default function ProducerDashboard() {
   const { notifications } = useNotifications();
   const navigate = useNavigate();
   const [showBankDetails, setShowBankDetails] = useState(false);
+  const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [producerData, setProducerData] = useState<any>(null);
   const [isLoadingProducer, setIsLoadingProducer] = useState(true);
   const [stats, setStats] = useState(null);
@@ -39,7 +41,7 @@ export default function ProducerDashboard() {
         const { data, error } = await supabase
           .from("users")
           .select(
-            "bank_code, account_number, verified_account_name, paystack_subaccount_code, paystack_split_code"
+            "bank_code, account_number, verified_account_name, paystack_subaccount_code, paystack_split_code, wallet_address"
           )
           .eq("id", user.id)
           .single();
@@ -50,6 +52,11 @@ export default function ProducerDashboard() {
         }
 
         setProducerData(data);
+
+        // Show wallet details form if not set up yet
+        if (!data.wallet_address) {
+          setShowWalletDetails(true);
+        }
 
         // Show bank details form if not set up yet
         if (!data.paystack_subaccount_code || !data.paystack_split_code) {
@@ -99,15 +106,33 @@ export default function ProducerDashboard() {
     .filter((notification) => user && notification.recipient_id === user.id)
     .slice(0, 5);
 
-  const handleBankDetailsSubmitted = () => {
-    setShowBankDetails(false);
-    // Instead of using refreshTrigger, directly fetch the data we need
+  const handleWalletDetailsSubmitted = () => {
+    setShowWalletDetails(false);
+    // Fetch producer data again after wallet details are submitted
     if (user) {
-      // Fetch producer data again after bank details are submitted
       supabase
         .from("users")
         .select(
-          "bank_code, account_number, verified_account_name, paystack_subaccount_code, paystack_split_code"
+          "bank_code, account_number, verified_account_name, paystack_subaccount_code, paystack_split_code, wallet_address"
+        )
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setProducerData(data);
+          }
+        });
+    }
+  };
+
+  const handleBankDetailsSubmitted = () => {
+    setShowBankDetails(false);
+    // Fetch producer data again after bank details are submitted
+    if (user) {
+      supabase
+        .from("users")
+        .select(
+          "bank_code, account_number, verified_account_name, paystack_subaccount_code, paystack_split_code, wallet_address"
         )
         .eq("id", user.id)
         .single()
@@ -125,16 +150,25 @@ export default function ProducerDashboard() {
         <h1 className="text-2xl font-bold mb-6">Producer Dashboard</h1>
 
         {isLoadingProducer ? (
-          <div className="text-center">Loading bank details...</div>
+          <div className="text-center">Loading details...</div>
         ) : (
-          showBankDetails &&
-          user && (
-            <BankDetailsCard
-              userId={user.id}
-              producerData={producerData}
-              onSuccess={handleBankDetailsSubmitted}
-            />
-          )
+          <>
+            {showWalletDetails && user && (
+              <WalletDetailsCard
+                userId={user.id}
+                producerData={producerData}
+                onSuccess={handleWalletDetailsSubmitted}
+              />
+            )}
+            
+            {showBankDetails && user && (
+              <BankDetailsCard
+                userId={user.id}
+                producerData={producerData}
+                onSuccess={handleBankDetailsSubmitted}
+              />
+            )}
+          </>
         )}
 
         <StatsCards

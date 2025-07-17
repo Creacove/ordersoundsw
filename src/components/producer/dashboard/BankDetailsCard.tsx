@@ -21,10 +21,10 @@ export function BankDetailsCard({
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Set Up Payment Account</CardTitle>
+        <CardTitle>Set Up NGN Bank Account</CardTitle>
         <CardDescription>
-          Enter your bank details to receive automatic payments for your beat
-          sales. You will receive 90% of each sale directly to your bank
+          Enter your Nigerian bank details to receive automatic NGN payments for your beat
+          sales. You will receive 90% of each sale directly to your NGN bank
           account.
         </CardDescription>
       </CardHeader>
