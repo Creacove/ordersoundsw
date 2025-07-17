@@ -53,9 +53,12 @@ export default function ProducerDashboard() {
 
         setProducerData(data);
 
-        // Show wallet details form if not set up yet
+        // Show wallet details form if wallet_address is not set up yet
         if (!data.wallet_address) {
           setShowWalletDetails(true);
+          console.log("Wallet address not found, showing wallet details form");
+        } else {
+          console.log("Wallet address found:", data.wallet_address);
         }
 
         // Show bank details form if not set up yet

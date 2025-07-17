@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,15 +27,41 @@ export default function AuthCallback() {
         }
         
         if (data?.session) {
-          console.log("Auth callback: Session found, navigating to home");
+          console.log("Auth callback: Session found, checking user role");
           // Clear OAuth flags
           localStorage.removeItem('oauth_initiated');
           localStorage.removeItem('oauth_provider');
           localStorage.removeItem('oauth_mode');
           
-          // Navigate immediately - let AuthContext handle user data loading
-          clearTimeout(timeoutId);
-          navigate('/');
+          try {
+            // Get user data from the database to check role
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', data.session.user.id)
+              .single();
+            
+            if (userError) {
+              console.error("Error fetching user role:", userError);
+              clearTimeout(timeoutId);
+              navigate('/');
+              return;
+            }
+            
+            // Navigate based on role
+            clearTimeout(timeoutId);
+            if (userData?.role === 'producer') {
+              console.log("Auth callback: Producer user, navigating to dashboard");
+              navigate('/producer/dashboard');
+            } else {
+              console.log("Auth callback: Non-producer user, navigating to home");
+              navigate('/');
+            }
+          } catch (error) {
+            console.error("Error checking user role:", error);
+            clearTimeout(timeoutId);
+            navigate('/');
+          }
         } else {
           console.log("Auth callback: No session found, navigating to login");
           clearTimeout(timeoutId);
