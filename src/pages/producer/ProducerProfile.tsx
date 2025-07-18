@@ -162,7 +162,7 @@ export default function ProducerProfile() {
             
             {producer.bio && (
               <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
-                {producer.bio}
+                {producer.bio.length > 200 ? `${producer.bio.substring(0, 200)}...` : producer.bio}
               </p>
             )}
             

@@ -520,7 +520,9 @@ const BeatDetail = () => {
           {beat.description && (
             <div className="bg-card/50 rounded-xl border p-4 shadow-sm mt-4">
               <h3 className="text-sm font-medium mb-2">Description</h3>
-              <p className="text-sm text-muted-foreground">{beat.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {beat.description.length > 300 ? `${beat.description.substring(0, 300)}...` : beat.description}
+              </p>
             </div>
           )}
           
