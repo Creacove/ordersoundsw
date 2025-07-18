@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useFollows } from '@/hooks/useFollows';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { UserCheck, UserPlus } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface FollowButtonProps {
   producerId: string;
@@ -27,21 +28,37 @@ export function FollowButton({
   const { useFollowStatus, toggleFollow } = useFollows();
   const { data: isFollowing, isLoading: isStatusLoading } = useFollowStatus(producerId);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastClickTime, setLastClickTime] = useState(0);
   
   // Use initialFollowState if provided and isFollowing is not loaded yet
   const followState = isFollowing ?? initialFollowState ?? false;
   
-  const handleFollowToggle = async () => {
+  // Debounce the follow state to prevent UI flicker
+  const debouncedFollowState = useDebounce(followState, 100);
+  
+  const handleFollowToggle = useCallback(async () => {
     if (!user) {
       toast.error('Please sign in to follow this producer');
       return;
     }
     
+    // Prevent rapid successive clicks (debounce)
+    const now = Date.now();
+    if (now - lastClickTime < 1000) {
+      return;
+    }
+    setLastClickTime(now);
+    
+    // Prevent multiple concurrent requests
+    if (isLoading) {
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      const result = await toggleFollow(producerId, followState);
+      const result = await toggleFollow(producerId, debouncedFollowState);
       if (result && onFollowChange) {
-        onFollowChange(!followState);
+        onFollowChange(!debouncedFollowState);
       }
     } catch (error) {
       console.error("Follow toggle error:", error);
@@ -49,20 +66,20 @@ export function FollowButton({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, producerId, debouncedFollowState, isLoading, lastClickTime, toggleFollow, onFollowChange]);
   
   return (
     <Button
       onClick={handleFollowToggle}
       size={size}
-      variant={followState ? 'secondary' : variant}
+      variant={debouncedFollowState ? 'secondary' : variant}
       disabled={isLoading || isStatusLoading}
       className={className}
-      data-following={followState}
+      data-following={debouncedFollowState}
     >
       {isLoading ? (
         'Loading...'
-      ) : followState ? (
+      ) : debouncedFollowState ? (
         <>
           <UserCheck className="mr-2 size-4" />
           Following

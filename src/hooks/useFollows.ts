@@ -67,12 +67,13 @@ export function useFollows() {
         throw new Error(error.message);
       }
       
-      // Invalidate follow status query after successful follow
-      queryClient.invalidateQueries({ queryKey: ['followStatus', producerId] });
-      // Update the producer's follower count in the cache
-      queryClient.invalidateQueries({ queryKey: ['producer', producerId] });
-      // Update the producers list to refresh follower counts
-      queryClient.invalidateQueries({ queryKey: ['producers'] });
+      // Optimistically update follow status in cache
+      queryClient.setQueryData(['followStatus', producerId], true);
+      
+      // Invalidate related queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['followStatus', producerId] });
+      await queryClient.invalidateQueries({ queryKey: ['producer', producerId] });
+      await queryClient.invalidateQueries({ queryKey: ['producers'] });
       
       toast.success("You're now following this producer");
       return true;
@@ -112,12 +113,13 @@ export function useFollows() {
         throw new Error(error.message);
       }
       
-      // Invalidate follow status query after successful unfollow
-      queryClient.invalidateQueries({ queryKey: ['followStatus', producerId] });
-      // Update the producer's follower count in the cache
-      queryClient.invalidateQueries({ queryKey: ['producer', producerId] });
-      // Update the producers list to refresh follower counts
-      queryClient.invalidateQueries({ queryKey: ['producers'] });
+      // Optimistically update follow status in cache
+      queryClient.setQueryData(['followStatus', producerId], false);
+      
+      // Invalidate related queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['followStatus', producerId] });
+      await queryClient.invalidateQueries({ queryKey: ['producer', producerId] });
+      await queryClient.invalidateQueries({ queryKey: ['producers'] });
       
       toast.success("You've unfollowed this producer");
       return true;

@@ -72,7 +72,13 @@ export default function ProducerProfile() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('beats')
-        .select('*')
+        .select(`
+          *,
+          users (
+            full_name,
+            stage_name
+          )
+        `)
         .eq('producer_id', producerId)
         .eq('status', 'published')
         .order('upload_date', { ascending: false });

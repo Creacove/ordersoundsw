@@ -42,15 +42,21 @@ export const mapSupabaseUser = (user: any): User => {
 
 // Add a helper function to map database beat objects to our Beat interface
 export const mapSupabaseBeat = (beat: any): Beat => {
+  // Get producer name with better fallback logic
+  const getProducerName = () => {
+    if (beat.producer_name) return beat.producer_name;
+    if (beat.users?.stage_name) return beat.users.stage_name;
+    if (beat.users?.full_name) return beat.users.full_name;
+    if (beat.producer?.stage_name) return beat.producer.stage_name;
+    if (beat.producer?.full_name) return beat.producer.full_name;
+    return 'Unknown Producer';
+  };
+
   return {
     id: beat.id,
     title: beat.title || '',
     producer_id: beat.producer_id || '',
-    producer_name: beat.producer_name || 
-                  (beat.users?.stage_name || 
-                   beat.users?.full_name || 
-                   beat.producer?.stage_name || 
-                   beat.producer?.full_name || 'Unknown Producer'),
+    producer_name: getProducerName(),
     cover_image_url: beat.cover_image || '',
     preview_url: beat.audio_preview || '',
     full_track_url: beat.audio_file || '',
