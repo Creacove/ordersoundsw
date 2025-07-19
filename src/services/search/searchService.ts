@@ -7,6 +7,7 @@ import {
   optimizedSearchProducers,
   getPopularSearchTerms as getOptimizedPopularSearchTerms,
   getGenres as getOptimizedGenres,
+  getMoods as getOptimizedMoods,
   OptimizedSearchParams,
   OptimizedSearchResults 
 } from './optimizedSearchService';
@@ -14,6 +15,7 @@ import {
 export interface SearchParams {
   query?: string;
   genre?: string;
+  mood?: string;
   minPrice?: number;
   maxPrice?: number;
   bpmMin?: number;
@@ -45,4 +47,8 @@ export async function getPopularSearchTerms(): Promise<string[]> {
 
 export async function getGenres(): Promise<string[]> {
   return getOptimizedGenres();
+}
+
+export async function getMoods(): Promise<string[]> {
+  return getOptimizedMoods();
 }

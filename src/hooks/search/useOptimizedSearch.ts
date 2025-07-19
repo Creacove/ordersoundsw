@@ -6,7 +6,8 @@ import {
   optimizedSearchBeats, 
   optimizedSearchProducers, 
   getPopularSearchTerms, 
-  getGenres, 
+  getGenres,
+  getMoods, 
   OptimizedSearchParams, 
   OptimizedSearchResults 
 } from '@/services/search/optimizedSearchService';
@@ -80,6 +81,15 @@ export function useOptimizedSearch() {
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
+  // Optimized moods query
+  const {
+    data: moods = []
+  } = useQuery({
+    queryKey: ['optimized-search-moods'],
+    queryFn: getMoods,
+    staleTime: 60 * 60 * 1000, // 1 hour
+  });
+
   // Flatten beats data from infinite query
   const allBeats = useMemo(() => {
     return beatsData?.pages.flatMap(page => page.beats) || [];
@@ -128,6 +138,7 @@ export function useOptimizedSearch() {
     producers: filteredResults.producers,
     popularTerms,
     genres,
+    moods,
     totalResults: allBeats.length,
     
     // Loading states

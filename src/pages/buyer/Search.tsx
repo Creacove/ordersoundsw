@@ -29,6 +29,7 @@ export default function SearchPage() {
     beats,
     producers,
     genres,
+    moods,
     isLoading,
     isLoadingBeats,
     isLoadingProducers,
@@ -68,6 +69,9 @@ export default function SearchPage() {
     if (filters.genre) {
       params.set('genre', filters.genre);
     }
+    if (filters.mood) {
+      params.set('mood', filters.mood);
+    }
     setSearchParams(params);
   };
 
@@ -97,7 +101,7 @@ export default function SearchPage() {
             <Input 
               id="search-input"
               type="text"
-              placeholder="Search beats, producers, genres..."
+              placeholder="Search beats, producers, genres, moods..."
               className="pl-10 pr-12 py-5 h-10 sm:h-12 bg-background border-input"
               value={searchTerm}
               onChange={(e) => updateSearchTerm(e.target.value)}
@@ -153,9 +157,35 @@ export default function SearchPage() {
             </div>
           </div>
           
+          {/* Mood filters */}
+          {moods.length > 0 && (
+            <div className="mb-4 overflow-x-auto pb-2">
+              <h3 className="text-sm font-medium mb-2">Mood</h3>
+              <div className="flex gap-2 flex-nowrap">
+                {moods.slice(0, 12).map((mood) => (
+                  <Button
+                    key={mood}
+                    variant={filters.mood === mood ? "default" : "outline"}
+                    size="sm"
+                    className="rounded-full whitespace-nowrap"
+                    onClick={() => {
+                      if (filters.mood === mood) {
+                        updateFilters({ mood: undefined });
+                      } else {
+                        updateFilters({ mood });
+                      }
+                    }}
+                  >
+                    {mood}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {showFilters && (
             <div className="bg-card rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 animate-slide-down shadow-sm border">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                 <div>
                   <label className="text-xs font-medium mb-1 block">Price Range</label>
                   <select 
@@ -207,6 +237,19 @@ export default function SearchPage() {
                     <option value="popular">Most Popular</option>
                     <option value="price_low">Price: Low to High</option>
                     <option value="price_high">Price: High to Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Mood</label>
+                  <select 
+                    className="w-full rounded-md bg-muted border-border p-2 text-xs sm:text-sm"
+                    value={filters.mood || ""}
+                    onChange={(e) => updateFilters({ mood: e.target.value || undefined })}
+                  >
+                    <option value="">All moods</option>
+                    {moods.map((mood) => (
+                      <option key={mood} value={mood}>{mood}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

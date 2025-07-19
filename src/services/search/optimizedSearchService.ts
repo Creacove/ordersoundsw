@@ -6,6 +6,7 @@ import { mapSupabaseBeatToBeat } from '@/services/beats/utils';
 export interface OptimizedSearchParams {
   query?: string;
   genre?: string;
+  mood?: string;
   minPrice?: number;
   maxPrice?: number;
   bpmMin?: number;
@@ -27,6 +28,7 @@ export async function optimizedSearchBeats(params: OptimizedSearchParams): Promi
   const {
     query = '',
     genre,
+    mood,
     minPrice,
     maxPrice,
     bpmMin,
@@ -52,11 +54,12 @@ export async function optimizedSearchBeats(params: OptimizedSearchParams): Promi
     if (query.trim()) {
       const searchTerm = query.trim().toLowerCase();
       
-      // Use ILIKE for case-insensitive search, leverages idx_beats_title_lower
+      // Use ILIKE for case-insensitive search with improved tag/mood searching
       beatsQuery = beatsQuery.or(
         `title.ilike.%${searchTerm}%,` +
         `genre.ilike.%${searchTerm}%,` +
-        `tags.cs.{${searchTerm}}`
+        `tags.cs.{${searchTerm}},` +
+        `tags.ov.{${searchTerm}}`
       );
     }
 
@@ -68,6 +71,11 @@ export async function optimizedSearchBeats(params: OptimizedSearchParams): Promi
     // Track type filter - uses idx_beats_track_type  
     if (trackType) {
       beatsQuery = beatsQuery.eq('track_type', trackType);
+    }
+
+    // Mood/Tag filter
+    if (mood) {
+      beatsQuery = beatsQuery.contains('tags', [mood]);
     }
 
     // BPM range filter - uses idx_beats_bpm_status
@@ -302,5 +310,26 @@ export async function getGenres(): Promise<string[]> {
   } catch (error) {
     console.error('Error fetching genres:', error);
     return ['Afrobeat', 'Amapiano', 'Hip Hop', 'R&B', 'Trap', 'Dancehall', 'Pop'];
+  }
+}
+
+export async function getMoods(): Promise<string[]> {
+  try {
+    // Get all tags from published beats
+    const { data, error } = await supabase
+      .from('beats')
+      .select('tags')
+      .eq('status', 'published')
+      .not('tags', 'is', null);
+
+    if (error) throw error;
+
+    // Flatten all tags and get unique values
+    const allTags = data?.flatMap(beat => beat.tags || []) || [];
+    const uniqueTags = [...new Set(allTags)].filter(Boolean);
+    return uniqueTags.sort();
+  } catch (error) {
+    console.error('Error fetching moods:', error);
+    return ['Chill', 'Upbeat', 'Dark', 'Melodic', 'Hard', 'Soft', 'Emotional', 'Party'];
   }
 }
