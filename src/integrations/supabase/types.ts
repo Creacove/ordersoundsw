@@ -7,10 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "12.2.12 (cd3cf9e)"
   }
   public: {
     Tables: {
@@ -814,11 +814,11 @@ export type Database = {
     }
     Functions: {
       add_favorite: {
-        Args: { user_id_param: string; beat_id_param: string }
+        Args: { beat_id_param: string; user_id_param: string }
         Returns: undefined
       }
       check_follow_status: {
-        Args: { p_follower_id: string; p_followee_id: string }
+        Args: { p_followee_id: string; p_follower_id: string }
         Returns: boolean
       }
       check_table_exists: {
@@ -830,7 +830,7 @@ export type Database = {
         Returns: undefined
       }
       follow_producer: {
-        Args: { p_follower_id: string; p_followee_id: string }
+        Args: { p_followee_id: string; p_follower_id: string }
         Returns: undefined
       }
       get_complete_schema: {
@@ -873,16 +873,16 @@ export type Database = {
         Args: { beat_count?: number }
         Returns: {
           id: string
-          title: string
           producer_id: string
+          title: string
         }[]
       }
       get_random_published_beats_by_category: {
         Args: { beat_count?: number; category?: string }
         Returns: {
           id: string
-          title: string
           producer_id: string
+          title: string
         }[]
       }
       get_user_favorites: {
@@ -896,7 +896,7 @@ export type Database = {
         Returns: string
       }
       increment_counter: {
-        Args: { p_table_name: string; p_column_name: string; p_id: string }
+        Args: { p_column_name: string; p_id: string; p_table_name: string }
         Returns: undefined
       }
       is_admin: {
@@ -917,19 +917,19 @@ export type Database = {
       }
       refresh_auth_token: {
         Args: {
-          p_user_id: string
-          p_refresh_token: string
           p_new_access_token: string
           p_new_refresh_token?: string
+          p_refresh_token: string
+          p_user_id: string
         }
         Returns: boolean
       }
       remove_favorite: {
-        Args: { user_id_param: string; beat_id_param: string }
+        Args: { beat_id_param: string; user_id_param: string }
         Returns: undefined
       }
       unfollow_producer: {
-        Args: { p_follower_id: string; p_followee_id: string }
+        Args: { p_followee_id: string; p_follower_id: string }
         Returns: undefined
       }
       update_session_version: {
