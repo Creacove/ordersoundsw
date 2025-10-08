@@ -295,13 +295,14 @@ export default function UploadBeat() {
         });
 
         // Upload all soundpack files
-        await uploadSoundpackFiles(
-          soundpackData.id,
-          producerInfo.id,
-          soundpackFiles,
-          soundpackMeta,
-          coverImageUrl
-        );
+            await uploadSoundpackFiles(
+              soundpackData.id,
+              producerInfo.id,
+              soundpackFiles,
+              soundpackMeta,
+              coverImageUrl,
+              'published'
+            );
 
         // Publish the soundpack
         await supabase
@@ -487,13 +488,14 @@ export default function UploadBeat() {
           licenseTerms: beatDetails.licenseTerms || ''
         });
 
-        await uploadSoundpackFiles(
-          soundpackData.id,
-          producerInfo.id,
-          soundpackFiles,
-          soundpackMeta,
-          coverImageUrl
-        );
+          await uploadSoundpackFiles(
+            soundpackData.id,
+            producerInfo.id,
+            soundpackFiles,
+            soundpackMeta,
+            coverImageUrl,
+            'draft'
+          );
 
         toast.success("Soundpack saved as draft!", { id: "saving-draft" });
         navigate("/producer/beats");

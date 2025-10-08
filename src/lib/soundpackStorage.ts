@@ -22,7 +22,9 @@ type CreateSoundpackParams = {
 };
 
 export const createSoundpack = async (params: CreateSoundpackParams) => {
-  const slug = params.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  // Generate unique slug to avoid conflicts
+  const baseSlug = params.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const slug = `${baseSlug}-${Date.now()}`;
   
   const { data, error } = await supabase
     .from('soundpacks')
@@ -59,6 +61,7 @@ export const uploadSoundpackFiles = async (
   files: File[],
   filesMeta: SoundFileMeta[],
   coverImageUrl: string,
+  status: 'draft' | 'published',
   onProgress?: (fileIndex: number, progress: number) => void
 ) => {
   const uploadedBeats = [];
@@ -80,12 +83,12 @@ export const uploadSoundpackFiles = async (
           title: meta.name.replace(/\.[^/.]+$/, ''), // Remove extension
           soundpack_id: packId,
           type: 'soundpack_item',
-          status: 'published',
+          status: status,
           audio_file: audioUrl,
           cover_image: coverImageUrl,
           genre: 'soundpack',
           track_type: 'sample',
-          bpm: 0,
+          bpm: null,
           producer_id: producerId
         })
         .select()
