@@ -26,8 +26,40 @@ export const uploadFile = async (
   file: FileOrUrl, 
   bucket: 'beats' | 'covers' | 'avatars', 
   path = '',
-  progressCallback?: (progress: number) => void
+  progressCallback?: (progress: number) => void,
+  maxRetries = 3
 ): Promise<string> => {
+  let lastError: any;
+  
+  // Retry logic with exponential backoff
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await uploadFileInternal(file, bucket, path, progressCallback);
+    } catch (error) {
+      lastError = error;
+      console.warn(`Upload attempt ${attempt}/${maxRetries} failed:`, error);
+      
+      if (attempt < maxRetries) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delayMs = 1000 * Math.pow(2, attempt - 1);
+        console.log(`Retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  
+  throw lastError;
+};
+
+/**
+ * Internal upload function with the actual implementation
+ */
+async function uploadFileInternal(
+  file: FileOrUrl, 
+  bucket: 'beats' | 'covers' | 'avatars', 
+  path = '',
+  progressCallback?: (progress: number) => void
+): Promise<string> {
   try {
     // If this is an image upload (covers or avatars), use the dedicated image upload function
     if (bucket === 'covers' || bucket === 'avatars') {
@@ -57,19 +89,20 @@ export const uploadFile = async (
     const isLargeFile = realFile.size > 50 * 1024 * 1024; // Over 50MB
     const isStems = path === 'stems';
 
-    // Extended timeout for large files
-    // For stems/large files we're using 15 minutes (900000ms) instead of 60s
-    // For medium files 10 minutes (600000ms)
-    // For small files 5 minutes (300000ms)
-    let uploadTimeoutMs = 300000; // Default 5 minutes
+    // Dynamic timeout calculation: 30s base + 5s per MB
+    const fileSizeMB = realFile.size / (1024 * 1024);
+    let uploadTimeoutMs = Math.max(30000, 30000 + (fileSizeMB * 5000)); // 30s base + 5s per MB
     
+    // Cap at 15 minutes for very large files
     if (isStems || realFile.size > 200 * 1024 * 1024) {
-      uploadTimeoutMs = 900000; // 15 minutes for stems or very large files
+      uploadTimeoutMs = Math.min(uploadTimeoutMs, 900000); // Max 15 minutes
     } else if (isLargeFile) {
-      uploadTimeoutMs = 600000; // 10 minutes for large files
+      uploadTimeoutMs = Math.min(uploadTimeoutMs, 600000); // Max 10 minutes
+    } else {
+      uploadTimeoutMs = Math.min(uploadTimeoutMs, 300000); // Max 5 minutes
     }
     
-    console.log(`Setting upload timeout to ${uploadTimeoutMs/1000} seconds for ${realFile.size/(1024*1024)} MB file`);
+    console.log(`Setting upload timeout to ${uploadTimeoutMs/1000} seconds for ${fileSizeMB.toFixed(2)} MB file`);
     
     // If progress callback is provided, we need to track progress
     if (progressCallback) {

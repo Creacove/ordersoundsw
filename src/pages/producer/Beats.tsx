@@ -74,27 +74,20 @@ export default function ProducerBeats() {
     
     setSoundpacksLoading(true);
     try {
+      // Simplified query without foreign key join to avoid 400 errors
       const { data, error } = await supabase
         .from('soundpacks')
-        .select(`
-          *,
-          users!soundpacks_producer_id_fkey (
-            full_name,
-            stage_name
-          )
-        `)
+        .select('*')
         .eq('producer_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      const transformedSoundpacks = (data || []).map(sp => {
-        const userData = Array.isArray(sp.users) ? sp.users[0] : sp.users;
-        return {
-          ...sp,
-          producer_name: userData?.stage_name || userData?.full_name || 'Unknown Producer'
-        };
-      });
+      // Transform soundpacks and add producer name from current user
+      const transformedSoundpacks = (data || []).map(sp => ({
+        ...sp,
+        producer_name: user.stage_name || user.full_name || 'Unknown Producer'
+      }));
       
       setSoundpacks(transformedSoundpacks);
     } catch (error) {

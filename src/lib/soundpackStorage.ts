@@ -64,48 +64,81 @@ export const uploadSoundpackFiles = async (
   status: 'draft' | 'published',
   onProgress?: (fileIndex: number, progress: number) => void
 ) => {
+  // Deduplication: Check for duplicate files
+  const fileHashes = new Map<string, number>();
+  const uniqueFiles: File[] = [];
+  const uniqueMeta: SoundFileMeta[] = [];
+  
+  files.forEach((file, index) => {
+    const hash = `${file.name}-${file.size}-${file.lastModified}`;
+    if (!fileHashes.has(hash)) {
+      fileHashes.set(hash, index);
+      uniqueFiles.push(file);
+      uniqueMeta.push(filesMeta[index]);
+    } else {
+      console.warn(`Duplicate file detected and skipped: ${file.name}`);
+    }
+  });
+  
   const uploadedBeats = [];
   
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const meta = filesMeta[i];
+  // Upload files in parallel batches of 3 for better performance
+  const BATCH_SIZE = 3;
+  
+  for (let i = 0; i < uniqueFiles.length; i += BATCH_SIZE) {
+    const batch = uniqueFiles.slice(i, i + BATCH_SIZE);
+    const batchMeta = uniqueMeta.slice(i, i + BATCH_SIZE);
     
-    try {
-      // Upload audio file
-      const audioUrl = await uploadFile(file, 'beats', `soundpacks/${packId}`, (progress) => {
-        onProgress?.(i, progress);
-      });
+    const batchPromises = batch.map(async (file, batchIndex) => {
+      const fileIndex = i + batchIndex;
+      const meta = batchMeta[batchIndex];
       
-      // Create beat record
-      const { data: beat, error } = await supabase
-        .from('beats')
-        .insert({
-          title: meta.name.replace(/\.[^/.]+$/, ''), // Remove extension
-          soundpack_id: packId,
-          type: 'soundpack_item',
-          status: status,
-          audio_file: audioUrl,
-          cover_image: coverImageUrl,
-          genre: 'soundpack',
-          track_type: 'sample',
-          bpm: null,
-          producer_id: producerId
-        })
-        .select()
-        .single();
+      try {
+        // Upload audio file with throttled progress updates
+        let lastProgressUpdate = 0;
+        const audioUrl = await uploadFile(file, 'beats', `soundpacks/${packId}`, (progress) => {
+          // Throttle progress updates to every 10% or when complete
+          if (progress === 100 || progress - lastProgressUpdate >= 10) {
+            onProgress?.(fileIndex, progress);
+            lastProgressUpdate = progress;
+          }
+        });
         
-      if (error) throw error;
-      uploadedBeats.push(beat);
-    } catch (error) {
-      console.error(`Failed to upload ${file.name}:`, error);
-      throw error;
-    }
+        // Create beat record
+        const { data: beat, error } = await supabase
+          .from('beats')
+          .insert({
+            title: meta.name.replace(/\.[^/.]+$/, ''),
+            soundpack_id: packId,
+            type: 'soundpack_item',
+            status: status,
+            audio_file: audioUrl,
+            cover_image: coverImageUrl,
+            genre: 'soundpack',
+            track_type: 'sample',
+            bpm: null,
+            producer_id: producerId
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        return beat;
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+        throw error;
+      }
+    });
+    
+    // Wait for current batch to complete before starting next batch
+    const batchResults = await Promise.all(batchPromises);
+    uploadedBeats.push(...batchResults);
   }
   
-  // Update soundpack file count
+  // Update soundpack file count with actual uploaded count
   await supabase
     .from('soundpacks')
-    .update({ file_count: files.length })
+    .update({ file_count: uniqueFiles.length })
     .eq('id', packId);
     
   return uploadedBeats;
