@@ -78,14 +78,19 @@ const SoundpackDetail = () => {
     queryFn: async () => {
       if (!soundpackId) return [];
       
+      // Explicitly filter by soundpack_id and only return beats that belong to this soundpack
       const { data, error } = await supabase
         .from('beats')
         .select('*')
         .eq('soundpack_id', soundpackId)
+        .not('soundpack_id', 'is', null)
         .order('title');
       
       if (error) throw error;
-      return data || [];
+      
+      // Additional safety check: only return beats that actually belong to this soundpack
+      const filteredData = (data || []).filter(beat => beat.soundpack_id === soundpackId);
+      return filteredData;
     },
     enabled: !!soundpackId,
   });
@@ -161,7 +166,7 @@ const SoundpackDetail = () => {
 
   return (
     <MainLayoutWithPlayer>
-      <div className="p-4 max-w-7xl mx-auto space-y-6">
+      <div className="w-full max-w-7xl mx-auto px-4 py-4 sm:px-6 space-y-6 overflow-x-hidden">
         {/* Back button */}
         <div className="flex gap-2">
           <Button
@@ -183,10 +188,10 @@ const SoundpackDetail = () => {
         </div>
 
         {/* Main content - optimized layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
           {/* Cover image - optimized size */}
           <div className="lg:col-span-2">
-            <div className="relative rounded-lg overflow-hidden shadow-lg sticky top-6">
+            <div className="relative rounded-lg overflow-hidden shadow-lg lg:sticky lg:top-6">
               <img
                 src={soundpack.cover_art_url || "/placeholder.svg"}
                 alt={soundpack.title}
@@ -230,7 +235,7 @@ const SoundpackDetail = () => {
                     key={license}
                     variant={selectedLicense === license ? 'default' : 'outline'}
                     onClick={() => setSelectedLicense(license)}
-                    className="capitalize h-10 text-sm font-medium transition-all"
+                    className="capitalize h-10 text-xs sm:text-sm font-medium transition-all whitespace-nowrap"
                     size="sm"
                   >
                     {license}
@@ -241,21 +246,21 @@ const SoundpackDetail = () => {
 
             {/* Price and actions - compact card */}
             <Card className="border-primary/20 bg-card">
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-baseline justify-between">
-                  <div>
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="min-w-0">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Price</p>
-                    <p className="text-3xl font-bold text-foreground">{formatCurrency(price, currency)}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-foreground truncate">{formatCurrency(price, currency)}</p>
                   </div>
                   {soundpack.purchase_count > 0 && (
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Sales</p>
                       <p className="text-xl font-semibold text-primary">{soundpack.purchase_count}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button 
                     onClick={handleAddToCart}
                     className="flex-1 h-11"
@@ -268,7 +273,7 @@ const SoundpackDetail = () => {
                     variant="outline"
                     size="lg"
                     onClick={handleShare}
-                    className="h-11 px-4"
+                    className="h-11 px-4 sm:w-auto w-full"
                   >
                     <Share2 className="w-4 h-4" />
                   </Button>
@@ -279,10 +284,10 @@ const SoundpackDetail = () => {
         </div>
 
         {/* Included files */}
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Music size={20} />
-            Included Files ({soundpack.file_count})
+        <div className="mt-6 sm:mt-8">
+          <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
+            <Music size={20} className="flex-shrink-0" />
+            <span>Included Files ({soundpackBeats?.length || 0})</span>
           </h2>
           
           {beatsLoading ? (
@@ -305,12 +310,12 @@ const SoundpackDetail = () => {
                     }`}
                   >
                     <CardContent className="p-3 sm:p-4">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         {/* Play button */}
                         <Button
                           size="icon"
                           variant={isCurrentBeat ? "default" : "outline"}
-                          className="flex-shrink-0 w-9 h-9"
+                          className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9"
                           onClick={() => {
                             if (isCurrentBeat) {
                               togglePlayPause();
@@ -338,18 +343,18 @@ const SoundpackDetail = () => {
                         
                         {/* Track info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
                             <span className="text-muted-foreground font-mono text-xs flex-shrink-0">
                               {String(index + 1).padStart(2, '0')}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <p className={`font-medium truncate text-sm ${
+                              <p className={`font-medium truncate text-xs sm:text-sm ${
                                 isCurrentBeat ? 'text-primary' : ''
                               }`}>
                                 {beat.title}
                               </p>
                               {beat.genre && (
-                                <p className="text-xs text-muted-foreground truncate">
+                                <p className="text-xs text-muted-foreground truncate hidden sm:block">
                                   {beat.genre}
                                   {beat.bpm && ` • ${beat.bpm} BPM`}
                                 </p>

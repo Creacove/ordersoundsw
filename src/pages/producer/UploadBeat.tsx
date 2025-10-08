@@ -275,6 +275,12 @@ export default function UploadBeat() {
 
       // Handle soundpack creation
       if (isSoundpack) {
+        // Validate soundpack has at least one file
+        if (!soundpackFiles || soundpackFiles.length === 0) {
+          toast.error("Cannot publish soundpack: At least one audio file is required", { id: "publishing-beat" });
+          return;
+        }
+        
         const soundpackData = await createSoundpack({
           title: beatDetails.title,
           description: beatDetails.description || '',
@@ -469,6 +475,12 @@ export default function UploadBeat() {
 
       // Handle soundpack draft
       if (isSoundpack) {
+        // Validate soundpack has at least one file
+        if (!soundpackFiles || soundpackFiles.length === 0) {
+          toast.error("Cannot save soundpack: At least one audio file is required", { id: "saving-draft" });
+          return;
+        }
+        
         const soundpackData = await createSoundpack({
           title: beatDetails.title,
           description: beatDetails.description || '',
