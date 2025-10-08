@@ -28,10 +28,12 @@ const SoundpackDetail = () => {
   const isMobile = useIsMobile();
   const { playBeat, currentBeat, isPlaying, togglePlayPause } = usePlayer();
 
-  const { data: soundpack, isLoading: soundpackLoading } = useQuery({
+  const { data: soundpack, isLoading: soundpackLoading, error: soundpackError } = useQuery({
     queryKey: ['soundpack', soundpackId],
     queryFn: async () => {
       if (!soundpackId) throw new Error('Soundpack ID is required');
+      
+      console.log('Fetching soundpack with ID:', soundpackId);
       
       const { data, error } = await supabase
         .from('soundpacks')
@@ -44,10 +46,19 @@ const SoundpackDetail = () => {
           )
         `)
         .eq('id', soundpackId)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
-      if (!data) throw new Error('Soundpack not found');
+      if (error) {
+        console.error('Soundpack query error:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        console.error('No soundpack found with ID:', soundpackId);
+        throw new Error('Soundpack not found');
+      }
+      
+      console.log('Soundpack data:', data);
       
       const userData = Array.isArray(data.users) ? data.users[0] : data.users;
       
@@ -58,6 +69,7 @@ const SoundpackDetail = () => {
       };
     },
     enabled: !!soundpackId,
+    retry: false
   });
 
   const { data: soundpackBeats, isLoading: beatsLoading } = useQuery({
