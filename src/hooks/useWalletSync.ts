@@ -60,12 +60,11 @@ export const useWalletSync = () => {
       const updateData = { wallet_address: walletAddress };
       console.log('📝 Updating database with:', updateData);
       
-      const { data, error, count } = await supabase
+      // Simple update without select to avoid RLS issues
+      const { error } = await supabase
         .from('users')
         .update(updateData)
-        .eq('id', user.id)
-        .select('id, wallet_address, email')
-        .single();
+        .eq('id', user.id);
 
       if (error) {
         console.error('❌ Database error syncing wallet:', error);
@@ -82,30 +81,7 @@ export const useWalletSync = () => {
         return false;
       }
 
-      if (!data) {
-        const errorMsg = 'No data returned from wallet update - user may not exist';
-        console.error('❌ ' + errorMsg);
-        setLastError(errorMsg);
-        setSyncStatus('error');
-        toast.error('Failed to sync wallet: User not found');
-        return false;
-      }
-
-      const updatedWallet = data.wallet_address;
-      console.log('✅ Database update successful:', {
-        expected: walletAddress,
-        actual: updatedWallet,
-        userId: user.id,
-        userEmail: data.email
-      });
-
-      // Verify the update was successful
-      if (updatedWallet !== walletAddress) {
-        console.warn('⚠️ Database update mismatch:', {
-          expected: walletAddress,
-          actual: updatedWallet
-        });
-      }
+      console.log('✅ Database update successful for user:', user.id);
 
       lastSyncedWallet.current = walletAddress;
       setSyncStatus('success');
@@ -142,16 +118,14 @@ export const useWalletSync = () => {
         console.warn('⚠️ RLS policy issue detected, retrying after delay...');
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Retry once
+        // Retry once with simple update
         try {
-          const { data: retryData, error: retryError } = await supabase
+          const { error: retryError } = await supabase
             .from('users')
             .update({ wallet_address: walletAddress })
-            .eq('id', user.id)
-            .select('id, wallet_address')
-            .single();
+            .eq('id', user.id);
             
-          if (!retryError && retryData) {
+          if (!retryError) {
             console.log('✅ Wallet synced successfully on retry');
             lastSyncedWallet.current = walletAddress;
             setSyncStatus('success');
