@@ -8,6 +8,7 @@ import { useCartLightweight } from '@/hooks/useCartLightweight';
 import { usePlayer } from '@/context/PlayerContext';
 import { Play, Pause, ShoppingCart, Heart, Plus, MoreVertical, Download, Pencil, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -177,8 +178,27 @@ const BeatCard = memo(function BeatCard({
     }
     
     try {
+      // Extract the path from the full URL
+      const url = new URL(beat.full_track_url);
+      const path = url.pathname.split('/storage/v1/object/public/beats/')[1] || 
+                   url.pathname.split('/beats/')[1];
+      
+      if (!path) {
+        throw new Error('Invalid beat URL');
+      }
+      
+      // Get signed URL for secure download
+      const { data, error } = await supabase.storage
+        .from('beats')
+        .createSignedUrl(path, 60); // Valid for 60 seconds
+      
+      if (error || !data) {
+        throw error || new Error('Failed to generate download URL');
+      }
+      
+      // Download using signed URL
       const link = document.createElement('a');
-      link.href = beat.full_track_url;
+      link.href = data.signedUrl;
       link.download = `${beat.title} - ${beat.producer_name}.mp3`;
       document.body.appendChild(link);
       link.click();
