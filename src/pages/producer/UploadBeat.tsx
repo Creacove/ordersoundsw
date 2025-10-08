@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { uploadBeat } from "@/lib/beatStorage";
+import { createSoundpack, uploadSoundpackFiles } from "@/lib/soundpackStorage";
 import { FileOrUrl, isFile } from "@/lib/storage";
 import { DetailTab } from "@/components/upload/DetailTab";
 import { FilesTab } from "@/components/upload/FilesTab";
@@ -47,7 +48,14 @@ export default function UploadBeat() {
     handleStemsUpload, regeneratePreview, licenseOptions, uploadedFileUrl,
     uploadProgress,
     uploadError,
-    stemsUrl
+    stemsUrl,
+    soundpackFiles,
+    soundpackMeta,
+    handleSoundpackFilesAdd,
+    handleSoundpackFileRemove,
+    handleSoundpackFileRename,
+    handleSoundpackFilesReorder,
+    handleSoundpackClearAll
   } = useBeatUpload();
   
   const { user } = useAuth();
@@ -206,24 +214,36 @@ export default function UploadBeat() {
     setIsSubmitting(true);
     
     try {
-      console.log('Publishing beat with license types:', selectedLicenseTypes);
+      console.log('Publishing with license types:', selectedLicenseTypes);
       
       if (!imageFile) {
         toast.error("Cover image is required");
         setActiveTab("files");
         return;
       }
+
+      const isSoundpack = beatDetails.category === 'Soundpack';
       
-      if (!uploadedFile && !uploadedFileUrl) {
-        toast.error("Full track file is required");
-        setActiveTab("files");
-        return;
-      }
-      
-      if (!previewFile && !previewUrl) {
-        toast.error("Preview track is required");
-        setActiveTab("files");
-        return;
+      // Soundpack validation
+      if (isSoundpack) {
+        if (soundpackFiles.length === 0) {
+          toast.error("At least one sound file is required for soundpacks");
+          setActiveTab("files");
+          return;
+        }
+      } else {
+        // Beat validation
+        if (!uploadedFile && !uploadedFileUrl) {
+          toast.error("Full track file is required");
+          setActiveTab("files");
+          return;
+        }
+        
+        if (!previewFile && !previewUrl) {
+          toast.error("Preview track is required");
+          setActiveTab("files");
+          return;
+        }
       }
 
       const producerInfo = {
@@ -236,14 +256,61 @@ export default function UploadBeat() {
         collaborators[0].email = user.email || '';
       }
       
-      toast.loading(isEditMode ? "Updating your beat..." : "Publishing your beat...", { id: "publishing-beat" });
+      toast.loading(
+        isEditMode 
+          ? `Updating your ${isSoundpack ? 'soundpack' : 'beat'}...` 
+          : `Publishing your ${isSoundpack ? 'soundpack' : 'beat'}...`, 
+        { id: "publishing-beat" }
+      );
       
       let coverImageUrl = '';
       if (imageFile) {
         if (!isFile(imageFile) && 'url' in imageFile) {
           coverImageUrl = imageFile.url;
           console.log("Using directly provided image URL:", coverImageUrl);
+        } else if (isFile(imageFile)) {
+          coverImageUrl = await uploadImage(imageFile, 'covers');
         }
+      }
+
+      // Handle soundpack creation
+      if (isSoundpack) {
+        const soundpackData = await createSoundpack({
+          title: beatDetails.title,
+          description: beatDetails.description || '',
+          genre: beatDetails.genre || 'Various',
+          category: beatDetails.category,
+          producerId: producerInfo.id,
+          coverImageUrl,
+          basicLicensePriceLocal: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceLocal : 0,
+          basicLicensePriceDiaspora: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceDiaspora : 0,
+          premiumLicensePriceLocal: selectedLicenseTypes.includes('premium') ? beatDetails.premiumLicensePriceLocal : 0,
+          premiumLicensePriceDiaspora: selectedLicenseTypes.includes('premium') ? beatDetails.premiumLicensePriceDiaspora : 0,
+          exclusiveLicensePriceLocal: selectedLicenseTypes.includes('exclusive') ? beatDetails.exclusiveLicensePriceLocal : 0,
+          exclusiveLicensePriceDiaspora: selectedLicenseTypes.includes('exclusive') ? beatDetails.exclusiveLicensePriceDiaspora : 0,
+          customLicensePriceLocal: selectedLicenseTypes.includes('custom') ? beatDetails.customLicensePriceLocal : 0,
+          customLicensePriceDiaspora: selectedLicenseTypes.includes('custom') ? beatDetails.customLicensePriceDiaspora : 0,
+          licenseType: selectedLicenseTypes.join(','),
+          licenseTerms: beatDetails.licenseTerms || ''
+        });
+
+        // Upload all soundpack files
+        await uploadSoundpackFiles(
+          soundpackData.id,
+          soundpackFiles,
+          soundpackMeta,
+          coverImageUrl
+        );
+
+        // Publish the soundpack
+        await supabase
+          .from('soundpacks')
+          .update({ published: true })
+          .eq('id', soundpackData.id);
+
+        toast.success("Soundpack published successfully!", { id: "publishing-beat" });
+        navigate("/producer/beats");
+        return;
       }
       
       const beatData = {
@@ -612,6 +679,13 @@ export default function UploadBeat() {
                     uploadError={uploadError}
                     stemsUrl={localStemsUrl || stemsUrl}
                     beatDetails={beatDetails}
+                    soundpackFiles={soundpackFiles}
+                    soundpackMeta={soundpackMeta}
+                    onSoundpackFilesAdd={handleSoundpackFilesAdd}
+                    onSoundpackFileRemove={handleSoundpackFileRemove}
+                    onSoundpackFileRename={handleSoundpackFileRename}
+                    onSoundpackFilesReorder={handleSoundpackFilesReorder}
+                    onSoundpackClearAll={handleSoundpackClearAll}
                   />
                 </TabsContent>
 
