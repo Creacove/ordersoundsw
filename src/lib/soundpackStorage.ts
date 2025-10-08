@@ -55,6 +55,7 @@ export const createSoundpack = async (params: CreateSoundpackParams) => {
 
 export const uploadSoundpackFiles = async (
   packId: string,
+  producerId: string,
   files: File[],
   filesMeta: SoundFileMeta[],
   coverImageUrl: string,
@@ -85,7 +86,7 @@ export const uploadSoundpackFiles = async (
           genre: 'soundpack',
           track_type: 'sample',
           bpm: 0,
-          producer_id: (await supabase.from('soundpacks').select('producer_id').eq('id', packId).single()).data?.producer_id
+          producer_id: producerId
         })
         .select()
         .single();

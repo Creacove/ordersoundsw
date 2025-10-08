@@ -297,6 +297,7 @@ export default function UploadBeat() {
         // Upload all soundpack files
         await uploadSoundpackFiles(
           soundpackData.id,
+          producerInfo.id,
           soundpackFiles,
           soundpackMeta,
           coverImageUrl
@@ -436,18 +437,67 @@ export default function UploadBeat() {
         setActiveTab("files");
         return;
       }
+
+      const isSoundpack = beatDetails.category === 'Soundpack';
+      
+      // Soundpack draft validation
+      if (isSoundpack && soundpackFiles.length === 0) {
+        toast.error("At least one sound file is required for soundpacks");
+        setActiveTab("files");
+        setIsSubmitting(false);
+        return;
+      }
       
       const producerInfo = {
         id: user?.id || 'anonymous-producer',
         name: user?.name || 'Anonymous Producer'
       };
       
+      toast.loading(`Saving ${isSoundpack ? 'soundpack' : 'beat'} as draft...`, { id: "saving-draft" });
+      
       let coverImageUrl = '';
       if (imageFile) {
         if (!isFile(imageFile) && 'url' in imageFile) {
           coverImageUrl = imageFile.url;
           console.log("Using directly provided image URL for draft:", coverImageUrl);
+        } else if (isFile(imageFile)) {
+          coverImageUrl = await uploadImage(imageFile, 'covers');
+          console.log("Uploaded cover image for draft:", coverImageUrl);
         }
+      }
+
+      // Handle soundpack draft
+      if (isSoundpack) {
+        const soundpackData = await createSoundpack({
+          title: beatDetails.title,
+          description: beatDetails.description || '',
+          genre: beatDetails.genre || 'Various',
+          category: beatDetails.category,
+          producerId: producerInfo.id,
+          coverImageUrl,
+          basicLicensePriceLocal: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceLocal : 0,
+          basicLicensePriceDiaspora: selectedLicenseTypes.includes('basic') ? beatDetails.basicLicensePriceDiaspora : 0,
+          premiumLicensePriceLocal: selectedLicenseTypes.includes('premium') ? beatDetails.premiumLicensePriceLocal : 0,
+          premiumLicensePriceDiaspora: selectedLicenseTypes.includes('premium') ? beatDetails.premiumLicensePriceDiaspora : 0,
+          exclusiveLicensePriceLocal: selectedLicenseTypes.includes('exclusive') ? beatDetails.exclusiveLicensePriceLocal : 0,
+          exclusiveLicensePriceDiaspora: selectedLicenseTypes.includes('exclusive') ? beatDetails.exclusiveLicensePriceDiaspora : 0,
+          customLicensePriceLocal: selectedLicenseTypes.includes('custom') ? beatDetails.customLicensePriceLocal : 0,
+          customLicensePriceDiaspora: selectedLicenseTypes.includes('custom') ? beatDetails.customLicensePriceDiaspora : 0,
+          licenseType: selectedLicenseTypes.join(','),
+          licenseTerms: beatDetails.licenseTerms || ''
+        });
+
+        await uploadSoundpackFiles(
+          soundpackData.id,
+          producerInfo.id,
+          soundpackFiles,
+          soundpackMeta,
+          coverImageUrl
+        );
+
+        toast.success("Soundpack saved as draft!", { id: "saving-draft" });
+        navigate("/producer/beats");
+        return;
       }
       
       const beatData = {
