@@ -77,6 +77,9 @@ export async function fetchAllBeats(options: FetchBeatsOptions = {}): Promise<Be
       query = query.or(`title.ilike.%${searchTerm}%,genre.ilike.%${searchTerm}%`);
     }
 
+    // Exclude soundpack items - they should only appear in soundpack detail pages
+    query = query.is('soundpack_id', null);
+
     // Order by upload_date for consistent results, uses our date indexes
     query = query.order('upload_date', { ascending: false });
 
@@ -140,6 +143,7 @@ export async function fetchMetricBasedTrending(limit: number = 100): Promise<Bea
         )
       `)
       .eq('status', 'published')
+      .is('soundpack_id', null) // Exclude soundpack items
       .not('plays', 'is', null)
       .order('plays', { ascending: false })
       .order('favorites_count', { ascending: false })
@@ -181,6 +185,7 @@ export async function fetchNewBeats(limit: number = 20): Promise<Beat[]> {
         users!beats_producer_id_fkey(stage_name, full_name, profile_picture)
       `)
       .eq('status', 'published')
+      .is('soundpack_id', null) // Exclude soundpack items
       .neq('category', 'Gaming & Soundtrack')
       .order('upload_date', { ascending: false })
       .limit(limit);
@@ -225,6 +230,7 @@ export async function fetchWeeklyPicksBeats(limit: number = 8): Promise<Beat[]> 
       `)
       .eq('status', 'published')
       .eq('is_weekly_pick', true)
+      .is('soundpack_id', null) // Exclude soundpack items
       .order('upload_date', { ascending: false })
       .limit(limit);
 
@@ -261,6 +267,7 @@ export async function fetchRandomBeats(limit: number = 8): Promise<Beat[]> {
         )
       `)
       .eq('status', 'published') // Uses our status indexes
+      .is('soundpack_id', null) // Exclude soundpack items
       .order('upload_date', { ascending: false }) // Uses idx_beats_new
       .limit(100); // Get more to randomize from
 
