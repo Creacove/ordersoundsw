@@ -109,6 +109,8 @@ export function useCartWithBeatDetailsOptimized() {
   // Fetch beat details with caching
   useEffect(() => {
     const fetchBeatDetails = async () => {
+      console.log('Fetching cart details for items:', lightweightItems);
+      
       if (lightweightItems.length === 0) {
         setCartItemsWithDetails([]);
         return;
@@ -274,6 +276,7 @@ export function useCartWithBeatDetailsOptimized() {
             }
           }
 
+          console.log('Fetched cart items with details:', allItemsWithDetails);
           setCartItemsWithDetails(allItemsWithDetails);
         } catch (error) {
           console.error('Error fetching cart item details:', error);
@@ -282,6 +285,7 @@ export function useCartWithBeatDetailsOptimized() {
         }
       } else {
         // Only cached items, set them
+        console.log('Using only cached items:', cachedItems);
         setCartItemsWithDetails(cachedItems);
       }
     };

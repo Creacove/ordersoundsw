@@ -256,16 +256,21 @@ export default function Cart() {
   // Calculate individual item price for display
   const getItemPrice = (item: any) => {
     const licenseType = item.licenseType;
-    const beat = item.beat;
+    const data = item.itemType === 'soundpack' ? item.soundpack : item.beat;
+    
+    if (!data) {
+      console.error('No data found for item:', item);
+      return 0;
+    }
     
     if (currency === 'NGN') {
-      if (licenseType === 'basic') return beat.basic_license_price_local || 0;
-      if (licenseType === 'premium') return beat.premium_license_price_local || 0;
-      if (licenseType === 'exclusive') return beat.exclusive_license_price_local || 0;
+      if (licenseType === 'basic') return data.basic_license_price_local || 0;
+      if (licenseType === 'premium') return data.premium_license_price_local || 0;
+      if (licenseType === 'exclusive') return data.exclusive_license_price_local || 0;
     } else {
-      if (licenseType === 'basic') return beat.basic_license_price_diaspora || 0;
-      if (licenseType === 'premium') return beat.premium_license_price_diaspora || 0;
-      if (licenseType === 'exclusive') return beat.exclusive_license_price_diaspora || 0;
+      if (licenseType === 'basic') return data.basic_license_price_diaspora || 0;
+      if (licenseType === 'premium') return data.premium_license_price_diaspora || 0;
+      if (licenseType === 'exclusive') return data.exclusive_license_price_diaspora || 0;
     }
     
     return 0;
