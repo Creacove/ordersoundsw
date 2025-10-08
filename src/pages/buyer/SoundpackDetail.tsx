@@ -35,37 +35,40 @@ const SoundpackDetail = () => {
       
       console.log('Fetching soundpack with ID:', soundpackId);
       
-      const { data, error } = await supabase
+      // Fetch soundpack
+      const { data: soundpackData, error: soundpackError } = await supabase
         .from('soundpacks')
-        .select(`
-          *,
-          users!soundpacks_producer_id_fkey (
-            full_name,
-            stage_name,
-            profile_picture
-          )
-        `)
+        .select('*')
         .eq('id', soundpackId)
         .maybeSingle();
       
-      if (error) {
-        console.error('Soundpack query error:', error);
-        throw error;
+      if (soundpackError) {
+        console.error('Soundpack query error:', soundpackError);
+        throw soundpackError;
       }
       
-      if (!data) {
+      if (!soundpackData) {
         console.error('No soundpack found with ID:', soundpackId);
         throw new Error('Soundpack not found');
       }
       
-      console.log('Soundpack data:', data);
+      console.log('Soundpack data:', soundpackData);
       
-      const userData = Array.isArray(data.users) ? data.users[0] : data.users;
+      // Fetch producer data separately
+      const { data: producerData, error: producerError } = await supabase
+        .from('users')
+        .select('full_name, stage_name, profile_picture')
+        .eq('id', soundpackData.producer_id)
+        .maybeSingle();
+      
+      if (producerError) {
+        console.error('Producer query error:', producerError);
+      }
       
       return {
-        ...data,
-        producer_name: userData?.stage_name || userData?.full_name || 'Unknown Producer',
-        producer_profile_picture: userData?.profile_picture
+        ...soundpackData,
+        producer_name: producerData?.stage_name || producerData?.full_name || 'Unknown Producer',
+        producer_profile_picture: producerData?.profile_picture
       };
     },
     enabled: !!soundpackId,
