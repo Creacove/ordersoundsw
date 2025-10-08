@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
 import { BeatCardCompact } from "@/components/marketplace/BeatCardCompact";
+import { SoundpackCard } from "@/components/marketplace/SoundpackCard";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
@@ -17,7 +18,7 @@ export default function GamingSoundtrack() {
   const [sortBy, setSortBy] = useState("newest");
   const { isInCart } = useCart();
   
-  // Smart caching: Single cache key, slice and sort client-side
+  // Query for Gaming & Soundtrack beats
   const { data: allGamingBeats = [], isLoading } = useQuery({
     queryKey: ['gaming-soundtrack-beats'], 
     queryFn: async () => {
@@ -61,7 +62,7 @@ export default function GamingSoundtrack() {
         .eq('status', 'published')
         .eq('category', 'Gaming & Soundtrack')
         .order('upload_date', { ascending: false })
-        .limit(200); // Fetch more upfront
+        .limit(200);
 
       if (error) throw error;
 
@@ -71,6 +72,46 @@ export default function GamingSoundtrack() {
     gcTime: 10 * 60 * 1000,
     placeholderData: keepPreviousData,
   }) as { data: Beat[], isLoading: boolean };
+
+  // Query for Gaming & Soundtrack soundpacks
+  const { data: gamingSoundpacks = [], isLoading: isLoadingSoundpacks } = useQuery({
+    queryKey: ['gaming-soundtrack-soundpacks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('soundpacks')
+        .select(`
+          id,
+          title,
+          description,
+          cover_art_url,
+          producer_id,
+          users (
+            full_name,
+            stage_name
+          ),
+          file_count,
+          basic_license_price_local,
+          basic_license_price_diaspora,
+          premium_license_price_local,
+          premium_license_price_diaspora,
+          exclusive_license_price_local,
+          exclusive_license_price_diaspora,
+          custom_license_price_local,
+          custom_license_price_diaspora,
+          category,
+          published,
+          created_at
+        `)
+        .eq('published', true)
+        .eq('category', 'Gaming & Soundtrack')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   // Memoized sorting and slicing
   const gamingBeats = useMemo(() => {
@@ -152,6 +193,43 @@ export default function GamingSoundtrack() {
           </div>
         ) : (
           <>
+            {/* Soundpacks Section */}
+            {gamingSoundpacks.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-xl md:text-2xl font-bold mb-4">Gaming Soundpacks</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {gamingSoundpacks.map((pack: any) => (
+                    <SoundpackCard
+                      key={pack.id}
+                      soundpack={{
+                        id: pack.id,
+                        title: pack.title,
+                        description: pack.description,
+                        cover_art_url: pack.cover_art_url,
+                        producer_id: pack.producer_id,
+                        producer_name: pack.users?.stage_name || pack.users?.full_name || 'Unknown',
+                        file_count: pack.file_count,
+                        basic_license_price_local: pack.basic_license_price_local,
+                        basic_license_price_diaspora: pack.basic_license_price_diaspora,
+                        premium_license_price_local: pack.premium_license_price_local,
+                        premium_license_price_diaspora: pack.premium_license_price_diaspora,
+                        exclusive_license_price_local: pack.exclusive_license_price_local,
+                        exclusive_license_price_diaspora: pack.exclusive_license_price_diaspora,
+                        custom_license_price_local: pack.custom_license_price_local,
+                        custom_license_price_diaspora: pack.custom_license_price_diaspora,
+                        published: pack.published,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Beats Section */}
+            <div className="mb-4">
+              <h2 className="text-xl md:text-2xl font-bold mb-4">Gaming Beats</h2>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {gamingBeats.map((beat) => (
                 <BeatCardCompact 
@@ -174,13 +252,13 @@ export default function GamingSoundtrack() {
               </div>
             )}
             
-            {gamingBeats.length === 0 && (
+            {gamingBeats.length === 0 && gamingSoundpacks.length === 0 && (
               <div className="text-center py-20">
                 <div className="max-w-md mx-auto">
                   <div className="text-6xl mb-4">🎮</div>
-                  <h3 className="text-xl font-semibold mb-2">No Gaming Beats Yet</h3>
+                  <h3 className="text-xl font-semibold mb-2">No Gaming Content Yet</h3>
                   <p className="text-muted-foreground mb-6">
-                    Be the first to discover amazing gaming and soundtrack beats!
+                    Be the first to discover amazing gaming beats and soundpacks!
                   </p>
                   <Button variant="outline" onClick={() => window.location.href = '/new'}>
                     Explore All Beats
