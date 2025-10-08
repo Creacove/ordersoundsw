@@ -142,92 +142,147 @@ export function useCartWithBeatDetailsOptimized() {
         setCartItemsWithDetails(cachedItems);
       }
 
-      // Fetch missing beats
-      if (beatsToFetch.length > 0) {
+      // Fetch both beats and soundpacks
+      const allItemsWithDetails: CartItemWithDetails[] = [...cachedItems];
+      
+      if (beatsToFetch.length > 0 || soundpackItems.length > 0) {
         setIsLoading(true);
         try {
-          const { data: beats, error } = await supabase
-            .from('beats')
-            .select(`
-              id,
-              title,
-              producer_id,
-              cover_image,
-              basic_license_price_local,
-              basic_license_price_diaspora,
-              premium_license_price_local,
-              premium_license_price_diaspora,
-              exclusive_license_price_local,
-              exclusive_license_price_diaspora,
-              genre,
-              users!beats_producer_id_fkey (
-                wallet_address,
-                stage_name,
-                full_name
-              )
-            `)
-            .in('id', beatsToFetch);
+          // Fetch missing beats
+          if (beatsToFetch.length > 0) {
+            const { data: beats, error } = await supabase
+              .from('beats')
+              .select(`
+                id,
+                title,
+                producer_id,
+                cover_image,
+                basic_license_price_local,
+                basic_license_price_diaspora,
+                premium_license_price_local,
+                premium_license_price_diaspora,
+                exclusive_license_price_local,
+                exclusive_license_price_diaspora,
+                genre,
+                users!beats_producer_id_fkey (
+                  wallet_address,
+                  stage_name,
+                  full_name
+                )
+              `)
+              .in('id', beatsToFetch);
 
-          if (error) {
-            console.error('Error fetching beat details:', error);
-            return;
+            if (error) {
+              console.error('Error fetching beat details:', error);
+            } else if (beats) {
+              beatItems.forEach(lightweightItem => {
+                // Skip if already cached
+                if (cachedItems.find(c => c.itemId === lightweightItem.itemId)) return;
+
+                const beat = beats.find(b => b.id === lightweightItem.itemId);
+                if (!beat) return;
+
+                const userData = beat.users;
+                const producerName = userData?.stage_name || userData?.full_name || 'Unknown Producer';
+                
+                const beatData: Beat = {
+                  id: beat.id,
+                  title: beat.title,
+                  producer_id: beat.producer_id,
+                  producer_name: producerName,
+                  cover_image_url: beat.cover_image || '',
+                  preview_url: '',
+                  full_track_url: '',
+                  genre: beat.genre || '',
+                  track_type: 'Beat',
+                  bpm: 0,
+                  tags: [],
+                  created_at: new Date().toISOString(),
+                  favorites_count: 0,
+                  purchase_count: 0,
+                  status: 'published' as const,
+                  basic_license_price_local: beat.basic_license_price_local || 0,
+                  basic_license_price_diaspora: beat.basic_license_price_diaspora || 0,
+                  premium_license_price_local: beat.premium_license_price_local || 0,
+                  premium_license_price_diaspora: beat.premium_license_price_diaspora || 0,
+                  exclusive_license_price_local: beat.exclusive_license_price_local || 0,
+                  exclusive_license_price_diaspora: beat.exclusive_license_price_diaspora || 0,
+                  selected_license: lightweightItem.licenseType,
+                  producer_wallet_address: userData?.wallet_address
+                };
+
+                // Cache the beat data
+                cacheBeatData(lightweightItem.itemId, beatData);
+
+                allItemsWithDetails.push({
+                  itemId: lightweightItem.itemId,
+                  itemType: 'beat' as const,
+                  licenseType: lightweightItem.licenseType,
+                  addedAt: lightweightItem.addedAt,
+                  beat: beatData
+                });
+              });
+            }
           }
 
-          const newItemsWithDetails = beatItems.map(lightweightItem => {
-            // First check if we already have this in cached items
-            const existingCached = cachedItems.find(c => c.itemId === lightweightItem.itemId);
-            if (existingCached) return existingCached;
-
-            const beat = beats?.find(b => b.id === lightweightItem.itemId);
-            if (!beat) return null;
-
-            const userData = beat.users;
-            const producerName = userData?.stage_name || userData?.full_name || 'Unknown Producer';
+          // Fetch soundpacks
+          if (soundpackItems.length > 0) {
+            const soundpackIds = soundpackItems.map(item => item.itemId);
             
-            const beatData: Beat = {
-              id: beat.id,
-              title: beat.title,
-              producer_id: beat.producer_id,
-              producer_name: producerName,
-              cover_image_url: beat.cover_image || '',
-              preview_url: '',
-              full_track_url: '',
-              genre: beat.genre || '',
-              track_type: 'Beat',
-              bpm: 0,
-              tags: [],
-              created_at: new Date().toISOString(),
-              favorites_count: 0,
-              purchase_count: 0,
-              status: 'published' as const,
-              basic_license_price_local: beat.basic_license_price_local || 0,
-              basic_license_price_diaspora: beat.basic_license_price_diaspora || 0,
-              premium_license_price_local: beat.premium_license_price_local || 0,
-              premium_license_price_diaspora: beat.premium_license_price_diaspora || 0,
-              exclusive_license_price_local: beat.exclusive_license_price_local || 0,
-              exclusive_license_price_diaspora: beat.exclusive_license_price_diaspora || 0,
-              selected_license: lightweightItem.licenseType,
-              producer_wallet_address: userData?.wallet_address
-            };
+            const { data: soundpacks, error } = await supabase
+              .from('soundpacks')
+              .select(`
+                id,
+                title,
+                producer_id,
+                cover_art_url,
+                file_count,
+                basic_license_price_local,
+                basic_license_price_diaspora,
+                premium_license_price_local,
+                premium_license_price_diaspora,
+                exclusive_license_price_local,
+                exclusive_license_price_diaspora,
+                users!soundpacks_producer_id_fkey (
+                  stage_name,
+                  full_name
+                )
+              `)
+              .in('id', soundpackIds);
 
-            // Cache the beat data
-            cacheBeatData(lightweightItem.itemId, beatData);
+            if (error) {
+              console.error('Error fetching soundpack details:', error);
+            } else if (soundpacks) {
+              soundpackItems.forEach(lightweightItem => {
+                const soundpack = soundpacks.find(s => s.id === lightweightItem.itemId);
+                if (!soundpack) return;
 
-            return {
-              itemId: lightweightItem.itemId,
-              itemType: 'beat' as const,
-              licenseType: lightweightItem.licenseType,
-              addedAt: lightweightItem.addedAt,
-              beat: beatData
-            };
-          }).filter((item): item is CartItemWithDetails => item !== null);
+                const userData = Array.isArray(soundpack.users) ? soundpack.users[0] : soundpack.users;
+                const producerName = userData?.stage_name || userData?.full_name || 'Unknown Producer';
 
-          setCartItemsWithDetails(newItemsWithDetails);
+                allItemsWithDetails.push({
+                  itemId: lightweightItem.itemId,
+                  itemType: 'soundpack' as const,
+                  licenseType: lightweightItem.licenseType,
+                  addedAt: lightweightItem.addedAt,
+                  soundpack: {
+                    ...soundpack,
+                    producer_name: producerName
+                  }
+                });
+              });
+            }
+          }
+
+          setCartItemsWithDetails(allItemsWithDetails);
         } catch (error) {
-          console.error('Error fetching beat details:', error);
+          console.error('Error fetching cart item details:', error);
         } finally {
           setIsLoading(false);
         }
+      } else {
+        // Only cached items, set them
+        setCartItemsWithDetails(cachedItems);
       }
     };
 
