@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Share2, ArrowLeft, Package, User, Music, Play, Pause } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ShoppingCart, Share2, ArrowLeft, Package, User, Music, Play, Pause, Upload } from 'lucide-react';
 import { usePlayer } from '@/context/PlayerContext';
 import { MainLayoutWithPlayer } from '@/components/layout/MainLayoutWithPlayer';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,9 @@ const SoundpackDetail = () => {
   const { addToCart, isInCart } = useCartLightweight();
   const { user, currency } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedLicense, setSelectedLicense] = useState<string>('basic');
+  const [isPublishing, setIsPublishing] = useState(false);
   const isMobile = useIsMobile();
   const { playBeat, currentBeat, isPlaying, togglePlayPause } = usePlayer();
 
@@ -116,6 +118,28 @@ const SoundpackDetail = () => {
     }
   };
 
+  const handlePublish = async () => {
+    if (!soundpack || !user || user.id !== soundpack.producer_id) return;
+    
+    setIsPublishing(true);
+    try {
+      const { error } = await supabase
+        .from('soundpacks')
+        .update({ published: true })
+        .eq('id', soundpack.id);
+      
+      if (error) throw error;
+      
+      toast.success('Soundpack published successfully!');
+      queryClient.invalidateQueries({ queryKey: ['soundpack', soundpackId] });
+    } catch (error) {
+      console.error('Error publishing soundpack:', error);
+      toast.error('Failed to publish soundpack');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const getLicensePrice = (license: string) => {
     if (!soundpack) return 0;
     
@@ -182,8 +206,8 @@ const SoundpackDetail = () => {
   return (
     <MainLayoutWithPlayer>
       <div className="w-full max-w-7xl mx-auto px-4 py-4 sm:px-6 space-y-6 overflow-x-hidden">
-        {/* Back button */}
-        <div className="flex gap-2">
+        {/* Back button and status */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
@@ -191,14 +215,37 @@ const SoundpackDetail = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
+          
+          {/* Draft status badge */}
+          {!soundpack.published && (
+            <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold">
+              DRAFT
+            </Badge>
+          )}
+          
           {user?.id === soundpack.producer_id && (
-            <Button
-              variant="outline"
-              onClick={() => navigate('/producer/beats')}
-            >
-              <Music className="w-4 h-4 mr-2" />
-              My Beats
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/producer/beats')}
+              >
+                <Music className="w-4 h-4 mr-2" />
+                My Beats
+              </Button>
+              
+              {/* Publish button - only show if draft */}
+              {!soundpack.published && (
+                <Button
+                  variant="default"
+                  onClick={handlePublish}
+                  disabled={isPublishing || (soundpackBeats?.length || 0) === 0}
+                  className="ml-auto"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {isPublishing ? 'Publishing...' : 'Publish Soundpack'}
+                </Button>
+              )}
+            </>
           )}
         </div>
 
@@ -323,7 +370,7 @@ const SoundpackDetail = () => {
               ))}
             </div>
           ) : soundpackBeats && soundpackBeats.length > 0 ? (
-            <div className="grid gap-2">
+            <div className="grid gap-2 w-full max-w-full">
               {soundpackBeats.map((beat, index) => {
                 const isCurrentBeat = currentBeat?.id === beat.id;
                 const isCurrentPlaying = isCurrentBeat && isPlaying;
@@ -331,17 +378,17 @@ const SoundpackDetail = () => {
                 return (
                   <Card 
                     key={beat.id}
-                    className={`transition-all duration-200 hover:bg-muted/30 ${
+                    className={`transition-all duration-200 hover:bg-muted/30 w-full max-w-full ${
                       isCurrentBeat ? 'border-primary bg-primary/5' : ''
                     }`}
                   >
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-2">
+                    <CardContent className="p-3 w-full max-w-full overflow-hidden">
+                      <div className="flex items-center gap-2 w-full max-w-full">
                         {/* Play button */}
                         <Button
                           size="icon"
                           variant={isCurrentBeat ? "default" : "outline"}
-                          className="flex-shrink-0 w-9 h-9"
+                          className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9"
                           onClick={() => {
                             if (isCurrentBeat) {
                               togglePlayPause();
