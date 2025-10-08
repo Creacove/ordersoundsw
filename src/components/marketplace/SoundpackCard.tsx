@@ -49,7 +49,7 @@ export function SoundpackCard({
   const { addToCart, removeFromCart, isInCart: checkIsInCart } = useCartLightweight();
   const [selectedLicense, setSelectedLicense] = useState<'basic' | 'premium' | 'exclusive' | 'custom'>('basic');
   
-  const itemInCart = isInCart || checkIsInCart(soundpack.id);
+  const itemInCart = isInCart || checkIsInCart(soundpack.id, 'soundpack');
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -58,9 +58,9 @@ export function SoundpackCard({
     if (onAddToCart) {
       onAddToCart();
     } else if (itemInCart) {
-      removeFromCart(soundpack.id);
+      removeFromCart(soundpack.id, 'soundpack');
     } else {
-      addToCart(soundpack.id, selectedLicense);
+      addToCart(soundpack.id, selectedLicense, 'soundpack');
     }
   };
 
