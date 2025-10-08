@@ -133,6 +133,37 @@ export const useWalletSync = () => {
 
     } catch (error) {
       console.error('❌ Exception in wallet sync:', error);
+      
+      // Handle RLS policy errors with retry
+      if (error instanceof Error && 
+          (error.message.includes('PGRST301') || 
+           error.message.includes('permission') || 
+           error.message.includes('policy'))) {
+        console.warn('⚠️ RLS policy issue detected, retrying after delay...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Retry once
+        try {
+          const { data: retryData, error: retryError } = await supabase
+            .from('users')
+            .update({ wallet_address: walletAddress })
+            .eq('id', user.id)
+            .select('id, wallet_address')
+            .single();
+            
+          if (!retryError && retryData) {
+            console.log('✅ Wallet synced successfully on retry');
+            lastSyncedWallet.current = walletAddress;
+            setSyncStatus('success');
+            await forceUserDataRefresh();
+            toast.success('Wallet synced successfully');
+            return true;
+          }
+        } catch (retryErr) {
+          console.error('❌ Retry failed:', retryErr);
+        }
+      }
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setLastError(errorMessage);
       setSyncStatus('error');
