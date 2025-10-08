@@ -66,6 +66,8 @@ export function useCartWithBeatDetailsOptimized() {
   const [cartItemsWithDetails, setCartItemsWithDetails] = useState<CartItemWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { currency } = useAuth();
+  
+  console.log('useCartWithBeatDetailsOptimized - lightweightItems:', lightweightItems, 'itemCount:', itemCount, 'cartItemsWithDetails:', cartItemsWithDetails);
 
   // Calculate total amount using memoization with currency consideration
   const totalAmount = useMemo(() => {
@@ -119,6 +121,8 @@ export function useCartWithBeatDetailsOptimized() {
       // Separate beats and soundpacks
       const beatItems = lightweightItems.filter(item => item.itemType === 'beat');
       const soundpackItems = lightweightItems.filter(item => item.itemType === 'soundpack');
+      
+      console.log('Separated items - beatItems:', beatItems, 'soundpackItems:', soundpackItems);
 
       // Check cache first for beats
       const cachedItems: CartItemWithDetails[] = [];
@@ -255,8 +259,10 @@ export function useCartWithBeatDetailsOptimized() {
             if (error) {
               console.error('Error fetching soundpack details:', error);
             } else if (soundpacks) {
+              console.log('Fetched soundpacks from DB:', soundpacks);
               soundpackItems.forEach(lightweightItem => {
                 const soundpack = soundpacks.find(s => s.id === lightweightItem.itemId);
+                console.log('Processing soundpack item:', lightweightItem.itemId, 'found:', soundpack);
                 if (!soundpack) return;
 
                 const userData = Array.isArray(soundpack.users) ? soundpack.users[0] : soundpack.users;

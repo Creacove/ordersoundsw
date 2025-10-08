@@ -22,6 +22,8 @@ import SoundpackCartItemCard from '@/components/cart/SoundpackCartItemCard';
 export default function Cart() {
   const { cartItems, removeFromCart, clearCart, totalAmount, itemCount, isLoading } = useCartWithBeatDetailsOptimized();
   const { user, currency } = useAuth();
+  
+  console.log('Cart Page - itemCount:', itemCount, 'cartItems:', cartItems, 'isLoading:', isLoading);
   const navigate = useNavigate();
   const wallet = useWallet();
   const { 
