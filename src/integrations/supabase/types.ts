@@ -105,11 +105,13 @@ export type Database = {
           premium_license_price_local: number | null
           producer_id: string
           purchase_count: number | null
+          soundpack_id: string | null
           status: string | null
           stems_url: string | null
           tags: string[] | null
           title: string
           track_type: string | null
+          type: string | null
           upload_date: string | null
         }
         Insert: {
@@ -139,11 +141,13 @@ export type Database = {
           premium_license_price_local?: number | null
           producer_id: string
           purchase_count?: number | null
+          soundpack_id?: string | null
           status?: string | null
           stems_url?: string | null
           tags?: string[] | null
           title: string
           track_type?: string | null
+          type?: string | null
           upload_date?: string | null
         }
         Update: {
@@ -173,11 +177,13 @@ export type Database = {
           premium_license_price_local?: number | null
           producer_id?: string
           purchase_count?: number | null
+          soundpack_id?: string | null
           status?: string | null
           stems_url?: string | null
           tags?: string[] | null
           title?: string
           track_type?: string | null
+          type?: string | null
           upload_date?: string | null
         }
         Relationships: [
@@ -186,6 +192,13 @@ export type Database = {
             columns: ["producer_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beats_soundpack_id_fkey"
+            columns: ["soundpack_id"]
+            isOneToOne: false
+            referencedRelation: "soundpacks"
             referencedColumns: ["id"]
           },
         ]
@@ -666,6 +679,63 @@ export type Database = {
           },
         ]
       }
+      soundpacks: {
+        Row: {
+          category: string | null
+          cover_art_url: string | null
+          created_at: string | null
+          currency_code: string | null
+          description: string | null
+          file_count: number | null
+          id: string
+          metadata: Json | null
+          price_diaspora: number
+          price_local: number
+          producer_id: string
+          published: boolean | null
+          purchase_count: number | null
+          slug: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          cover_art_url?: string | null
+          created_at?: string | null
+          currency_code?: string | null
+          description?: string | null
+          file_count?: number | null
+          id?: string
+          metadata?: Json | null
+          price_diaspora?: number
+          price_local?: number
+          producer_id: string
+          published?: boolean | null
+          purchase_count?: number | null
+          slug: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          cover_art_url?: string | null
+          created_at?: string | null
+          currency_code?: string | null
+          description?: string | null
+          file_count?: number | null
+          id?: string
+          metadata?: Json | null
+          price_diaspora?: number
+          price_local?: number
+          producer_id?: string
+          published?: boolean | null
+          purchase_count?: number | null
+          slug?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_purchased_beats: {
         Row: {
           beat_id: string
@@ -714,6 +784,45 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_purchased_soundpacks: {
+        Row: {
+          id: string
+          order_id: string | null
+          pack_id: string
+          purchase_date: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          pack_id: string
+          purchase_date?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          pack_id?: string
+          purchase_date?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_purchased_soundpacks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_purchased_soundpacks_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "soundpacks"
             referencedColumns: ["id"]
           },
         ]

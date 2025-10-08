@@ -86,6 +86,32 @@ export interface Beat {
   };
   selected_license?: string;
   producer_wallet_address?: string;
+  soundpack_id?: string | null;
+  type?: 'beat' | 'soundpack_item';
+}
+
+export interface Soundpack {
+  id: string;
+  producer_id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  cover_art_url?: string;
+  price_local: number;
+  price_diaspora: number;
+  currency_code: string;
+  category: string;
+  metadata?: Record<string, any>;
+  published: boolean;
+  purchase_count: number;
+  file_count: number;
+  created_at: string;
+  updated_at: string;
+  sounds?: Beat[];
+  producer?: {
+    full_name?: string;
+    stage_name?: string;
+  };
 }
 
 export interface Playlist {
