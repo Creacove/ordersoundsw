@@ -58,7 +58,8 @@ export const validateCurrentTab = ({
       if (!beatDetails.genre) {
         errors.genre = "Genre is required";
       }
-      if (!beatDetails.trackType) {
+      // Track type is only required for beats, not soundpacks
+      if (beatDetails.category !== 'Soundpack' && !beatDetails.trackType) {
         errors.trackType = "Track type is required";
       }
       break;
