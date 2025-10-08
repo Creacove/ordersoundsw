@@ -6,10 +6,12 @@ import { Beat } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
 interface CartItemWithDetails {
-  beatId: string;
+  itemId: string;
+  itemType: 'beat' | 'soundpack';
   licenseType: string;
   addedAt: string;
-  beat: Beat;
+  beat?: Beat;
+  soundpack?: any;
 }
 
 interface CachedBeatData {
@@ -67,32 +69,40 @@ export function useCartWithBeatDetailsOptimized() {
 
   // Calculate total amount using memoization with currency consideration
   const totalAmount = useMemo(() => {
-    return cartItemsWithDetails.reduce((sum, item) => {
-      if (!item.beat) return sum;
-      
-      const licenseType = item.licenseType;
+    return cartItemsWithDetails.reduce((total, item) => {
       let price = 0;
       
-      // Use local prices for NGN, diaspora prices for USD
-      if (currency === 'NGN') {
-        if (licenseType === 'basic') {
-          price = item.beat.basic_license_price_local || 0;
-        } else if (licenseType === 'premium') {
-          price = item.beat.premium_license_price_local || 0;
-        } else if (licenseType === 'exclusive') {
-          price = item.beat.exclusive_license_price_local || 0;
+      if (item.itemType === 'beat' && item.beat) {
+        const licenseType = item.licenseType;
+        
+        if (currency === 'NGN') {
+          if (licenseType === 'basic') price = item.beat.basic_license_price_local || 0;
+          else if (licenseType === 'premium') price = item.beat.premium_license_price_local || 0;
+          else if (licenseType === 'exclusive') price = item.beat.exclusive_license_price_local || 0;
+          else if (licenseType === 'custom') price = item.beat.custom_license_price_local || 0;
+        } else {
+          if (licenseType === 'basic') price = item.beat.basic_license_price_diaspora || 0;
+          else if (licenseType === 'premium') price = item.beat.premium_license_price_diaspora || 0;
+          else if (licenseType === 'exclusive') price = item.beat.exclusive_license_price_diaspora || 0;
+          else if (licenseType === 'custom') price = item.beat.custom_license_price_diaspora || 0;
         }
-      } else {
-        if (licenseType === 'basic') {
-          price = item.beat.basic_license_price_diaspora || 0;
-        } else if (licenseType === 'premium') {
-          price = item.beat.premium_license_price_diaspora || 0;
-        } else if (licenseType === 'exclusive') {
-          price = item.beat.exclusive_license_price_diaspora || 0;
+      } else if (item.itemType === 'soundpack' && item.soundpack) {
+        const licenseType = item.licenseType;
+        
+        if (currency === 'NGN') {
+          if (licenseType === 'basic') price = item.soundpack.basic_license_price_local || 0;
+          else if (licenseType === 'premium') price = item.soundpack.premium_license_price_local || 0;
+          else if (licenseType === 'exclusive') price = item.soundpack.exclusive_license_price_local || 0;
+          else if (licenseType === 'custom') price = item.soundpack.custom_license_price_local || 0;
+        } else {
+          if (licenseType === 'basic') price = item.soundpack.basic_license_price_diaspora || 0;
+          else if (licenseType === 'premium') price = item.soundpack.premium_license_price_diaspora || 0;
+          else if (licenseType === 'exclusive') price = item.soundpack.exclusive_license_price_diaspora || 0;
+          else if (licenseType === 'custom') price = item.soundpack.custom_license_price_diaspora || 0;
         }
       }
       
-      return sum + price;
+      return total + price;
     }, 0);
   }, [cartItemsWithDetails, currency]);
 
@@ -104,21 +114,26 @@ export function useCartWithBeatDetailsOptimized() {
         return;
       }
 
-      // Check cache first
+      // Separate beats and soundpacks
+      const beatItems = lightweightItems.filter(item => item.itemType === 'beat');
+      const soundpackItems = lightweightItems.filter(item => item.itemType === 'soundpack');
+
+      // Check cache first for beats
       const cachedItems: CartItemWithDetails[] = [];
       const beatsToFetch: string[] = [];
 
-      lightweightItems.forEach(item => {
-        const cachedBeat = getCachedBeatData(item.beatId);
+      beatItems.forEach(item => {
+        const cachedBeat = getCachedBeatData(item.itemId);
         if (cachedBeat) {
           cachedItems.push({
-            beatId: item.beatId,
+            itemId: item.itemId,
+            itemType: 'beat',
             licenseType: item.licenseType,
             addedAt: item.addedAt,
             beat: cachedBeat
           });
         } else {
-          beatsToFetch.push(item.beatId);
+          beatsToFetch.push(item.itemId);
         }
       });
 
@@ -158,12 +173,12 @@ export function useCartWithBeatDetailsOptimized() {
             return;
           }
 
-          const newItemsWithDetails = lightweightItems.map(lightweightItem => {
+          const newItemsWithDetails = beatItems.map(lightweightItem => {
             // First check if we already have this in cached items
-            const existingCached = cachedItems.find(c => c.beatId === lightweightItem.beatId);
+            const existingCached = cachedItems.find(c => c.itemId === lightweightItem.itemId);
             if (existingCached) return existingCached;
 
-            const beat = beats?.find(b => b.id === lightweightItem.beatId);
+            const beat = beats?.find(b => b.id === lightweightItem.itemId);
             if (!beat) return null;
 
             const userData = beat.users;
@@ -196,10 +211,11 @@ export function useCartWithBeatDetailsOptimized() {
             };
 
             // Cache the beat data
-            cacheBeatData(lightweightItem.beatId, beatData);
+            cacheBeatData(lightweightItem.itemId, beatData);
 
             return {
-              beatId: lightweightItem.beatId,
+              itemId: lightweightItem.itemId,
+              itemType: 'beat' as const,
               licenseType: lightweightItem.licenseType,
               addedAt: lightweightItem.addedAt,
               beat: beatData

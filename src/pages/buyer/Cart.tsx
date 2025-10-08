@@ -17,6 +17,7 @@ import WalletButton from "@/components/wallet/WalletButton";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletSync } from '@/hooks/useWalletSync';
 import CartItemCard from '@/components/cart/CartItemCard';
+import SoundpackCartItemCard from '@/components/cart/SoundpackCartItemCard';
 
 export default function Cart() {
   const { cartItems, removeFromCart, clearCart, totalAmount, itemCount, isLoading } = useCartWithBeatDetailsOptimized();
@@ -350,14 +351,27 @@ export default function Cart() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <div className="space-y-3">
-                {cartItems.map((item) => (
-                  <CartItemCard
-                    key={`${item.beatId}-${item.addedAt}`}
-                    item={item}
-                    price={getItemPrice(item)}
-                    onRemove={handleRemoveItem}
-                  />
-                ))}
+                {cartItems.map((item) => {
+                  if (item.itemType === 'soundpack') {
+                    return (
+                      <SoundpackCartItemCard
+                        key={`${item.itemId}-${item.addedAt}`}
+                        item={item as any}
+                        price={getItemPrice(item)}
+                        onRemove={handleRemoveItem}
+                      />
+                    );
+                  }
+                  if (!item.beat) return null;
+                  return (
+                    <CartItemCard
+                      key={`${item.itemId}-${item.addedAt}`}
+                      item={item as any}
+                      price={getItemPrice(item)}
+                      onRemove={handleRemoveItem}
+                    />
+                  );
+                })}
               </div>
               
               <div className="mt-6">

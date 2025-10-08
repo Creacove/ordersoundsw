@@ -218,46 +218,96 @@ serve(async (req) => {
               }
             });
             
+            // Separate beats and soundpacks
+            const beatItems = orderItems.filter((item: any) => item.item_type === 'beat');
+            const soundpackItems = orderItems.filter((item: any) => item.item_type === 'soundpack');
+            
             // Add purchased beats to user's collection
-            try {
-              const purchasedItems = orderItems.map(item => ({
-                user_id: orderData.buyer_id,
-                beat_id: item.beat_id,
-                license_type: beatLicenses[item.beat_id] || 'basic',
-                currency_code: 'NGN',
-                order_id: orderId,
-              }));
-              
-              console.log(`Adding ${purchasedItems.length} purchased beats to user collection`);
-              const { error: purchaseError } = await supabaseClient
-                .from('user_purchased_beats')
-                .insert(purchasedItems);
-              
-              if (purchaseError) {
-                console.error('Failed to record purchases:', purchaseError);
-              } else {
-                console.log(`Successfully recorded ${purchasedItems.length} purchases`);
-              }
-              
-              // Update purchase counts using the RPC function
-              for (const item of orderItems) {
-                try {
-                  const { error: updateCountError } = await supabaseClient
-                    .rpc('increment_counter', {
-                      p_table_name: 'beats',
-                      p_column_name: 'purchase_count',
-                      p_id: item.beat_id
-                    });
-                    
-                  if (!updateCountError) {
-                    console.log(`Updated purchase count for beat ${item.beat_id}`);
-                  }
-                } catch (err) {
-                  console.error(`Error updating purchase count for beat ${item.beat_id}:`, err);
+            if (beatItems.length > 0) {
+              try {
+                const purchasedBeats = beatItems.map(item => ({
+                  user_id: orderData.buyer_id,
+                  beat_id: item.beat_id || item.item_id,
+                  license_type: beatLicenses[item.beat_id || item.item_id] || 'basic',
+                  currency_code: 'NGN',
+                  order_id: orderId,
+                }));
+                
+                console.log(`Adding ${purchasedBeats.length} purchased beats to user collection`);
+                const { error: purchaseError } = await supabaseClient
+                  .from('user_purchased_beats')
+                  .insert(purchasedBeats);
+                
+                if (purchaseError) {
+                  console.error('Failed to record beat purchases:', purchaseError);
+                } else {
+                  console.log(`Successfully recorded ${purchasedBeats.length} beat purchases`);
                 }
+                
+                // Update purchase counts for beats
+                for (const item of beatItems) {
+                  try {
+                    const { error: updateCountError } = await supabaseClient
+                      .rpc('increment_counter', {
+                        p_table_name: 'beats',
+                        p_column_name: 'purchase_count',
+                        p_id: item.beat_id || item.item_id
+                      });
+                      
+                    if (!updateCountError) {
+                      console.log(`Updated purchase count for beat ${item.beat_id || item.item_id}`);
+                    }
+                  } catch (err) {
+                    console.error(`Error updating purchase count for beat ${item.beat_id || item.item_id}:`, err);
+                  }
+                }
+              } catch (purchaseInsertError) {
+                console.error('Exception recording beat purchases:', purchaseInsertError);
               }
-            } catch (purchaseInsertError) {
-              console.error('Exception recording purchases:', purchaseInsertError);
+            }
+            
+            // Add purchased soundpacks to user's collection
+            if (soundpackItems.length > 0) {
+              try {
+                const purchasedSoundpacks = soundpackItems.map(item => ({
+                  user_id: orderData.buyer_id,
+                  pack_id: item.soundpack_id || item.item_id,
+                  order_id: orderId,
+                  license_type: item.license || 'basic',
+                  purchase_date: new Date().toISOString()
+                }));
+                
+                console.log(`Adding ${purchasedSoundpacks.length} purchased soundpacks to user collection`);
+                const { error: soundpackPurchaseError } = await supabaseClient
+                  .from('user_purchased_soundpacks')
+                  .insert(purchasedSoundpacks);
+                
+                if (soundpackPurchaseError) {
+                  console.error('Failed to record soundpack purchases:', soundpackPurchaseError);
+                } else {
+                  console.log(`Successfully recorded ${purchasedSoundpacks.length} soundpack purchases`);
+                }
+                
+                // Update purchase counts for soundpacks
+                for (const item of soundpackItems) {
+                  try {
+                    const { error: updateCountError } = await supabaseClient
+                      .rpc('increment_counter', {
+                        p_table_name: 'soundpacks',
+                        p_column_name: 'purchase_count',
+                        p_id: item.soundpack_id || item.item_id
+                      });
+                      
+                    if (!updateCountError) {
+                      console.log(`Updated purchase count for soundpack ${item.soundpack_id || item.item_id}`);
+                    }
+                  } catch (err) {
+                    console.error(`Error updating purchase count for soundpack ${item.soundpack_id || item.item_id}:`, err);
+                  }
+                }
+              } catch (purchaseInsertError) {
+                console.error('Exception recording soundpack purchases:', purchaseInsertError);
+              }
             }
           }
         } catch (updateProcessError) {

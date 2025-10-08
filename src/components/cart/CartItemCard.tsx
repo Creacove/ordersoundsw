@@ -9,7 +9,7 @@ import { Beat } from '@/types';
 
 interface CartItemCardProps {
   item: {
-    beatId: string;
+    itemId: string;
     licenseType: string;
     addedAt: string;
     beat: {
@@ -27,7 +27,7 @@ interface CartItemCardProps {
     };
   };
   price: number;
-  onRemove: (beatId: string) => void;
+  onRemove: (itemId: string) => void;
 }
 
 const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
@@ -146,7 +146,7 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
               variant="ghost" 
               size="icon" 
               className="h-8 w-8 text-muted-foreground hover:text-destructive mt-1"
-              onClick={() => onRemove(item.beatId)}
+              onClick={() => onRemove(item.itemId)}
             >
               <Trash2 size={16} />
             </Button>

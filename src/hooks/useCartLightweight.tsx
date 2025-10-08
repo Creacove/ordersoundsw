@@ -3,57 +3,49 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 interface LightweightCartItem {
-  beatId: string;
+  itemId: string;
+  itemType: 'beat' | 'soundpack';
   licenseType: string;
   addedAt: string;
 }
 
 // Helper function to load cart from localStorage synchronously
 const loadCartFromStorage = (userId: string | undefined): LightweightCartItem[] => {
-  if (!userId) {
-    return [];
-  }
-
   try {
-    const cartKey = `cart_${userId}`;
-    const savedCart = localStorage.getItem(cartKey);
+    const cartKey = userId ? `cart_${userId}` : 'cart_guest';
+    const stored = localStorage.getItem(cartKey);
     
-    if (savedCart) {
-      const parsed = JSON.parse(savedCart);
-      let lightweightItems: LightweightCartItem[] = [];
-      
-      // Check if it's already in lightweight format
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const firstItem = parsed[0];
-        
-        // If it has beatId property, it's already lightweight format
-        if (firstItem.beatId) {
-          lightweightItems = parsed.filter(item => 
-            item && 
-            typeof item.beatId === 'string' && 
-            typeof item.licenseType === 'string' && 
-            typeof item.addedAt === 'string'
-          );
-        }
-        // If it has beat.id property, it's old CartContext format
-        else if (firstItem.beat && firstItem.beat.id) {
-          lightweightItems = parsed.map((item: any) => ({
-            beatId: item.beat?.id || item.beatId,
-            licenseType: item.beat?.selected_license || item.licenseType || 'basic',
-            addedAt: item.added_at || item.addedAt || new Date().toISOString()
-          })).filter(item => item.beatId);
-        }
-      }
-      
-      return lightweightItems;
-    } else {
+    if (!stored) {
       return [];
     }
-  } catch (error) {
-    // Clear corrupted data
-    if (userId) {
-      localStorage.removeItem(`cart_${userId}`);
+
+    const parsed = JSON.parse(stored);
+    
+    // Migrate old format (beatId) to new format (itemId + itemType)
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: any) => {
+        // Old format has beatId, new format has itemId + itemType
+        if (item.beatId && !item.itemId) {
+          return {
+            itemId: item.beatId,
+            itemType: 'beat' as const,
+            licenseType: item.licenseType || 'basic',
+            addedAt: item.addedAt || new Date().toISOString()
+          };
+        }
+        // New format already has itemId and itemType
+        return {
+          itemId: item.itemId,
+          itemType: item.itemType || 'beat',
+          licenseType: item.licenseType || 'basic',
+          addedAt: item.addedAt || new Date().toISOString()
+        };
+      });
     }
+    
+    return [];
+  } catch (error) {
+    console.error('Error loading cart from storage:', error);
     return [];
   }
 };
@@ -125,16 +117,16 @@ export function useCartLightweight() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [user]);
 
-  const isInCart = useCallback((beatId: string): boolean => {
-    return cartItems.some(item => item.beatId === beatId);
+  const isInCart = useCallback((itemId: string, itemType: 'beat' | 'soundpack' = 'beat'): boolean => {
+    return cartItems.some(item => item.itemId === itemId && item.itemType === itemType);
   }, [cartItems]);
 
-  const addToCart = useCallback((beatId: string, licenseType: string = 'basic') => {
+  const addToCart = useCallback((itemId: string, licenseType: string = 'basic', itemType: 'beat' | 'soundpack' = 'beat') => {
     if (!user) {
       return;
     }
     
-    const existingIndex = cartItems.findIndex(item => item.beatId === beatId);
+    const existingIndex = cartItems.findIndex(item => item.itemId === itemId && item.itemType === itemType);
     
     if (existingIndex >= 0) {
       // Update license type if item exists
@@ -147,7 +139,8 @@ export function useCartLightweight() {
     } else {
       // Add new item
       const newItem: LightweightCartItem = {
-        beatId,
+        itemId,
+        itemType,
         licenseType,
         addedAt: new Date().toISOString()
       };
@@ -158,9 +151,11 @@ export function useCartLightweight() {
     }
   }, [cartItems, user]);
 
-  const removeFromCart = useCallback((beatId: string) => {
+  const removeFromCart = useCallback((itemId: string, itemType?: 'beat' | 'soundpack') => {
     setCartItems(prev => {
-      const filtered = prev.filter(item => item.beatId !== beatId);
+      const filtered = itemType 
+        ? prev.filter(item => !(item.itemId === itemId && item.itemType === itemType))
+        : prev.filter(item => item.itemId !== itemId);
       setItemCount(filtered.length);
       return filtered;
     });

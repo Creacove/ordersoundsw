@@ -19,24 +19,55 @@ export const validateCartItems = async (user: any, cartItems: any[]) => {
       throw new Error('Your cart is empty. Add items before checkout.');
     }
     
-    const beatIds = cartItems.map(item => item.beat.id);
+    // Separate beats and soundpacks
+    const beatItems = cartItems.filter((item: any) => item.itemType === 'beat');
+    const soundpackItems = cartItems.filter((item: any) => item.itemType === 'soundpack');
     
-    const { data: beatsExist, error: beatCheckError } = await supabase
-      .from('beats')
-      .select('id, producer_id')
-      .in('id', beatIds);
-    
-    if (beatCheckError) {
-      console.error('Error checking beats existence:', beatCheckError);
-      throw new Error(`Failed to validate beats: ${beatCheckError.message}`);
+    // Validate beats
+    if (beatItems.length > 0) {
+      const beatIds = beatItems.map((item: any) => item.itemId);
+      
+      const { data: beatsExist, error: beatCheckError } = await supabase
+        .from('beats')
+        .select('id, producer_id')
+        .in('id', beatIds);
+      
+      if (beatCheckError) {
+        console.error('Error checking beats existence:', beatCheckError);
+        throw new Error(`Failed to validate beats: ${beatCheckError.message}`);
+      }
+      
+      if (!beatsExist || beatsExist.length !== beatIds.length) {
+        const existingIds = beatsExist?.map(b => b.id) || [];
+        const missingIds = beatIds.filter(id => !existingIds.includes(id));
+        
+        console.error('Some beats in cart no longer exist:', missingIds);
+        throw new Error('Some items in your cart are no longer available. Please refresh your cart.');
+      }
     }
     
-    if (!beatsExist || beatsExist.length !== beatIds.length) {
-      const existingIds = beatsExist?.map(b => b.id) || [];
-      const missingIds = beatIds.filter(id => !existingIds.includes(id));
+    // Validate soundpacks
+    if (soundpackItems.length > 0) {
+      const soundpackIds = soundpackItems.map((item: any) => item.itemId);
       
-      console.error('Some beats in cart no longer exist:', missingIds);
-      throw new Error('Some items in your cart are no longer available. Please refresh your cart.');
+      const { data: soundpacksExist, error: soundpackCheckError } = await supabase
+        .from('soundpacks')
+        .select('id, producer_id, published')
+        .in('id', soundpackIds)
+        .eq('published', true);
+      
+      if (soundpackCheckError) {
+        console.error('Error checking soundpacks existence:', soundpackCheckError);
+        throw new Error(`Failed to validate soundpacks: ${soundpackCheckError.message}`);
+      }
+      
+      if (!soundpacksExist || soundpacksExist.length !== soundpackIds.length) {
+        const existingIds = soundpacksExist?.map(s => s.id) || [];
+        const missingIds = soundpackIds.filter(id => !existingIds.includes(id));
+        
+        console.error('Some soundpacks in cart no longer exist:', missingIds);
+        throw new Error('Some soundpacks in your cart are no longer available. Please refresh your cart.');
+      }
     }
     
     return true;
@@ -98,23 +129,33 @@ export const createOrder = async (user: any, totalAmount: number, orderItemsData
     
     console.log('Order created with ID:', insertedOrder.id);
     
-    const lineItems = orderItemsData.map(item => ({
-      order_id: insertedOrder.id,
-      beat_id: item.beat_id,
-      price_charged: item.price,
-      currency_code: 'NGN',
-    }));
+    // Separate beats and soundpacks
+    const beatItems = orderItemsData.filter(item => item.item_type === 'beat');
+    const soundpackItems = orderItemsData.filter(item => item.item_type === 'soundpack');
     
-    const { error: lineItemError } = await supabase
-      .from('line_items')
-      .insert(lineItems);
-    
-    if (lineItemError) {
-      console.error('Line items error:', lineItemError);
-      throw new Error(`Line items creation failed: ${lineItemError.message}`);
+    // Insert beat line items
+    if (beatItems.length > 0) {
+      const lineItems = beatItems.map(item => ({
+        order_id: insertedOrder.id,
+        beat_id: item.beat_id || item.item_id,
+        price_charged: item.price,
+        currency_code: 'NGN',
+      }));
+      
+      const { error: lineItemError } = await supabase
+        .from('line_items')
+        .insert(lineItems);
+      
+      if (lineItemError) {
+        console.error('Line items error:', lineItemError);
+        throw new Error(`Line items creation failed: ${lineItemError.message}`);
+      }
+      
+      console.log('Beat line items created successfully');
     }
     
-    console.log('Line items created successfully');
+    // Note: Soundpack purchases will be created in the verification edge function
+    // We don't create them here to avoid duplication
     
     return { orderId: insertedOrder.id };
   } catch (error) {

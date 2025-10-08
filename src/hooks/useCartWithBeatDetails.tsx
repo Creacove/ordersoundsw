@@ -5,10 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Beat } from '@/types';
 
 interface CartItemWithDetails {
-  beatId: string;
+  itemId: string;
+  itemType: 'beat' | 'soundpack';
   licenseType: string;
   addedAt: string;
-  beat: Beat; // Make this required since we filter out null items
+  beat?: Beat;
+  soundpack?: any;
 }
 
 export function useCartWithBeatDetails() {
@@ -31,9 +33,18 @@ export function useCartWithBeatDetails() {
 
       setIsLoading(true);
       try {
-        // Extract beat IDs from lightweight items
-        const beatIds = lightweightItems.map(item => item.beatId);
+        // Extract beat IDs from lightweight items (filter only beats)
+        const beatItems = lightweightItems.filter(item => item.itemType === 'beat');
+        const beatIds = beatItems.map(item => item.itemId);
         console.log('🛒 Beat IDs to fetch:', beatIds);
+        
+        if (beatIds.length === 0) {
+          console.log('🛒 No beats to fetch');
+          setCartItemsWithDetails([]);
+          setTotalAmount(0);
+          setIsLoading(false);
+          return;
+        }
         
         const { data: beats, error } = await supabase
           .from('beats')
@@ -65,12 +76,12 @@ export function useCartWithBeatDetails() {
         console.log('🛒 Fetched beats from database:', beats);
 
         // Map lightweight items with beat details
-        const itemsWithDetails = lightweightItems.map(lightweightItem => {
+        const itemsWithDetails = beatItems.map(lightweightItem => {
           console.log('🛒 Processing lightweight item:', lightweightItem);
           
-          const beat = beats?.find(b => b.id === lightweightItem.beatId);
+          const beat = beats?.find(b => b.id === lightweightItem.itemId);
           if (!beat) {
-            console.warn('🛒 Beat not found for ID:', lightweightItem.beatId);
+            console.warn('🛒 Beat not found for ID:', lightweightItem.itemId);
             return null;
           }
 
@@ -79,8 +90,9 @@ export function useCartWithBeatDetails() {
           const userData = beat.users;
           const producerName = userData?.stage_name || userData?.full_name || 'Unknown Producer';
           
-          const detailedItem = {
-            beatId: lightweightItem.beatId,
+          const detailedItem: CartItemWithDetails = {
+            itemId: lightweightItem.itemId,
+            itemType: 'beat',
             licenseType: lightweightItem.licenseType,
             addedAt: lightweightItem.addedAt,
             beat: {

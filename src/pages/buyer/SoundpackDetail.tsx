@@ -100,10 +100,10 @@ const SoundpackDetail = () => {
   const handleAddToCart = () => {
     if (!soundpack || !canAddToCart) return;
     
-    if (isInCart(soundpack.id)) {
+    if (isInCart(soundpack.id, 'soundpack')) {
       toast.info('Already in cart');
     } else {
-      addToCart(soundpack.id, selectedLicense);
+      addToCart(soundpack.id, selectedLicense, 'soundpack');
       toast.success('Added to cart');
     }
   };
@@ -334,12 +334,12 @@ const SoundpackDetail = () => {
                 <div className="space-y-2">
                   <Button 
                     onClick={handleAddToCart}
-                    disabled={!canAddToCart || isInCart(soundpack.id)}
+                    disabled={!canAddToCart || isInCart(soundpack.id, 'soundpack')}
                     className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                     size="lg"
                   >
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    {!canAddToCart ? 'License Not Available' : isInCart(soundpack.id) ? 'Already in Cart' : 'Add to Cart'}
+                    {!canAddToCart ? 'License Not Available' : isInCart(soundpack.id, 'soundpack') ? 'Already in Cart' : 'Add to Cart'}
                   </Button>
                   <Button
                     variant="outline"
