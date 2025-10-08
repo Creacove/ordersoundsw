@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { X, Gamepad2, Music3 } from "lucide-react";
+import { X, Gamepad2, Music3, Package } from "lucide-react";
 import { BeatDetails } from "@/hooks/useBeatUpload";
 
 type DetailTabProps = {
@@ -76,6 +76,13 @@ export const DetailTab = ({
             >
               <Gamepad2 size={16} />
               Gaming & Soundtrack
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="Soundpack" 
+              className="flex items-center gap-2 flex-1 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <Package size={16} />
+              Soundpack
             </ToggleGroupItem>
           </ToggleGroup>
         </div>

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadFile, FileOrUrl, isFile } from "@/lib/storage";
 import { uploadImage } from "@/lib/imageStorage";
 import { createMp3Preview } from "@/utils/audioPreview";
+import type { SoundFileMeta } from "@/components/upload/SoundpackFilesUpload";
 
 export type LicenseOption = {
   value: string;
@@ -64,6 +65,11 @@ export function useBeatUpload() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [stemsUploadError, setStemsUploadError] = useState<string | null>(null);
+  
+  // Soundpack state
+  const [soundpackFiles, setSoundpackFiles] = useState<File[]>([]);
+  const [soundpackMeta, setSoundpackMeta] = useState<SoundFileMeta[]>([]);
+  const [uploadingPackFiles, setUploadingPackFiles] = useState(false);
 
   const [beatDetails, setBeatDetails] = useState<BeatDetails>({
     title: "",
@@ -454,11 +460,34 @@ export function useBeatUpload() {
   };
 
   const validateForm = () => {
+    const isSoundpack = beatDetails.category === 'Soundpack';
+    
     if (!beatDetails.title) {
-      toast.error("Beat title is required");
+      toast.error("Title is required");
       return false;
     }
     
+    // Soundpack-specific validation
+    if (isSoundpack) {
+      if (soundpackFiles.length === 0) {
+        toast.error("At least one sound file is required for soundpacks");
+        return false;
+      }
+      
+      if (!imageFile) {
+        toast.error("Cover art is required");
+        return false;
+      }
+      
+      if (selectedLicenseTypes.length === 0) {
+        toast.error("At least one license type is required");
+        return false;
+      }
+      
+      return true;
+    }
+    
+    // Beat-specific validation (existing)
     if (!uploadedFile && !uploadedFileUrl) {
       toast.error("Full track file is required");
       return false;
@@ -602,6 +631,128 @@ export function useBeatUpload() {
       throw error;
     }
   };
+  
+  // Soundpack file management
+  const handleSoundpackFilesAdd = async (fileList: FileList) => {
+    const files = Array.from(fileList);
+    const maxFiles = 50;
+    const maxTotalSize = 500 * 1024 * 1024; // 500MB
+    const maxFileSize = 20 * 1024 * 1024; // 20MB per file
+    
+    // Check total file count
+    if (soundpackFiles.length + files.length > maxFiles) {
+      toast.error(`Maximum ${maxFiles} files allowed`);
+      return;
+    }
+    
+    // Validate each file
+    const validFiles: File[] = [];
+    for (const file of files) {
+      // Check file type
+      if (!file.type.includes('audio/')) {
+        toast.error(`${file.name} is not an audio file`);
+        continue;
+      }
+      
+      // Check individual file size
+      if (file.size > maxFileSize) {
+        toast.error(`${file.name} exceeds 20MB limit`);
+        continue;
+      }
+      
+      validFiles.push(file);
+    }
+    
+    if (validFiles.length === 0) return;
+    
+    // Check total size
+    const currentTotalSize = soundpackFiles.reduce((sum, f) => sum + f.size, 0);
+    const newTotalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
+    if (currentTotalSize + newTotalSize > maxTotalSize) {
+      toast.error("Total soundpack size cannot exceed 500MB");
+      return;
+    }
+    
+    // Extract audio durations
+    const newMeta: SoundFileMeta[] = [];
+    for (const file of validFiles) {
+      try {
+        const duration = await extractAudioDuration(file);
+        newMeta.push({
+          id: `${Date.now()}-${Math.random()}`,
+          name: file.name,
+          size: file.size,
+          duration
+        });
+      } catch (error) {
+        console.error(`Failed to extract duration for ${file.name}:`, error);
+        newMeta.push({
+          id: `${Date.now()}-${Math.random()}`,
+          name: file.name,
+          size: file.size,
+          duration: null
+        });
+      }
+    }
+    
+    setSoundpackFiles(prev => [...prev, ...validFiles]);
+    setSoundpackMeta(prev => [...prev, ...newMeta]);
+    toast.success(`Added ${validFiles.length} file${validFiles.length !== 1 ? 's' : ''}`);
+  };
+  
+  const extractAudioDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio();
+      const url = URL.createObjectURL(file);
+      
+      audio.addEventListener('loadedmetadata', () => {
+        URL.revokeObjectURL(url);
+        resolve(audio.duration);
+      });
+      
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load audio'));
+      });
+      
+      audio.src = url;
+    });
+  };
+  
+  const handleSoundpackFileRemove = (id: string) => {
+    const index = soundpackMeta.findIndex(m => m.id === id);
+    if (index === -1) return;
+    
+    setSoundpackFiles(prev => prev.filter((_, i) => i !== index));
+    setSoundpackMeta(prev => prev.filter(m => m.id !== id));
+  };
+  
+  const handleSoundpackFileRename = (id: string, newName: string) => {
+    setSoundpackMeta(prev => 
+      prev.map(m => m.id === id ? { ...m, name: newName } : m)
+    );
+  };
+  
+  const handleSoundpackFilesReorder = (fromIndex: number, toIndex: number) => {
+    setSoundpackFiles(prev => {
+      const newFiles = [...prev];
+      const [removed] = newFiles.splice(fromIndex, 1);
+      newFiles.splice(toIndex, 0, removed);
+      return newFiles;
+    });
+    
+    setSoundpackMeta(prev => {
+      const newMeta = [...prev];
+      const [removed] = newMeta.splice(fromIndex, 1);
+      newMeta.splice(toIndex, 0, removed);
+      return newMeta;
+    });
+  };
+  
+  const handleSoundpackClearAll = () => {
+    setSoundpackFiles([]);
+    setSoundpackMeta([]);
+  };
 
   return {
     activeTab, setActiveTab,
@@ -641,6 +792,16 @@ export function useBeatUpload() {
     stemsUrl,
     setStemsUrl,
     stemsUploadError,
-    setStemsUploadError
+    setStemsUploadError,
+    // Soundpack state and handlers
+    soundpackFiles,
+    soundpackMeta,
+    uploadingPackFiles,
+    setUploadingPackFiles,
+    handleSoundpackFilesAdd,
+    handleSoundpackFileRemove,
+    handleSoundpackFileRename,
+    handleSoundpackFilesReorder,
+    handleSoundpackClearAll
   };
 }

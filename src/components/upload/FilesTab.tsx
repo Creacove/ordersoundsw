@@ -8,6 +8,7 @@ import { useAudio } from "@/hooks/useAudio";
 import { toast } from "sonner";
 import { FileOrUrl, isFile } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { SoundpackFilesUpload, type SoundFileMeta } from "./SoundpackFilesUpload";
 
 type FilesTabProps = {
   imagePreview: string | null;
@@ -33,6 +34,14 @@ type FilesTabProps = {
   stemsUrl?: string | null;
   uploadedFileUrl?: string;
   beatDetails: { category: string };
+  // Soundpack props
+  soundpackFiles?: File[];
+  soundpackMeta?: SoundFileMeta[];
+  onSoundpackFilesAdd?: (files: FileList) => void;
+  onSoundpackFileRemove?: (id: string) => void;
+  onSoundpackFileRename?: (id: string, newName: string) => void;
+  onSoundpackFilesReorder?: (fromIndex: number, toIndex: number) => void;
+  onSoundpackClearAll?: () => void;
 };
 
 export const FilesTab = ({
@@ -58,7 +67,14 @@ export const FilesTab = ({
   uploadError,
   stemsUrl,
   uploadedFileUrl,
-  beatDetails
+  beatDetails,
+  soundpackFiles = [],
+  soundpackMeta = [],
+  onSoundpackFilesAdd,
+  onSoundpackFileRemove,
+  onSoundpackFileRename,
+  onSoundpackFilesReorder,
+  onSoundpackClearAll
 }: FilesTabProps) => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -66,6 +82,7 @@ export const FilesTab = ({
   const [previewLoadingFailed, setPreviewLoadingFailed] = useState(false);
   const [stemUploadError, setStemUploadError] = useState<string | null>(null);
   
+  const isSoundpack = beatDetails.category === 'Soundpack';
   const hasExclusiveLicense = selectedLicenseTypes.includes('exclusive');
   const hasPremiumLicense = selectedLicenseTypes.includes('premium');
   const requiresWavFormat = (hasExclusiveLicense || hasPremiumLicense) && 
@@ -350,6 +367,7 @@ export const FilesTab = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 mb-24 sm:mb-16">
+      {/* Cover Image Section */}
       <div>
         <h3 className="text-base sm:text-lg font-medium mb-1">Cover Image *</h3>
         <p className="text-xs sm:text-sm text-muted-foreground mb-4">
@@ -390,7 +408,17 @@ export const FilesTab = ({
             />
           </div>
           
-          <div className="space-y-4">
+          {/* Conditional rendering: Soundpack or Beat files */}
+          {isSoundpack ? (
+            <div className="sm:col-span-1">
+              <Alert>
+                <AlertDescription className="text-xs">
+                  Soundpacks use multi-file upload. Add your audio files in the section below.
+                </AlertDescription>
+              </Alert>
+            </div>
+          ) : (
+            <div className="space-y-4">
             <div>
               <h4 className="text-sm font-medium mb-1">Full Track *</h4>
               <div 
@@ -691,7 +719,23 @@ export const FilesTab = ({
               </div>
             )}
           </div>
+          )}
         </div>
+
+        {/* Soundpack Files Section */}
+        {isSoundpack && onSoundpackFilesAdd && onSoundpackFileRemove && 
+         onSoundpackFileRename && onSoundpackFilesReorder && onSoundpackClearAll && (
+          <SoundpackFilesUpload
+            soundFiles={soundpackFiles}
+            soundFilesMeta={soundpackMeta}
+            onFilesAdd={onSoundpackFilesAdd}
+            onFileRemove={onSoundpackFileRemove}
+            onFileRename={onSoundpackFileRename}
+            onFilesReorder={onSoundpackFilesReorder}
+            onClearAll={onSoundpackClearAll}
+            uploadProgress={uploadProgress}
+          />
+        )}
 
         {validationError && (
           <Alert variant="destructive" className="mt-4">

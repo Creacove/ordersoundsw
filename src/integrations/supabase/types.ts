@@ -681,16 +681,24 @@ export type Database = {
       }
       soundpacks: {
         Row: {
+          basic_license_price_diaspora: number | null
+          basic_license_price_local: number | null
           category: string | null
           cover_art_url: string | null
           created_at: string | null
           currency_code: string | null
+          custom_license_price_diaspora: number | null
+          custom_license_price_local: number | null
           description: string | null
+          exclusive_license_price_diaspora: number | null
+          exclusive_license_price_local: number | null
           file_count: number | null
           id: string
+          license_terms: string | null
+          license_type: string | null
           metadata: Json | null
-          price_diaspora: number
-          price_local: number
+          premium_license_price_diaspora: number | null
+          premium_license_price_local: number | null
           producer_id: string
           published: boolean | null
           purchase_count: number | null
@@ -699,16 +707,24 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          basic_license_price_diaspora?: number | null
+          basic_license_price_local?: number | null
           category?: string | null
           cover_art_url?: string | null
           created_at?: string | null
           currency_code?: string | null
+          custom_license_price_diaspora?: number | null
+          custom_license_price_local?: number | null
           description?: string | null
+          exclusive_license_price_diaspora?: number | null
+          exclusive_license_price_local?: number | null
           file_count?: number | null
           id?: string
+          license_terms?: string | null
+          license_type?: string | null
           metadata?: Json | null
-          price_diaspora?: number
-          price_local?: number
+          premium_license_price_diaspora?: number | null
+          premium_license_price_local?: number | null
           producer_id: string
           published?: boolean | null
           purchase_count?: number | null
@@ -717,16 +733,24 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          basic_license_price_diaspora?: number | null
+          basic_license_price_local?: number | null
           category?: string | null
           cover_art_url?: string | null
           created_at?: string | null
           currency_code?: string | null
+          custom_license_price_diaspora?: number | null
+          custom_license_price_local?: number | null
           description?: string | null
+          exclusive_license_price_diaspora?: number | null
+          exclusive_license_price_local?: number | null
           file_count?: number | null
           id?: string
+          license_terms?: string | null
+          license_type?: string | null
           metadata?: Json | null
-          price_diaspora?: number
-          price_local?: number
+          premium_license_price_diaspora?: number | null
+          premium_license_price_local?: number | null
           producer_id?: string
           published?: boolean | null
           purchase_count?: number | null
