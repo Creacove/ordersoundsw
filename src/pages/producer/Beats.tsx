@@ -7,8 +7,9 @@ import { fetchProducerBeats } from "@/services/beats"; // Fixed: updated import
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BeatCard } from "@/components/ui/BeatCard";
+import { SoundpackCard } from "@/components/marketplace/SoundpackCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Music, LayoutGrid, LayoutList, Table as LucideTable, Pencil, Trash2, Upload } from 'lucide-react';
+import { PlusCircle, Music, LayoutGrid, LayoutList, Table as LucideTable, Pencil, Trash2, Upload, Package } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,7 +38,7 @@ export default function ProducerBeats() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? "list" : "grid");
-  const [tabValue, setTabValue] = useState<"published" | "drafts">("published");
+  const [tabValue, setTabValue] = useState<"published" | "drafts" | "soundpacks">("published");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -46,6 +47,8 @@ export default function ProducerBeats() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [producerBeats, setProducerBeats] = useState<Beat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [soundpacks, setSoundpacks] = useState<any[]>([]);
+  const [soundpacksLoading, setSoundpacksLoading] = useState(true);
 
   // Load producer beats directly
   const loadProducerBeats = useCallback(async () => {
@@ -65,18 +68,56 @@ export default function ProducerBeats() {
     }
   }, [user]);
 
+  // Load producer soundpacks
+  const loadProducerSoundpacks = useCallback(async () => {
+    if (!user) return;
+    
+    setSoundpacksLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('soundpacks')
+        .select(`
+          *,
+          users!soundpacks_producer_id_fkey (
+            full_name,
+            stage_name
+          )
+        `)
+        .eq('producer_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const transformedSoundpacks = (data || []).map(sp => {
+        const userData = Array.isArray(sp.users) ? sp.users[0] : sp.users;
+        return {
+          ...sp,
+          producer_name: userData?.stage_name || userData?.full_name || 'Unknown Producer'
+        };
+      });
+      
+      setSoundpacks(transformedSoundpacks);
+    } catch (error) {
+      console.error('Error loading soundpacks:', error);
+      toast.error('Failed to load your soundpacks');
+    } finally {
+      setSoundpacksLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     document.title = "My Beats | OrderSOUNDS";
     
     // Initial load
     loadProducerBeats();
+    loadProducerSoundpacks();
     
     const timer = setTimeout(() => {
       setInitialLoading(false);
     }, 800);
     
     return () => clearTimeout(timer);
-  }, [loadProducerBeats]);
+  }, [loadProducerBeats, loadProducerSoundpacks]);
 
   // Listen for storage events to detect changes from other tabs/windows
   useEffect(() => {
@@ -100,6 +141,8 @@ export default function ProducerBeats() {
 
   const draftBeats = producerBeats.filter(beat => beat.status === 'draft');
   const publishedBeats = producerBeats.filter(beat => beat.status === 'published');
+  const draftSoundpacks = soundpacks.filter(sp => !sp.published);
+  const publishedSoundpacks = soundpacks.filter(sp => sp.published);
 
   const handleEdit = useCallback((beatId: string) => {
     navigate(`/producer/upload?edit=${beatId}`);
@@ -264,19 +307,25 @@ export default function ProducerBeats() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between md:gap-6 gap-2 mb-2">
           <Tabs
             value={tabValue}
-            onValueChange={(v) => setTabValue(v as "published" | "drafts")}
+            onValueChange={(v) => setTabValue(v as "published" | "drafts" | "soundpacks")}
             className="w-full"
           >
             <div className="flex justify-between items-center mb-2">
-              <TabsList className="max-w-xs w-full flex items-center ml-0 md:mx-0 mb-0">
-                <TabsTrigger value="published" className={cn("flex-1 text-base py-2", tabValue === "published" ? "shadow" : "")}>
+              <TabsList className="max-w-md w-full flex items-center ml-0 md:mx-0 mb-0">
+                <TabsTrigger value="published" className={cn("flex-1 text-sm md:text-base py-2", tabValue === "published" ? "shadow" : "")}>
                   Published <span className="ml-1 text-xs text-muted-foreground font-normal">
                     {!showSkeleton ? `(${publishedBeats.length})` : "(...)"}
                   </span>
                 </TabsTrigger>
-                <TabsTrigger value="drafts" className={cn("flex-1 text-base py-2", tabValue === "drafts" ? "shadow" : "")}>
+                <TabsTrigger value="drafts" className={cn("flex-1 text-sm md:text-base py-2", tabValue === "drafts" ? "shadow" : "")}>
                   Drafts <span className="ml-1 text-xs text-muted-foreground font-normal">
                     {!showSkeleton ? `(${draftBeats.length})` : "(...)"}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="soundpacks" className={cn("flex-1 text-sm md:text-base py-2", tabValue === "soundpacks" ? "shadow" : "")}>
+                  <Package className="h-4 w-4 mr-1" />
+                  Soundpacks <span className="ml-1 text-xs text-muted-foreground font-normal">
+                    {!soundpacksLoading ? `(${soundpacks.length})` : "(...)"}
                   </span>
                 </TabsTrigger>
               </TabsList>
@@ -566,6 +615,71 @@ export default function ProducerBeats() {
                 <NoBeatsCard
                   title="No Drafts"
                   description="You don't have any draft beats! Upload or save a beat as draft to see them here."
+                  showUpload={true}
+                />
+              )}
+            </TabsContent>
+            
+            {/* Soundpacks Tab */}
+            <TabsContent value="soundpacks" className="mt-4 min-h-[220px] animate-fade-in">
+              {soundpacksLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex flex-col gap-2">
+                      <Skeleton className="aspect-square w-full rounded-lg" />
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : soundpacks.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Published Soundpacks */}
+                  {publishedSoundpacks.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <Package size={20} />
+                        Published Soundpacks ({publishedSoundpacks.length})
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
+                        {publishedSoundpacks.map((soundpack) => (
+                          <SoundpackCard 
+                            key={soundpack.id}
+                            soundpack={soundpack}
+                            showLicenseSelector={false}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Draft Soundpacks */}
+                  {draftSoundpacks.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <Package size={20} />
+                        Draft Soundpacks ({draftSoundpacks.length})
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
+                        {draftSoundpacks.map((soundpack) => (
+                          <div key={soundpack.id} className="relative">
+                            <SoundpackCard 
+                              soundpack={soundpack}
+                              showLicenseSelector={false}
+                            />
+                            <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-full font-semibold">
+                              DRAFT
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <NoBeatsCard
+                  title="No Soundpacks"
+                  description="You haven't created any soundpacks yet. Upload a soundpack to get started!"
                   showUpload={true}
                 />
               )}
