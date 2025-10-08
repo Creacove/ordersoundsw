@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  ShoppingCart, Download, Share2, ArrowLeft, Package, User, Music, Play, Pause
-} from 'lucide-react';
+import { ShoppingCart, Share2, ArrowLeft, Package, User, Music, Play, Pause } from 'lucide-react';
 import { usePlayer } from '@/context/PlayerContext';
 import { MainLayoutWithPlayer } from '@/components/layout/MainLayoutWithPlayer';
 import { Button } from '@/components/ui/button';
@@ -184,51 +182,56 @@ const SoundpackDetail = () => {
           )}
         </div>
 
-        {/* Main content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Cover image */}
-          <div className="relative">
-            <img
-              src={soundpack.cover_art_url || "/placeholder.svg"}
-              alt={soundpack.title}
-              className="w-full aspect-square object-cover rounded-lg shadow-lg"
-            />
-            <Badge 
-              className="absolute top-4 left-4 bg-primary/90 text-white flex items-center gap-1"
-              variant="default"
-            >
-              <Package size={14} />
-              Soundpack - {soundpack.file_count} files
-            </Badge>
+        {/* Main content - optimized layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
+          {/* Cover image - optimized size */}
+          <div className="lg:col-span-2">
+            <div className="relative rounded-lg overflow-hidden shadow-lg sticky top-6">
+              <img
+                src={soundpack.cover_art_url || "/placeholder.svg"}
+                alt={soundpack.title}
+                className="w-full aspect-square object-cover"
+                loading="eager"
+              />
+              <Badge 
+                className="absolute top-3 left-3 bg-primary text-primary-foreground shadow-lg flex items-center gap-1.5 px-3 py-1.5"
+                variant="default"
+              >
+                <Package size={16} />
+                <span className="font-semibold">{soundpack.file_count} Files</span>
+              </Badge>
+            </div>
           </div>
 
-          {/* Details */}
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">{soundpack.title}</h1>
+          {/* Details - better spacing */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Header */}
+            <div className="space-y-3">
+              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{soundpack.title}</h1>
               <Link
                 to={`/producer/${soundpack.producer_id}`}
-                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+                className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
               >
-                <User size={16} />
-                by {soundpack.producer_name}
+                <User size={18} />
+                <span className="text-base font-medium group-hover:underline">by {soundpack.producer_name}</span>
               </Link>
             </div>
 
             {soundpack.description && (
-              <p className="text-muted-foreground">{soundpack.description}</p>
+              <p className="text-muted-foreground leading-relaxed">{soundpack.description}</p>
             )}
 
-            {/* License selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select License</label>
-              <div className="grid grid-cols-2 gap-2">
+            {/* License selector - improved design */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-foreground">Select License</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {['basic', 'premium', 'exclusive', 'custom'].map((license) => (
                   <Button
                     key={license}
                     variant={selectedLicense === license ? 'default' : 'outline'}
                     onClick={() => setSelectedLicense(license)}
-                    className="capitalize"
+                    className="capitalize h-10 text-sm font-medium transition-all"
+                    size="sm"
                   >
                     {license}
                   </Button>
@@ -236,20 +239,26 @@ const SoundpackDetail = () => {
               </div>
             </div>
 
-            {/* Price and actions */}
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
+            {/* Price and actions - compact card */}
+            <Card className="border-primary/20 bg-card">
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-baseline justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="text-3xl font-bold">{formatCurrency(price, currency)}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Price</p>
+                    <p className="text-3xl font-bold text-foreground">{formatCurrency(price, currency)}</p>
                   </div>
+                  {soundpack.purchase_count > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Sales</p>
+                      <p className="text-xl font-semibold text-primary">{soundpack.purchase_count}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
                   <Button 
                     onClick={handleAddToCart}
-                    className="flex-1"
+                    className="flex-1 h-11"
                     size="lg"
                   >
                     <ShoppingCart className="w-4 h-4 mr-2" />
@@ -259,6 +268,7 @@ const SoundpackDetail = () => {
                     variant="outline"
                     size="lg"
                     onClick={handleShare}
+                    className="h-11 px-4"
                   >
                     <Share2 className="w-4 h-4" />
                   </Button>
@@ -269,20 +279,20 @@ const SoundpackDetail = () => {
         </div>
 
         {/* Included files */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <Music size={24} />
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Music size={20} />
             Included Files ({soundpack.file_count})
           </h2>
           
           {beatsLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
+                <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
           ) : soundpackBeats && soundpackBeats.length > 0 ? (
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               {soundpackBeats.map((beat, index) => {
                 const isCurrentBeat = currentBeat?.id === beat.id;
                 const isCurrentPlaying = isCurrentBeat && isPlaying;
@@ -290,17 +300,17 @@ const SoundpackDetail = () => {
                 return (
                   <Card 
                     key={beat.id}
-                    className={`transition-all duration-200 hover:shadow-md ${
+                    className={`transition-all duration-200 hover:bg-muted/50 ${
                       isCurrentBeat ? 'border-primary bg-primary/5' : ''
                     }`}
                   >
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex items-center gap-3 sm:gap-4">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-3">
                         {/* Play button */}
                         <Button
                           size="icon"
                           variant={isCurrentBeat ? "default" : "outline"}
-                          className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12"
+                          className="flex-shrink-0 w-9 h-9"
                           onClick={() => {
                             if (isCurrentBeat) {
                               togglePlayPause();
@@ -320,26 +330,26 @@ const SoundpackDetail = () => {
                           }}
                         >
                           {isCurrentPlaying ? (
-                            <Pause className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <Pause className="w-4 h-4" />
                           ) : (
-                            <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <Play className="w-4 h-4" />
                           )}
                         </Button>
                         
                         {/* Track info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <span className="text-muted-foreground font-mono text-sm sm:text-base flex-shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground font-mono text-xs flex-shrink-0">
                               {String(index + 1).padStart(2, '0')}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <p className={`font-semibold truncate text-sm sm:text-base ${
+                              <p className={`font-medium truncate text-sm ${
                                 isCurrentBeat ? 'text-primary' : ''
                               }`}>
                                 {beat.title}
                               </p>
                               {beat.genre && (
-                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                <p className="text-xs text-muted-foreground truncate">
                                   {beat.genre}
                                   {beat.bpm && ` • ${beat.bpm} BPM`}
                                 </p>
