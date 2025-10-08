@@ -35,6 +35,7 @@ import Contact from "./pages/Contact";
 import BuyerProfile from "./pages/buyer/BuyerProfile";
 import ProducerProfile from "./pages/producer/ProducerProfile";
 import BeatDetail from "./pages/buyer/BeatDetail";
+import SoundpackDetail from "./pages/buyer/SoundpackDetail";
 import ProducerDashboard from "./pages/producer/Dashboard";
 import UploadBeat from "./pages/producer/UploadBeat";
 import ProducerBeats from "./pages/producer/Beats";
@@ -99,6 +100,7 @@ const AppContent = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/beat/:beatId" element={<BeatDetail />} />
+            <Route path="/soundpack/:soundpackId" element={<SoundpackDetail />} />
             <Route path="/licenses" element={<Licenses />} />
             <Route path="/sandbox" element={<Sandbox />} />
 
