@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Package } from "lucide-react";
+import { ShoppingCart, Package, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -19,6 +19,7 @@ interface Soundpack {
   cover_art_url?: string;
   file_count: number;
   published?: boolean;
+  purchase_count?: number;
   basic_license_price_local: number;
   basic_license_price_diaspora: number;
   premium_license_price_local: number;
@@ -93,76 +94,102 @@ export function SoundpackCard({
   const price = getPriceForLicense();
 
   return (
-    <Card className={`group overflow-hidden h-full ${featured ? 'border-primary bg-primary/5' : ''}`}>
-      <CardContent className="p-0 flex flex-col h-full">
-        <div className="relative">
-          <Link to={`/soundpack/${soundpack.id}`}>
+    <Card className={`group overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${
+      featured ? 'border-primary bg-primary/5' : ''
+    }`}>
+      <Link to={`/soundpack/${soundpack.id}`} className="block">
+        <CardContent className="p-0 flex flex-col h-full">
+          <div className="relative">
             <img
               src={soundpack.cover_art_url || "/placeholder.svg"}
               alt={soundpack.title}
-              className="aspect-square w-full object-cover rounded-none group-hover:scale-105 transition-transform duration-200"
+              className="aspect-square w-full object-cover rounded-t-lg transition-transform duration-300 group-hover:scale-105"
             />
-          </Link>
-          
-          {/* Soundpack Badge */}
-          <Badge 
-            className="absolute top-2 left-2 bg-purple-600 text-white flex items-center gap-1.5 font-semibold px-3 py-1.5"
-          >
-            <Package size={14} />
-            SOUNDPACK • {soundpack.file_count} files
-          </Badge>
-          
-          {/* Draft/Published Status Badge */}
-          {soundpack.published === false && (
-            <Badge className="absolute top-2 right-2 bg-orange-500 text-white font-semibold">
-              DRAFT
+            
+            {/* Soundpack Badge */}
+            <Badge 
+              className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white flex items-center gap-1.5 font-bold px-3 py-1.5 text-xs sm:text-sm shadow-lg"
+            >
+              <Package size={16} className="flex-shrink-0" />
+              <span className="hidden sm:inline">SOUNDPACK</span>
+              <span className="sm:hidden">PACK</span>
+              <span className="opacity-75">•</span>
+              <span>{soundpack.file_count}</span>
             </Badge>
-          )}
-          
-          {featured && soundpack.published !== false && (
-            <div className="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded-full">
-              Featured
-            </div>
-          )}
-          
-          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
-            <div>
-              <h3 className="font-semibold">{soundpack.title}</h3>
-              <p className="text-sm opacity-70">by {soundpack.producer_name || 'Unknown Producer'}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-4 flex flex-col justify-between flex-1">
-          {showLicenseSelector && (
-            <LicenseSelector onChange={setSelectedLicense} />
-          )}
-          
-          <CardFooter className="flex items-center justify-between p-0 mt-4">
-            <div>
-              <Label className="text-sm opacity-70">Price</Label>
-              <p className="font-semibold text-lg">
-                {formatCurrency(price || 0, currency)}
+            
+            {/* Draft/Published Status Badge */}
+            {soundpack.published === false && (
+              <Badge className="absolute top-3 right-3 bg-orange-500 text-white font-bold animate-pulse shadow-lg">
+                DRAFT
+              </Badge>
+            )}
+            
+            {featured && soundpack.published !== false && (
+              <Badge className="absolute top-3 right-3 bg-primary text-white font-bold shadow-lg">
+                Featured
+              </Badge>
+            )}
+            
+            {/* Stats Row - Only show if published */}
+            {soundpack.published !== false && soundpack.purchase_count > 0 && (
+              <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                <Badge 
+                  variant="secondary" 
+                  className="bg-black/60 backdrop-blur-sm text-white border-none flex items-center gap-1.5 px-2 py-1"
+                >
+                  <ShoppingBag size={12} />
+                  <span className="text-xs font-medium">{soundpack.purchase_count}</span>
+                </Badge>
+              </div>
+            )}
+            
+            <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 sm:p-4 text-white">
+              <h3 className="font-bold text-base sm:text-lg line-clamp-1">{soundpack.title}</h3>
+              <p className="text-xs sm:text-sm opacity-90 line-clamp-1">
+                by {soundpack.producer_name || 'Unknown Producer'}
               </p>
             </div>
-            <Button 
-              onClick={handleAddToCart}
-              disabled={false}
-            >
-              {itemInCart ? (
-                <>
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  <span>In Cart</span>
-                </>
-              ) : (
-                <>
-                  Add to Cart
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </div>
-      </CardContent>
+          </div>
+        </CardContent>
+      </Link>
+      
+      <div className="p-3 sm:p-4 flex flex-col gap-3 sm:gap-4 bg-card">
+        {showLicenseSelector && (
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Select License</Label>
+            <LicenseSelector onChange={setSelectedLicense} />
+          </div>
+        )}
+        
+        <CardFooter className="flex items-center justify-between p-0">
+          <div>
+            <Label className="text-xs text-muted-foreground">Price</Label>
+            <p className="font-bold text-xl sm:text-2xl">
+              {formatCurrency(price || 0, currency)}
+            </p>
+          </div>
+          <Button 
+            onClick={(e) => {
+              e.preventDefault();
+              handleAddToCart();
+            }}
+            size={itemInCart ? "default" : "lg"}
+            className="transition-all duration-200"
+          >
+            {itemInCart ? (
+              <>
+                <ShoppingCart className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">In Cart</span>
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Add to Cart
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </div>
     </Card>
   );
 }

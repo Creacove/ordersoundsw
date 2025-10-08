@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  ShoppingCart, Download, Share2, ArrowLeft, Package, User, Music
+  ShoppingCart, Download, Share2, ArrowLeft, Package, User, Music, Play, Pause
 } from 'lucide-react';
+import { usePlayer } from '@/context/PlayerContext';
 import { MainLayoutWithPlayer } from '@/components/layout/MainLayoutWithPlayer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ const SoundpackDetail = () => {
   const navigate = useNavigate();
   const [selectedLicense, setSelectedLicense] = useState<string>('basic');
   const isMobile = useIsMobile();
+  const { playBeat, currentBeat, isPlaying, togglePlayPause } = usePlayer();
 
   const { data: soundpack, isLoading: soundpackLoading } = useQuery({
     queryKey: ['soundpack', soundpackId],
@@ -253,7 +255,7 @@ const SoundpackDetail = () => {
 
         {/* Included files */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
             <Music size={24} />
             Included Files ({soundpack.file_count})
           </h2>
@@ -261,25 +263,97 @@ const SoundpackDetail = () => {
           {beatsLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 w-full" />
+                <Skeleton key={i} className="h-20 w-full" />
               ))}
             </div>
           ) : soundpackBeats && soundpackBeats.length > 0 ? (
-            <div className="grid gap-2">
-              {soundpackBeats.map((beat, index) => (
-                <Card key={beat.id}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-muted-foreground font-mono">{String(index + 1).padStart(2, '0')}</span>
-                      <Music size={16} className="text-muted-foreground" />
-                      <span className="font-medium">{beat.title}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="grid gap-3">
+              {soundpackBeats.map((beat, index) => {
+                const isCurrentBeat = currentBeat?.id === beat.id;
+                const isCurrentPlaying = isCurrentBeat && isPlaying;
+                
+                return (
+                  <Card 
+                    key={beat.id}
+                    className={`transition-all duration-200 hover:shadow-md ${
+                      isCurrentBeat ? 'border-primary bg-primary/5' : ''
+                    }`}
+                  >
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        {/* Play button */}
+                        <Button
+                          size="icon"
+                          variant={isCurrentBeat ? "default" : "outline"}
+                          className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12"
+                          onClick={() => {
+                            if (isCurrentBeat) {
+                              togglePlayPause();
+                            } else {
+                              const beatData: Beat = {
+                                ...beat,
+                                status: (beat.status || 'published') as 'draft' | 'published',
+                                type: (beat.type || 'beat') as 'beat' | 'soundpack_item',
+                                producer_name: soundpack.producer_name || 'Unknown Producer',
+                                cover_image_url: beat.cover_image || soundpack.cover_art_url || '',
+                                preview_url: beat.audio_preview || '',
+                                full_track_url: beat.audio_file || '',
+                                created_at: beat.upload_date || new Date().toISOString(),
+                              };
+                              playBeat(beatData);
+                            }
+                          }}
+                        >
+                          {isCurrentPlaying ? (
+                            <Pause className="w-4 h-4 sm:w-5 sm:h-5" />
+                          ) : (
+                            <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+                          )}
+                        </Button>
+                        
+                        {/* Track info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <span className="text-muted-foreground font-mono text-sm sm:text-base flex-shrink-0">
+                              {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className={`font-semibold truncate text-sm sm:text-base ${
+                                isCurrentBeat ? 'text-primary' : ''
+                              }`}>
+                                {beat.title}
+                              </p>
+                              {beat.genre && (
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                  {beat.genre}
+                                  {beat.bpm && ` • ${beat.bpm} BPM`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Playing indicator */}
+                        {isCurrentPlaying && (
+                          <div className="flex gap-0.5 items-end h-4 flex-shrink-0">
+                            <div className="w-0.5 bg-primary animate-pulse h-2" style={{ animationDelay: '0ms' }} />
+                            <div className="w-0.5 bg-primary animate-pulse h-3" style={{ animationDelay: '150ms' }} />
+                            <div className="w-0.5 bg-primary animate-pulse h-4" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
-            <p className="text-muted-foreground">No files found in this soundpack.</p>
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Music size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No files found in this soundpack.</p>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
