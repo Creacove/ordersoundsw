@@ -18,6 +18,7 @@ interface Soundpack {
   producer_name?: string;
   cover_art_url?: string;
   file_count: number;
+  published?: boolean;
   basic_license_price_local: number;
   basic_license_price_diaspora: number;
   premium_license_price_local: number;
@@ -105,13 +106,20 @@ export function SoundpackCard({
           
           {/* Soundpack Badge */}
           <Badge 
-            className="absolute top-2 left-2 bg-primary/90 text-white flex items-center gap-1"
+            className="absolute top-2 left-2 bg-purple-600 text-white flex items-center gap-1.5 font-semibold px-3 py-1.5"
           >
-            <Package size={12} />
-            {soundpack.file_count} files
+            <Package size={14} />
+            SOUNDPACK • {soundpack.file_count} files
           </Badge>
           
-          {featured && (
+          {/* Draft/Published Status Badge */}
+          {soundpack.published === false && (
+            <Badge className="absolute top-2 right-2 bg-orange-500 text-white font-semibold">
+              DRAFT
+            </Badge>
+          )}
+          
+          {featured && soundpack.published !== false && (
             <div className="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded-full">
               Featured
             </div>

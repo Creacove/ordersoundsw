@@ -366,6 +366,7 @@ export async function fetchProducerBeats(producerId: string, includeDrafts: bool
         )
       `)
       .eq('producer_id', producerId)
+      .is('soundpack_id', null) // Exclude soundpack items from regular beats list
       .order('upload_date', { ascending: false });
 
     if (!includeDrafts) {

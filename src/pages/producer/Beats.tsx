@@ -645,7 +645,7 @@ export default function ProducerBeats() {
                         {publishedSoundpacks.map((soundpack) => (
                           <SoundpackCard 
                             key={soundpack.id}
-                            soundpack={soundpack}
+                            soundpack={{...soundpack, published: true}}
                             showLicenseSelector={false}
                           />
                         ))}
@@ -662,15 +662,11 @@ export default function ProducerBeats() {
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
                         {draftSoundpacks.map((soundpack) => (
-                          <div key={soundpack.id} className="relative">
-                            <SoundpackCard 
-                              soundpack={soundpack}
-                              showLicenseSelector={false}
-                            />
-                            <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-full font-semibold">
-                              DRAFT
-                            </div>
-                          </div>
+                          <SoundpackCard 
+                            key={soundpack.id}
+                            soundpack={{...soundpack, published: false}}
+                            showLicenseSelector={false}
+                          />
                         ))}
                       </div>
                     </div>

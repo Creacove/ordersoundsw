@@ -148,14 +148,24 @@ const SoundpackDetail = () => {
     <MainLayoutWithPlayer>
       <div className="p-4 max-w-7xl mx-auto space-y-6">
         {/* Back button */}
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          {user?.id === soundpack.producer_id && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/producer/beats')}
+            >
+              <Music className="w-4 h-4 mr-2" />
+              My Beats
+            </Button>
+          )}
+        </div>
 
         {/* Main content */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
