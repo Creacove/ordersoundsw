@@ -146,86 +146,96 @@ export const DetailTab = ({
               </SelectContent>              
             </Select>
           </div>
-          <div>
-            <Label htmlFor="trackType">Track Type *</Label>
-            <Select 
-              name="trackType" 
-              onValueChange={(value) => setBeatDetails({...beatDetails, trackType: value})}
-              value={beatDetails.trackType}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {trackTypes.map(type => (
-                  <SelectItem key={type} value={type.toLowerCase().replace(/\s+/g, '_')}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          
+          {/* Only show Track Type for non-Soundpack categories */}
+          {beatDetails.category !== 'Soundpack' && (
+            <div>
+              <Label htmlFor="trackType">Track Type *</Label>
+              <Select 
+                name="trackType" 
+                onValueChange={(value) => setBeatDetails({...beatDetails, trackType: value})}
+                value={beatDetails.trackType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trackTypes.map(type => (
+                    <SelectItem key={type} value={type.toLowerCase().replace(/\s+/g, '_')}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="bpm">BPM</Label>
-            <div className="flex items-center gap-4">
-              <Slider
-                id="bpm"
-                min={40}
-                max={200}
-                step={1}
-                defaultValue={[90]}
-                value={[beatDetails.bpm]}
-                onValueChange={(value) => setBeatDetails({...beatDetails, bpm: value[0]})}
-                className="flex-1"
-              />
-              <span className="w-12 text-center font-medium">{beatDetails.bpm}</span>
+        {/* Only show BPM and Key for non-Soundpack categories */}
+        {beatDetails.category !== 'Soundpack' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="bpm">BPM</Label>
+              <div className="flex items-center gap-4">
+                <Slider
+                  id="bpm"
+                  min={40}
+                  max={200}
+                  step={1}
+                  defaultValue={[90]}
+                  value={[beatDetails.bpm]}
+                  onValueChange={(value) => setBeatDetails({...beatDetails, bpm: value[0]})}
+                  className="flex-1"
+                />
+                <span className="w-12 text-center font-medium">{beatDetails.bpm}</span>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="key">Key (optional)</Label>
+              <Select 
+                name="key" 
+                onValueChange={(value) => setBeatDetails({...beatDetails, key: value})}
+                value={beatDetails.key}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select key" />
+                </SelectTrigger>
+                <SelectContent>
+                  {keys.map(k => (
+                    <SelectItem key={k} value={k}>{k}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div>
-            <Label htmlFor="key">Key (optional)</Label>
-            <Select 
-              name="key" 
-              onValueChange={(value) => setBeatDetails({...beatDetails, key: value})}
-              value={beatDetails.key}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select key" />
-              </SelectTrigger>
-              <SelectContent>
-                {keys.map(k => (
-                  <SelectItem key={k} value={k}>{k}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        )}
         
-        <div>
-          <Label htmlFor="tags">Tags (Enter to add)</Label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                {tag}
-                <button 
-                  onClick={() => handleRemoveTag(tag)} 
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X size={12} />
-                </button>
-              </Badge>
-            ))}
+        {/* Only show Tags for non-Soundpack categories */}
+        {beatDetails.category !== 'Soundpack' && (
+          <div>
+            <Label htmlFor="tags">Tags (Enter to add)</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                  {tag}
+                  <button 
+                    onClick={() => handleRemoveTag(tag)} 
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={12} />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <Input 
+              id="tags" 
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleAddTag}
+              placeholder="Add tags (e.g. afrobeat, dance)" 
+            />
           </div>
-          <Input 
-            id="tags" 
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={handleAddTag}
-            placeholder="Add tags (e.g. afrobeat, dance)" 
-          />
-        </div>
+        )}
       </div>
     </div>
   );
