@@ -73,11 +73,12 @@ export default function GamingSoundtrack() {
     placeholderData: keepPreviousData,
   }) as { data: Beat[], isLoading: boolean };
 
-  // Query for Gaming & Soundtrack soundpacks
+  // Query for ALL published soundpacks
   const { data: gamingSoundpacks = [], isLoading: isLoadingSoundpacks } = useQuery({
-    queryKey: ['gaming-soundtrack-soundpacks'],
+    queryKey: ['all-published-soundpacks'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get all published soundpacks
+      const { data: soundpacksData, error: soundpacksError } = await supabase
         .from('soundpacks')
         .select(`
           id,
@@ -85,10 +86,6 @@ export default function GamingSoundtrack() {
           description,
           cover_art_url,
           producer_id,
-          users (
-            full_name,
-            stage_name
-          ),
           file_count,
           basic_license_price_local,
           basic_license_price_diaspora,
@@ -103,11 +100,38 @@ export default function GamingSoundtrack() {
           created_at
         `)
         .eq('published', true)
-        .eq('category', 'Gaming & Soundtrack')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (soundpacksError) throw soundpacksError;
+      if (!soundpacksData || soundpacksData.length === 0) return [];
+
+      // Get unique producer IDs
+      const producerIds = [...new Set(soundpacksData.map(pack => pack.producer_id))];
+
+      // Fetch producer details separately
+      const { data: producersData, error: producersError } = await supabase
+        .from('users')
+        .select('id, full_name, stage_name')
+        .in('id', producerIds);
+
+      if (producersError) {
+        console.error('Error fetching producers:', producersError);
+        // Continue without producer names rather than failing
+      }
+
+      // Create a map of producer details
+      const producersMap = new Map(
+        (producersData || []).map(producer => [
+          producer.id,
+          { full_name: producer.full_name, stage_name: producer.stage_name }
+        ])
+      );
+
+      // Merge soundpack data with producer details
+      return soundpacksData.map(pack => ({
+        ...pack,
+        users: producersMap.get(pack.producer_id) || null
+      }));
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
