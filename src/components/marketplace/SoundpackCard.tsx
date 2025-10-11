@@ -155,7 +155,7 @@ export function SoundpackCard({
         </div>
         
         {/* Content - Ultra Compact */}
-        <CardContent className="flex-1 flex flex-col p-3 pt-2 gap-1.5">
+        <CardContent className="flex-1 flex flex-col p-3 pt-2 gap-2">
           {/* Title & Producer */}
           <div>
             <h3 className="font-semibold text-sm line-clamp-1 mb-0.5 group-hover:text-primary transition-colors">
@@ -168,19 +168,16 @@ export function SoundpackCard({
           
           {/* License Selector - Compact */}
           {showLicenseSelector && (
-            <div className="space-y-1">
+            <div>
               <LicenseSelector onChange={setSelectedLicense} />
             </div>
           )}
           
-          {/* Price & Action - Compact footer */}
+          {/* Price & Action - Clean layout */}
           <div className="flex items-center justify-between gap-2 mt-auto">
-            <div className="min-w-0">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Price</p>
-              <p className="font-bold text-base truncate">
-                {formatCurrency(price || 0, currency)}
-              </p>
-            </div>
+            <p className="font-bold text-lg truncate">
+              {formatCurrency(price || 0, currency)}
+            </p>
             <Button 
               onClick={handleAddToCart}
               size="sm"
