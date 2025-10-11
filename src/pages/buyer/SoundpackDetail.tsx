@@ -420,14 +420,9 @@ const SoundpackDetail = () => {
                             {String(index + 1).padStart(2, '0')}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className={`font-medium text-sm leading-tight ${
+                            <p className={`font-medium text-sm leading-tight truncate ${
                               isCurrentBeat ? 'text-primary' : 'text-foreground'
-                            }`} style={{ 
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              wordBreak: 'break-all'
-                            }}>
+                            }`}>
                               {beat.title}
                             </p>
                             {beat.genre && (

@@ -107,7 +107,7 @@ export function SoundpackCard({
         {/* Cover Image - Stacked Design */}
         <div className="relative overflow-visible bg-transparent pt-3 px-3">
           {/* Stacked layers effect - 3 layers behind main image */}
-          <div className="aspect-video relative">
+          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
             {/* Layer 3 - Bottom */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg transform -rotate-3 translate-y-2 translate-x-1 shadow-sm" />
             
@@ -118,11 +118,11 @@ export function SoundpackCard({
             <div className="absolute inset-0 bg-muted/50 rounded-lg transform rotate-0.5 shadow-lg" />
             
             {/* Main Image - Front */}
-            <div className="relative rounded-lg overflow-hidden shadow-xl border-2 border-background transform transition-transform duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1">
+            <div className="absolute inset-0 rounded-lg overflow-hidden shadow-xl border-2 border-background transform transition-transform duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1">
               <img
                 src={soundpack.cover_art_url || "/placeholder.svg"}
                 alt={soundpack.title}
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
                 loading="lazy"
               />
               
