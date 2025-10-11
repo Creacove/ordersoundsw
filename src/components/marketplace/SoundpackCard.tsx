@@ -104,28 +104,52 @@ export function SoundpackCard({
         "hover:shadow-lg hover:border-primary/50",
         featured && "border-primary/50 bg-primary/5"
       )}>
-        {/* Cover Image - Compact aspect ratio */}
-        <div className="relative overflow-hidden bg-muted">
+        {/* Cover Image - Stacked Design */}
+        <div className="relative overflow-visible bg-transparent pt-3 px-3">
+          {/* Stacked layers effect - 3 layers behind main image */}
           <div className="aspect-video relative">
-            <img
-              src={soundpack.cover_art_url || "/placeholder.svg"}
-              alt={soundpack.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
+            {/* Layer 3 - Bottom */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg transform -rotate-3 translate-y-2 translate-x-1 shadow-sm" />
             
-            {/* Top Badges - Minimal */}
-            <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
-              <Badge className="bg-primary text-primary-foreground shadow-md flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold">
-                <Package size={10} />
-                SOUNDPACK
-              </Badge>
+            {/* Layer 2 - Middle */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-primary/15 rounded-lg transform -rotate-1.5 translate-y-1 translate-x-0.5 shadow-md" />
+            
+            {/* Layer 1 - Top visible layer behind main */}
+            <div className="absolute inset-0 bg-muted/50 rounded-lg transform rotate-0.5 shadow-lg" />
+            
+            {/* Main Image - Front */}
+            <div className="relative rounded-lg overflow-hidden shadow-xl border-2 border-background transform transition-transform duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1">
+              <img
+                src={soundpack.cover_art_url || "/placeholder.svg"}
+                alt={soundpack.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
               
-              {soundpack.published === false && (
-                <Badge variant="outline" className="bg-muted/90 backdrop-blur-sm px-2 py-0.5 text-[10px]">
-                  DRAFT
+              {/* Overlay gradient for better badge visibility */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+              
+              {/* Top Badges - Minimal */}
+              <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2 z-10">
+                <Badge className="bg-primary text-primary-foreground shadow-lg flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm border border-primary-foreground/20">
+                  <Package size={10} />
+                  SOUNDPACK
                 </Badge>
-              )}
+                
+                {soundpack.published === false && (
+                  <Badge variant="outline" className="bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] shadow-lg">
+                    DRAFT
+                  </Badge>
+                )}
+              </div>
+              
+              {/* File count indicator at bottom of image */}
+              <div className="absolute bottom-2 right-2 z-10">
+                <div className="bg-background/80 backdrop-blur-md rounded-full px-2 py-1 shadow-lg border border-border/50 flex items-center gap-1">
+                  <Package size={10} className="text-primary" />
+                  <span className="text-[10px] font-semibold">{soundpack.file_count || 0}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -144,14 +168,10 @@ export function SoundpackCard({
           
           {/* Stats - Inline */}
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Package size={11} />
-              <span>{soundpack.file_count || 0} files</span>
-            </div>
             {soundpack.purchase_count && soundpack.purchase_count > 0 && (
               <div className="flex items-center gap-1">
                 <ShoppingBag size={11} />
-                <span>{soundpack.purchase_count}</span>
+                <span>{soundpack.purchase_count} purchases</span>
               </div>
             )}
           </div>
