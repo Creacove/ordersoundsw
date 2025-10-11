@@ -370,7 +370,7 @@ const SoundpackDetail = () => {
               ))}
             </div>
           ) : soundpackBeats && soundpackBeats.length > 0 ? (
-            <div className="grid gap-2 w-full max-w-full">
+            <div className="space-y-2">
               {soundpackBeats.map((beat, index) => {
                 const isCurrentBeat = currentBeat?.id === beat.id;
                 const isCurrentPlaying = isCurrentBeat && isPlaying;
@@ -378,12 +378,12 @@ const SoundpackDetail = () => {
                 return (
                   <Card 
                     key={beat.id}
-                    className={`transition-all duration-200 hover:bg-muted/30 w-full max-w-full ${
+                    className={`transition-all duration-200 hover:bg-muted/30 ${
                       isCurrentBeat ? 'border-primary bg-primary/5' : ''
                     }`}
                   >
-                    <CardContent className="p-3 w-full max-w-full overflow-hidden">
-                      <div className="flex items-center gap-2 w-full max-w-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         {/* Play button */}
                         <Button
                           size="icon"
@@ -415,18 +415,18 @@ const SoundpackDetail = () => {
                         </Button>
                         
                         {/* Track info */}
-                        <div className="flex-1 min-w-0 flex items-center gap-2">
-                          <span className="text-muted-foreground font-mono text-[11px] flex-shrink-0">
+                        <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
+                          <span className="text-muted-foreground font-mono text-[11px] sm:text-xs flex-shrink-0">
                             {String(index + 1).padStart(2, '0')}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className={`font-medium text-sm leading-tight truncate ${
+                            <p className={`font-medium text-sm sm:text-base leading-tight truncate ${
                               isCurrentBeat ? 'text-primary' : 'text-foreground'
                             }`}>
                               {beat.title}
                             </p>
                             {beat.genre && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5 hidden sm:block">
+                              <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
                                 {beat.genre}
                                 {beat.bpm && ` • ${beat.bpm} BPM`}
                               </p>

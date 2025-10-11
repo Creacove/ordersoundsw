@@ -107,7 +107,7 @@ export function SoundpackCard({
         {/* Cover Image - Stacked Design */}
         <div className="relative overflow-visible bg-transparent pt-3 px-3">
           {/* Stacked layers effect - 3 layers behind main image */}
-          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <div className="relative w-full" style={{ paddingBottom: '66%' }}>
             {/* Layer 3 - Bottom */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg transform -rotate-3 translate-y-2 translate-x-1 shadow-sm" />
             
