@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Package, ShoppingBag } from "lucide-react";
+import { ShoppingCart, Package, ShoppingBag, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -36,6 +36,8 @@ interface SoundpackCardProps {
   onAddToCart?: () => void;
   showLicenseSelector?: boolean;
   featured?: boolean;
+  isProducerOwned?: boolean;
+  onDelete?: () => void;
 }
 
 export function SoundpackCard({ 
@@ -43,7 +45,9 @@ export function SoundpackCard({
   isInCart, 
   onAddToCart, 
   showLicenseSelector = true,
-  featured = false
+  featured = false,
+  isProducerOwned = false,
+  onDelete
 }: SoundpackCardProps) {
   const { currency } = useAuth();
   const { addToCart, removeFromCart, isInCart: checkIsInCart } = useCartLightweight();
@@ -136,11 +140,28 @@ export function SoundpackCard({
                   SOUNDPACK
                 </Badge>
                 
-                {soundpack.published === false && (
-                  <Badge variant="outline" className="bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] shadow-lg">
-                    DRAFT
-                  </Badge>
-                )}
+                <div className="flex gap-1">
+                  {soundpack.published === false && (
+                    <Badge variant="outline" className="bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] shadow-lg">
+                      DRAFT
+                    </Badge>
+                  )}
+                  
+                  {isProducerOwned && onDelete && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 bg-background/90 hover:bg-destructive hover:text-destructive-foreground backdrop-blur-sm shadow-lg"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </Button>
+                  )}
+                </div>
               </div>
               
               {/* File count indicator at bottom of image */}

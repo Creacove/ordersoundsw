@@ -49,6 +49,9 @@ export default function ProducerBeats() {
   const [isLoading, setIsLoading] = useState(true);
   const [soundpacks, setSoundpacks] = useState<any[]>([]);
   const [soundpacksLoading, setSoundpacksLoading] = useState(true);
+  const [deleteSoundpackOpen, setDeleteSoundpackOpen] = useState(false);
+  const [selectedSoundpackId, setSelectedSoundpackId] = useState<string | null>(null);
+  const [isDeletingSoundpack, setIsDeletingSoundpack] = useState(false);
 
   // Load producer beats directly
   const loadProducerBeats = useCallback(async () => {
@@ -210,6 +213,54 @@ export default function ProducerBeats() {
       setIsPublishing(false);
       setPublishOpen(false);
       setSelectedBeatId(null);
+    }
+  };
+
+  const handleDeleteSoundpack = useCallback((soundpackId: string) => {
+    setSelectedSoundpackId(soundpackId);
+    setDeleteSoundpackOpen(true);
+  }, []);
+
+  const confirmDeleteSoundpack = async () => {
+    if (!selectedSoundpackId) return;
+    try {
+      setIsDeletingSoundpack(true);
+      
+      // First, delete all beats associated with this soundpack
+      const { error: beatsError } = await supabase
+        .from('beats')
+        .delete()
+        .eq('soundpack_id', selectedSoundpackId);
+      
+      if (beatsError) {
+        throw new Error(`Failed to delete soundpack items: ${beatsError.message}`);
+      }
+      
+      // Then delete the soundpack itself
+      const { error: soundpackError } = await supabase
+        .from('soundpacks')
+        .delete()
+        .eq('id', selectedSoundpackId);
+      
+      if (soundpackError) {
+        throw new Error(`Failed to delete soundpack: ${soundpackError.message}`);
+      }
+      
+      toast.success('Soundpack deleted successfully');
+      
+      // Update local state
+      setSoundpacks(prev => prev.filter(sp => sp.id !== selectedSoundpackId));
+      setProducerBeats(prev => prev.filter(beat => beat.soundpack_id !== selectedSoundpackId));
+      
+      // Set flag for other components/tabs
+      sessionStorage.setItem('beats_needs_refresh', 'true');
+    } catch (error) {
+      console.error('Error deleting soundpack:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete soundpack');
+    } finally {
+      setIsDeletingSoundpack(false);
+      setDeleteSoundpackOpen(false);
+      setSelectedSoundpackId(null);
     }
   };
 
@@ -640,6 +691,8 @@ export default function ProducerBeats() {
                             key={soundpack.id}
                             soundpack={{...soundpack, published: true}}
                             showLicenseSelector={false}
+                            isProducerOwned={true}
+                            onDelete={() => handleDeleteSoundpack(soundpack.id)}
                           />
                         ))}
                       </div>
@@ -659,6 +712,8 @@ export default function ProducerBeats() {
                             key={soundpack.id}
                             soundpack={{...soundpack, published: false}}
                             showLicenseSelector={false}
+                            isProducerOwned={true}
+                            onDelete={() => handleDeleteSoundpack(soundpack.id)}
                           />
                         ))}
                       </div>
@@ -714,6 +769,27 @@ export default function ProducerBeats() {
               disabled={isPublishing}
             >
               {isPublishing ? 'Publishing...' : 'Publish'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteSoundpackOpen} onOpenChange={setDeleteSoundpackOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this soundpack?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this soundpack and all its files? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={confirmDeleteSoundpack}
+              disabled={isDeletingSoundpack}
+            >
+              {isDeletingSoundpack ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
