@@ -223,115 +223,118 @@ const SoundpackDetail = () => {
             </Badge>
           )}
           
-          {user?.id === soundpack.producer_id && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => navigate('/producer/beats')}
-              >
-                <Music className="w-4 h-4 mr-2" />
-                My Beats
-              </Button>
-              
-              {/* Publish button - only show if draft */}
-              {!soundpack.published && (
-                <Button
-                  variant="default"
-                  onClick={handlePublish}
-                  disabled={isPublishing || (soundpackBeats?.length || 0) === 0}
-                  className="ml-auto"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isPublishing ? 'Publishing...' : 'Publish Soundpack'}
-                </Button>
-              )}
-            </>
+          {user?.id === soundpack.producer_id && !soundpack.published && (
+            <Button
+              variant="default"
+              onClick={handlePublish}
+              disabled={isPublishing || (soundpackBeats?.length || 0) === 0}
+              className="ml-auto"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {isPublishing ? 'Publishing...' : 'Publish Soundpack'}
+            </Button>
           )}
         </div>
 
-        {/* Main content - optimized layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
-          {/* Cover image - optimized size */}
-          <div className="lg:col-span-2">
-            <div className="relative rounded-lg overflow-hidden shadow-lg lg:sticky lg:top-6">
-              <img
-                src={soundpack.cover_art_url || "/placeholder.svg"}
-                alt={soundpack.title}
-                className="w-full aspect-square object-cover"
-                loading="eager"
-              />
+        {/* Hero section with gradient overlay */}
+        <div className="relative rounded-xl overflow-hidden shadow-2xl">
+          <div className="relative aspect-[21/9] sm:aspect-[21/9] md:aspect-[2/1]">
+            <img
+              src={soundpack.cover_art_url || "/placeholder.svg"}
+              alt={soundpack.title}
+              className="w-full h-full object-cover"
+              loading="eager"
+            />
+            {/* Black gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            
+            {/* Content overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:p-10">
               <Badge 
-                className="absolute top-3 left-3 bg-primary text-primary-foreground shadow-lg flex items-center gap-1.5 px-3 py-1.5"
+                className="mb-4 bg-primary text-primary-foreground shadow-lg flex items-center gap-1.5 px-3 py-1.5 w-fit"
                 variant="default"
               >
                 <Package size={16} />
                 <span className="font-semibold">{soundpack.file_count} Files</span>
               </Badge>
-            </div>
-          </div>
-
-          {/* Details - better spacing */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Header */}
-            <div className="space-y-3">
-              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{soundpack.title}</h1>
+              
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-3 drop-shadow-lg">
+                {soundpack.title}
+              </h1>
+              
               <Link
                 to={`/producer/${soundpack.producer_id}`}
-                className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
+                className="inline-flex items-center gap-2 text-white/90 hover:text-white transition-colors group"
               >
                 <User size={18} />
                 <span className="text-base font-medium group-hover:underline">by {soundpack.producer_name}</span>
               </Link>
             </div>
+          </div>
+        </div>
 
+        {/* Main content grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Left column - Description */}
+          <div className="lg:col-span-2 space-y-6">
             {soundpack.description && (
-              <p className="text-muted-foreground leading-relaxed">{soundpack.description}</p>
-            )}
-
-            {/* License selector - improved design */}
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-foreground">Select License</label>
-              <div className="grid grid-cols-2 gap-2">
-                {['basic', 'premium', 'exclusive', 'custom'].map((license) => {
-                  const available = isLicenseAvailable(license);
-                  const isSelected = selectedLicense === license;
-                  
-                  return (
-                    <Button
-                      key={license}
-                      variant={isSelected ? 'default' : 'outline'}
-                      onClick={() => available && setSelectedLicense(license)}
-                      disabled={!available}
-                      className={`capitalize h-11 text-sm font-medium transition-all ${
-                        !available ? 'opacity-40 cursor-not-allowed' : ''
-                      }`}
-                      size="sm"
-                    >
-                      {license}
-                      {!available && <span className="ml-1 text-[10px]">(N/A)</span>}
-                    </Button>
-                  );
-                })}
+              <div>
+                <h2 className="text-xl font-bold mb-3">About this Pack</h2>
+                <p className="text-muted-foreground leading-relaxed text-base">{soundpack.description}</p>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Price and actions - compact card */}
-            <Card className="border-primary/20 bg-card/50 backdrop-blur-sm">
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-baseline justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-medium">Price</p>
-                    <p className="text-3xl sm:text-4xl font-bold text-foreground">{formatCurrency(price, currency)}</p>
+          {/* Right column - Pricing & License (Sticky on desktop) */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-6 space-y-4">
+              {/* License selection */}
+              {availableLicenses.length > 1 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-foreground">Select License</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableLicenses.map((license) => {
+                      const isSelected = selectedLicense === license;
+                      
+                      return (
+                        <Button
+                          key={license}
+                          variant={isSelected ? 'default' : 'outline'}
+                          onClick={() => setSelectedLicense(license)}
+                          className="capitalize h-10 text-sm font-medium transition-all"
+                          size="sm"
+                        >
+                          {license}
+                        </Button>
+                      );
+                    })}
                   </div>
+                </div>
+              )}
+              
+              {/* Price card */}
+              <Card className="border-2 border-primary/30 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm shadow-xl">
+                <CardContent className="p-6 space-y-5">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                      {availableLicenses.length === 1 ? `${availableLicenses[0]} License` : 'Price'}
+                    </p>
+                    <p className="text-4xl font-bold text-foreground tracking-tight">
+                      {formatCurrency(price, currency)}
+                    </p>
+                  </div>
+
                   {soundpack.purchase_count > 0 && (
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-medium">Sales</p>
-                      <p className="text-2xl font-bold text-primary">{soundpack.purchase_count}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex -space-x-1">
+                        {[...Array(Math.min(3, soundpack.purchase_count))].map((_, i) => (
+                          <div key={i} className="w-6 h-6 rounded-full bg-primary/20 border-2 border-card" />
+                        ))}
+                      </div>
+                      <span className="font-medium">{soundpack.purchase_count} {soundpack.purchase_count === 1 ? 'purchase' : 'purchases'}</span>
                     </div>
                   )}
-                </div>
 
-                <div className="space-y-2">
                   <Button 
                     onClick={handleAddToCart}
                     disabled={!canAddToCart || isInCart(soundpack.id, 'soundpack')}
@@ -339,20 +342,21 @@ const SoundpackDetail = () => {
                     size="lg"
                   >
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    {!canAddToCart ? 'License Not Available' : isInCart(soundpack.id, 'soundpack') ? 'Already in Cart' : 'Add to Cart'}
+                    {!canAddToCart ? 'Not Available' : isInCart(soundpack.id, 'soundpack') ? 'In Cart' : 'Add to Cart'}
                   </Button>
+                  
                   <Button
-                    variant="outline"
-                    size="lg"
+                    variant="ghost"
+                    size="sm"
                     onClick={handleShare}
-                    className="w-full h-11 font-medium"
+                    className="w-full text-muted-foreground hover:text-foreground"
                   >
                     <Share2 className="w-4 h-4 mr-2" />
-                    Share Soundpack
+                    Share
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
 
