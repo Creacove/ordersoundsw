@@ -113,6 +113,7 @@ export const uploadSoundpackFiles = async (
             type: 'soundpack_item',
             status: status,
             audio_file: audioUrl,
+            audio_preview: audioUrl, // Set preview to same URL for playback
             cover_image: coverImageUrl,
             genre: 'soundpack',
             track_type: 'sample',
