@@ -245,9 +245,9 @@ export const SoundpackFilesUpload = ({
                           <p className="text-sm font-medium truncate">{file.name}</p>
                           <button
                             onClick={() => startEditing(file)}
-                            className="text-muted-foreground hover:text-foreground"
+                            className="text-muted-foreground hover:text-foreground flex-shrink-0 p-1 sm:p-0.5"
                           >
-                            <Edit2 size={12} />
+                            <Edit2 size={16} className="sm:w-3 sm:h-3" />
                           </button>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">

@@ -127,6 +127,7 @@ const BeatDetail = () => {
             .from('beats')
             .select(BEAT_QUERY_FIELDS)
             .eq('status', 'published')
+            .is('soundpack_id', null)
             .or(`producer_id.eq.${beat.producer_id},genre.eq.${beat.genre}`)
             .neq('id', beat.id)
             .limit(5);
