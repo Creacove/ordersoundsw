@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShoppingCart, Share2, ArrowLeft, Package, User, Music, Play, Pause, Upload } from 'lucide-react';
@@ -178,6 +178,68 @@ const SoundpackDetail = () => {
 
   const price = getLicensePrice(selectedLicense);
   const canAddToCart = isLicenseAvailable(selectedLicense);
+
+  // State to store audio durations
+  const [audioDurations, setAudioDurations] = useState<Record<string, string>>({});
+  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
+
+  // Load audio durations when beats are available
+  useEffect(() => {
+    if (!soundpackBeats || soundpackBeats.length === 0) return;
+
+    soundpackBeats.forEach((beat) => {
+      if (!beat.audio_preview && !beat.audio_file) return;
+      if (audioDurations[beat.id]) return; // Already loaded
+
+      const audio = new Audio(beat.audio_preview || beat.audio_file || '');
+      audioRefs.current[beat.id] = audio;
+
+      audio.addEventListener('loadedmetadata', () => {
+        const duration = audio.duration;
+        const minutes = Math.floor(duration / 60);
+        const seconds = Math.floor(duration % 60);
+        const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        setAudioDurations(prev => ({
+          ...prev,
+          [beat.id]: formattedDuration
+        }));
+      });
+
+      audio.load();
+    });
+
+    return () => {
+      // Cleanup audio elements
+      Object.values(audioRefs.current).forEach(audio => {
+        audio.pause();
+        audio.src = '';
+      });
+    };
+  }, [soundpackBeats]);
+
+  // Helper function to sanitize filename and remove duplicate extensions
+  const sanitizeFileName = (title: string): string => {
+    if (!title) return 'Untitled';
+    
+    // Remove duplicate extensions like .wav.wav or .mp3.mp3
+    const extensionPattern = /\.(wav|mp3|flac|aac|m4a)(\.\1)+$/i;
+    let cleaned = title.replace(extensionPattern, '.$1');
+    
+    // If no extension, assume it's just the name
+    if (!/\.(wav|mp3|flac|aac|m4a)$/i.test(cleaned)) {
+      return cleaned;
+    }
+    
+    // Remove extension for display
+    return cleaned.replace(/\.(wav|mp3|flac|aac|m4a)$/i, '');
+  };
+
+  // Helper function to get file extension
+  const getFileExtension = (title: string): string => {
+    const match = title.match(/\.(wav|mp3|flac|aac|m4a)$/i);
+    return match ? match[1].toLowerCase() : 'wav';
+  };
 
   if (soundpackLoading) {
     return (
@@ -378,11 +440,14 @@ const SoundpackDetail = () => {
                 {soundpackBeats.map((beat, index) => {
                   const isCurrentBeat = currentBeat?.id === beat.id;
                   const isCurrentPlaying = isCurrentBeat && isPlaying;
+                  const sanitizedName = sanitizeFileName(beat.title);
+                  const fileExtension = getFileExtension(beat.title);
+                  const duration = audioDurations[beat.id] || '--:--';
                   
                   return (
                     <div 
                       key={beat.id}
-                      className={`flex items-center gap-4 px-2 py-3 rounded-lg transition-colors ${
+                      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                         isCurrentBeat ? 'bg-primary/10' : 'hover:bg-muted/30'
                       }`}
                     >
@@ -416,28 +481,28 @@ const SoundpackDetail = () => {
                         )}
                       </Button>
                       
-                      {/* Filename */}
-                      <div className="flex-1 min-w-0">
+                      {/* Filename with tooltip */}
+                      <div className="flex-1 min-w-0" title={beat.title}>
                         <p className={`text-sm font-medium truncate ${
                           isCurrentBeat ? 'text-primary' : 'text-foreground'
-                        }`}>
-                          {beat.title}
+                        }`}
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {sanitizedName}
                         </p>
                       </div>
                       
                       {/* Duration */}
-                      <span className="text-sm text-muted-foreground flex-shrink-0 w-16 text-right">
-                        0:00
+                      <span className="text-sm text-muted-foreground flex-shrink-0 w-12 text-right">
+                        {duration}
                       </span>
                       
                       {/* File type */}
-                      <span className="text-sm text-muted-foreground flex-shrink-0 w-16">
-                        .wav
-                      </span>
-                      
-                      {/* File type (right aligned) - duplicate for layout */}
-                      <span className="text-sm text-muted-foreground flex-shrink-0 w-16 text-right hidden sm:block">
-                        .wav
+                      <span className="text-xs text-muted-foreground flex-shrink-0 w-12 text-right uppercase">
+                        .{fileExtension}
                       </span>
                     </div>
                   );
