@@ -180,13 +180,13 @@ export const SoundpackFilesUpload = ({
 
       {/* Files List */}
       {soundFilesMeta.length > 0 && (
-        <div className="border rounded-lg p-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
+        <div className="border rounded-lg p-2 sm:p-4">
+          <div className="flex justify-between items-center mb-2 sm:mb-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
               <h4 className="text-sm font-medium">
                 {soundFilesMeta.length} file{soundFilesMeta.length !== 1 ? 's' : ''}
               </h4>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground break-words max-w-full sm:max-w-none">
                 {getTotalSize()} • {getTotalDuration()}
               </span>
             </div>
@@ -201,7 +201,7 @@ export const SoundpackFilesUpload = ({
             </Button>
           </div>
 
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-[300px] pr-2 sm:pr-4">
             <div className="space-y-2">
               {soundFilesMeta.map((file, index) => (
                 <div
@@ -211,7 +211,7 @@ export const SoundpackFilesUpload = ({
                   onDragOver={(e) => handleItemDragOver(e, index)}
                   onDragEnd={handleItemDragEnd}
                   className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border bg-card transition-colors",
+                    "flex items-center gap-1 sm:gap-3 p-1 sm:p-3 rounded-lg border bg-card transition-colors w-full overflow-hidden",
                     draggedIndex === index && "opacity-50",
                     "hover:bg-accent cursor-move"
                   )}
@@ -221,7 +221,7 @@ export const SoundpackFilesUpload = ({
                   
                   <div className="flex-1 min-w-0">
                     {editingFileId === file.id ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2 w-full">
                         <Input
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
@@ -229,30 +229,30 @@ export const SoundpackFilesUpload = ({
                             if (e.key === "Enter") saveEdit(file.id);
                             if (e.key === "Escape") cancelEdit();
                           }}
-                          className="h-7 text-sm"
+                          className="h-7 text-sm flex-1 min-w-0"
                           autoFocus
                         />
-                        <Button size="sm" onClick={() => saveEdit(file.id)} className="h-7 px-2">
+                        <Button size="sm" onClick={() => saveEdit(file.id)} className="h-7 px-1 sm:px-2 text-xs">
                           Save
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-7 px-2">
+                        <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-7 px-1 sm:px-2 text-xs">
                           Cancel
                         </Button>
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
+                        <div className="flex items-center sm:justify-between w-full min-w-0">
+                          <p className="text-sm font-medium truncate flex-grow pr-1 sm:pr-2 max-w-[20ch] sm:max-w-none">{file.name}</p>
                           <button
                             onClick={() => startEditing(file)}
-                            className="text-muted-foreground hover:text-foreground flex-shrink-0 p-1 sm:p-0.5"
+                            className="text-muted-foreground hover:text-foreground flex-shrink-0 p-1 ml-auto sm:ml-0"
                           >
-                            <Edit2 size={16} className="sm:w-3 sm:h-3" />
+                            <Edit2 size={14} className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>{formatFileSize(file.size)}</span>
-                          {file.duration && <span>{formatDuration(file.duration)}</span>}
+                        <div className="flex items-center gap-1 sm:gap-3 text-xs text-muted-foreground mt-1 overflow-hidden">
+                          <span className="flex-shrink-0">{formatFileSize(file.size)}</span>
+                          {file.duration && <span className="flex-shrink-0">{formatDuration(file.duration)}</span>}
                         </div>
                       </>
                     )}
@@ -271,7 +271,7 @@ export const SoundpackFilesUpload = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => onFileRemove(file.id)}
-                    className="text-destructive hover:text-destructive flex-shrink-0"
+                    className="text-destructive hover:text-destructive flex-shrink-0 h-8 sm:h-9 px-2 sm:px-3"
                   >
                     <X size={16} />
                   </Button>

@@ -88,7 +88,7 @@ export const DetailTab = ({
         </div>
 
         <div>
-          <Label htmlFor="title">Beat Title *</Label>
+          <Label htmlFor="title">{beatDetails.category === 'Soundpack' ? 'Soundpack Title *' : 'Beat Title *'}</Label>
           <Input 
             id="title" 
             name="title"
