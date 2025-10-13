@@ -401,7 +401,7 @@ const SoundpackDetail = () => {
         {/* Bottom section: About and Included Files */}
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 lg:gap-12 mt-12">
           {/* Left: About */}
-          <div>
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold mb-4">About this Pack</h2>
             {soundpack.description ? (
               <p className="text-muted-foreground leading-relaxed">
@@ -413,7 +413,7 @@ const SoundpackDetail = () => {
           </div>
 
           {/* Right: Included Files */}
-          <div>
+          <div className="min-w-0 overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">
                 Included Files ({soundpackBeats?.length || 0})
