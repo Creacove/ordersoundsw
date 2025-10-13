@@ -203,263 +203,253 @@ const SoundpackDetail = () => {
     );
   }
 
+  const handlePlayAll = () => {
+    if (!soundpackBeats || soundpackBeats.length === 0) return;
+    
+    const firstBeat = soundpackBeats[0];
+    const beatData: Beat = {
+      ...firstBeat,
+      status: (firstBeat.status || 'published') as 'draft' | 'published',
+      type: (firstBeat.type || 'beat') as 'beat' | 'soundpack_item',
+      producer_name: soundpack?.producer_name || 'Unknown Producer',
+      cover_image_url: firstBeat.cover_image || soundpack?.cover_art_url || '',
+      preview_url: firstBeat.audio_preview || '',
+      full_track_url: firstBeat.audio_file || '',
+      created_at: firstBeat.upload_date || new Date().toISOString(),
+    };
+    playBeat(beatData);
+  };
+
   return (
     <MainLayoutWithPlayer>
-      <div className="w-full max-w-7xl mx-auto px-4 py-4 sm:px-6 space-y-6 overflow-x-hidden">
-        {/* Back button and status */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="w-full max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
+            className="gap-2 text-lg"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            <ArrowLeft className="w-5 h-5" />
+            Soundpacks
           </Button>
           
-          {/* Draft status badge */}
-          {!soundpack.published && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleShare}
+          >
+            <Share2 className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Draft status and publish button for producers */}
+        {user?.id === soundpack.producer_id && !soundpack.published && (
+          <div className="mb-6 flex items-center gap-3">
             <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold">
               DRAFT
             </Badge>
-          )}
-          
-          {user?.id === soundpack.producer_id && !soundpack.published && (
             <Button
               variant="default"
               onClick={handlePublish}
               disabled={isPublishing || (soundpackBeats?.length || 0) === 0}
-              className="ml-auto"
+              size="sm"
             >
               <Upload className="w-4 h-4 mr-2" />
               {isPublishing ? 'Publishing...' : 'Publish Soundpack'}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Hero section with gradient overlay */}
-        <div className="relative rounded-xl overflow-hidden shadow-2xl">
-          <div className="relative aspect-[21/9] sm:aspect-[21/9] md:aspect-[2/1]">
-            <img
-              src={soundpack.cover_art_url || "/placeholder.svg"}
-              alt={soundpack.title}
-              className="w-full h-full object-cover"
-              loading="eager"
-            />
-            {/* Black gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-            
-            {/* Content overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:p-10">
-              <Badge 
-                className="mb-4 bg-primary text-primary-foreground shadow-lg flex items-center gap-1.5 px-3 py-1.5 w-fit"
-                variant="default"
-              >
-                <Package size={16} />
-                <span className="font-semibold">{soundpack.file_count} Files</span>
-              </Badge>
-              
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-3 drop-shadow-lg">
+        {/* Main content */}
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 lg:gap-12">
+          {/* Left: Cover Art */}
+          <div>
+            <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl">
+              <img
+                src={soundpack.cover_art_url || "/placeholder.svg"}
+                alt={soundpack.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Right: Content */}
+          <div className="space-y-6">
+            {/* Title section */}
+            <div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-2 tracking-tight">
                 {soundpack.title}
               </h1>
-              
               <Link
                 to={`/producer/${soundpack.producer_id}`}
-                className="inline-flex items-center gap-2 text-white/90 hover:text-white transition-colors group"
+                className="text-lg text-muted-foreground hover:text-foreground transition-colors inline-block mb-4"
               >
-                <User size={18} />
-                <span className="text-base font-medium group-hover:underline">by {soundpack.producer_name}</span>
+                by {soundpack.producer_name}
               </Link>
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                Sound Pack
+              </Badge>
+            </div>
+
+            {/* License selection and Add to Cart */}
+            <div className="bg-card/50 rounded-xl p-6 border border-border/50">
+              <div className="flex flex-wrap gap-3 items-center mb-4">
+                {availableLicenses.map((license) => {
+                  const isSelected = selectedLicense === license;
+                  const licensePrice = getLicensePrice(license);
+                  
+                  return (
+                    <button
+                      key={license}
+                      onClick={() => setSelectedLicense(license)}
+                      className={`flex flex-col items-center justify-center px-6 py-4 rounded-lg border-2 transition-all min-w-[110px] ${
+                        isSelected 
+                          ? 'bg-primary border-primary text-primary-foreground' 
+                          : 'bg-card/30 border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <span className="text-base font-semibold capitalize mb-1">
+                        {license}
+                      </span>
+                      <span className="text-xl font-bold">
+                        {formatCurrency(licensePrice, currency)}
+                      </span>
+                    </button>
+                  );
+                })}
+                
+                <Button 
+                  onClick={handleAddToCart}
+                  disabled={!canAddToCart || isInCart(soundpack.id, 'soundpack')}
+                  className="ml-auto h-auto px-8 py-4 text-lg font-semibold"
+                  size="lg"
+                >
+                  Add to Cart
+                </Button>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Selected: <span className="font-semibold capitalize text-foreground">{selectedLicense}</span>
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Left column - Description */}
-          <div className="lg:col-span-2 space-y-6">
-            {soundpack.description && (
-              <div>
-                <h2 className="text-xl font-bold mb-3">About this Pack</h2>
-                <p className="text-muted-foreground leading-relaxed text-base">{soundpack.description}</p>
-              </div>
+        {/* Bottom section: About and Included Files */}
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 lg:gap-12 mt-12">
+          {/* Left: About */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">About this Pack</h2>
+            {soundpack.description ? (
+              <p className="text-muted-foreground leading-relaxed">
+                {soundpack.description}
+              </p>
+            ) : (
+              <p className="text-muted-foreground italic">No description available.</p>
             )}
           </div>
 
-          {/* Right column - Pricing & License (Sticky on desktop) */}
-          <div className="lg:col-span-1">
-            <div className="lg:sticky lg:top-6 space-y-4">
-              {/* License selection */}
-              {availableLicenses.length > 1 && (
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-foreground">Select License</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availableLicenses.map((license) => {
-                      const isSelected = selectedLicense === license;
-                      
-                      return (
-                        <Button
-                          key={license}
-                          variant={isSelected ? 'default' : 'outline'}
-                          onClick={() => setSelectedLicense(license)}
-                          className="capitalize h-10 text-sm font-medium transition-all"
-                          size="sm"
-                        >
-                          {license}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
+          {/* Right: Included Files */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">
+                Included Files ({soundpackBeats?.length || 0})
+              </h2>
+              {soundpackBeats && soundpackBeats.length > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handlePlayAll}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Play All
+                </Button>
               )}
-              
-              {/* Price card */}
-              <Card className="border-2 border-primary/30 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm shadow-xl">
-                <CardContent className="p-6 space-y-5">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                      {availableLicenses.length === 1 ? `${availableLicenses[0]} License` : 'Price'}
-                    </p>
-                    <p className="text-4xl font-bold text-foreground tracking-tight">
-                      {formatCurrency(price, currency)}
-                    </p>
-                  </div>
-
-                  {soundpack.purchase_count > 0 && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="flex -space-x-1">
-                        {[...Array(Math.min(3, soundpack.purchase_count))].map((_, i) => (
-                          <div key={i} className="w-6 h-6 rounded-full bg-primary/20 border-2 border-card" />
-                        ))}
-                      </div>
-                      <span className="font-medium">{soundpack.purchase_count} {soundpack.purchase_count === 1 ? 'purchase' : 'purchases'}</span>
-                    </div>
-                  )}
-
-                  <Button 
-                    onClick={handleAddToCart}
-                    disabled={!canAddToCart || isInCart(soundpack.id, 'soundpack')}
-                    className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                    size="lg"
-                  >
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    {!canAddToCart ? 'Not Available' : isInCart(soundpack.id, 'soundpack') ? 'In Cart' : 'Add to Cart'}
-                  </Button>
+            </div>
+            
+            {beatsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full" />
+                ))}
+              </div>
+            ) : soundpackBeats && soundpackBeats.length > 0 ? (
+              <div className="space-y-1">
+                {soundpackBeats.map((beat, index) => {
+                  const isCurrentBeat = currentBeat?.id === beat.id;
+                  const isCurrentPlaying = isCurrentBeat && isPlaying;
                   
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleShare}
-                    className="w-full text-muted-foreground hover:text-foreground"
-                  >
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-
-        {/* Included files */}
-        <div className="mt-6 sm:mt-8">
-          <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
-            <Music size={20} className="flex-shrink-0" />
-            <span>Included Files ({soundpackBeats?.length || 0})</span>
-          </h2>
-          
-          {beatsLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : soundpackBeats && soundpackBeats.length > 0 ? (
-            <div className="space-y-2">
-              {soundpackBeats.map((beat, index) => {
-                const isCurrentBeat = currentBeat?.id === beat.id;
-                const isCurrentPlaying = isCurrentBeat && isPlaying;
-                
-                return (
-                  <Card 
-                    key={beat.id}
-                    className={`transition-all duration-200 hover:bg-muted/30 ${
-                      isCurrentBeat ? 'border-primary bg-primary/5' : ''
-                    }`}
-                  >
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        {/* Play button */}
-                        <Button
-                          size="icon"
-                          variant={isCurrentBeat ? "default" : "outline"}
-                          className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9"
-                          onClick={() => {
-                            if (isCurrentBeat) {
-                              togglePlayPause();
-                            } else {
-                              const beatData: Beat = {
-                                ...beat,
-                                status: (beat.status || 'published') as 'draft' | 'published',
-                                type: (beat.type || 'beat') as 'beat' | 'soundpack_item',
-                                producer_name: soundpack.producer_name || 'Unknown Producer',
-                                cover_image_url: beat.cover_image || soundpack.cover_art_url || '',
-                                preview_url: beat.audio_preview || '',
-                                full_track_url: beat.audio_file || '',
-                                created_at: beat.upload_date || new Date().toISOString(),
-                              };
-                              playBeat(beatData);
-                            }
-                          }}
-                        >
-                          {isCurrentPlaying ? (
-                            <Pause className="w-3.5 h-3.5" />
-                          ) : (
-                            <Play className="w-3.5 h-3.5" />
-                          )}
-                        </Button>
-                        
-                        {/* Track info */}
-                        <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
-                          <span className="text-muted-foreground font-mono text-[11px] sm:text-xs flex-shrink-0">
-                            {String(index + 1).padStart(2, '0')}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className={`font-medium text-sm sm:text-base leading-tight truncate ${
-                              isCurrentBeat ? 'text-primary' : 'text-foreground'
-                            }`}>
-                              {beat.title}
-                            </p>
-                            {beat.genre && (
-                              <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-                                {beat.genre}
-                                {beat.bpm && ` • ${beat.bpm} BPM`}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Playing indicator */}
-                        {isCurrentPlaying && (
-                          <div className="flex gap-0.5 items-end h-3.5 flex-shrink-0 ml-1">
-                            <div className="w-0.5 bg-primary animate-pulse h-2" style={{ animationDelay: '0ms' }} />
-                            <div className="w-0.5 bg-primary animate-pulse h-2.5" style={{ animationDelay: '150ms' }} />
-                            <div className="w-0.5 bg-primary animate-pulse h-3.5" style={{ animationDelay: '300ms' }} />
-                          </div>
+                  return (
+                    <div 
+                      key={beat.id}
+                      className={`flex items-center gap-4 px-2 py-3 rounded-lg transition-colors ${
+                        isCurrentBeat ? 'bg-primary/10' : 'hover:bg-muted/30'
+                      }`}
+                    >
+                      {/* Play button */}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="flex-shrink-0 w-8 h-8"
+                        onClick={() => {
+                          if (isCurrentBeat) {
+                            togglePlayPause();
+                          } else {
+                            const beatData: Beat = {
+                              ...beat,
+                              status: (beat.status || 'published') as 'draft' | 'published',
+                              type: (beat.type || 'beat') as 'beat' | 'soundpack_item',
+                              producer_name: soundpack.producer_name || 'Unknown Producer',
+                              cover_image_url: beat.cover_image || soundpack.cover_art_url || '',
+                              preview_url: beat.audio_preview || '',
+                              full_track_url: beat.audio_file || '',
+                              created_at: beat.upload_date || new Date().toISOString(),
+                            };
+                            playBeat(beatData);
+                          }
+                        }}
+                      >
+                        {isCurrentPlaying ? (
+                          <Pause className="w-4 h-4" />
+                        ) : (
+                          <Play className="w-4 h-4" />
                         )}
+                      </Button>
+                      
+                      {/* Filename */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${
+                          isCurrentBeat ? 'text-primary' : 'text-foreground'
+                        }`}>
+                          {beat.title}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
+                      
+                      {/* Duration */}
+                      <span className="text-sm text-muted-foreground flex-shrink-0 w-16 text-right">
+                        0:00
+                      </span>
+                      
+                      {/* File type */}
+                      <span className="text-sm text-muted-foreground flex-shrink-0 w-16">
+                        .wav
+                      </span>
+                      
+                      {/* File type (right aligned) - duplicate for layout */}
+                      <span className="text-sm text-muted-foreground flex-shrink-0 w-16 text-right hidden sm:block">
+                        .wav
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
                 <Music size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground">No files found in this soundpack.</p>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </MainLayoutWithPlayer>
