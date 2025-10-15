@@ -1,10 +1,10 @@
 
-import { 
-  Home, 
-  TrendingUp, 
-  Clock, 
-  List, 
-  Heart, 
+import {
+  Home,
+  TrendingUp,
+  Clock,
+  List,
+  Heart,
   LayoutGrid,
   Music,
   LayoutDashboard,
@@ -17,9 +17,11 @@ import {
   ShoppingCart,
   KeyRound,
   Users,
-  Gamepad2
+  Gamepad2,
+  Share2
 } from "lucide-react";
 import { User as UserType } from "@/types";
+import { isReferralEnabled } from "@/utils/featureFlags";
 
 export const getSidebarSections = (user: UserType | null, handleSignOut: () => void) => {
   const sections = [];
@@ -86,6 +88,7 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       items: [
         { icon: User, title: "Profile", href: user.role === "producer" ? `/producer/${user.id}` : `/buyer/${user.id}` },
         { icon: Settings, title: "Settings", href: user.role === "producer" ? "/producer/settings" : "/settings" },
+        ...(isReferralEnabled() ? [{ icon: Share2, title: "Invite & Earn", href: "/referrals" }] : []),
         { icon: LogOut, title: "Sign Out", href: "#", onClick: handleSignOut },
       ]
     });

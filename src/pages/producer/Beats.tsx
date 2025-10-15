@@ -165,10 +165,10 @@ export default function ProducerBeats() {
       if (error) {
         throw new Error(error.message);
       }
-      
+
       toast.success('Beat deleted successfully');
-      // Update the local beats list after deletion
-      setProducerBeats(prev => prev.filter(beat => beat.id !== selectedBeatId));
+      // Refresh beats from API instead of just updating local state
+      await loadProducerBeats();
       // Set flag for other components/tabs
       sessionStorage.setItem('beats_needs_refresh', 'true');
     } catch (error) {
