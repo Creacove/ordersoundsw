@@ -44,6 +44,7 @@ import ProtectedProducerRoute from "./components/auth/ProtectedProducerRoute";
 import ProtectedAdminRoute from "./components/auth/ProtectedAdminRoute";
 import Sandbox from "./pages/Sandbox";
 import Licenses from "./pages/Licenses";
+import InviteAndEarn from "./pages/referrals/InviteAndEarn";
 
 // Lazy load admin dashboard to avoid affecting main app performance
 import { lazy, Suspense } from "react";
@@ -115,6 +116,10 @@ const AppContent = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/producer-activation" element={<ProducerActivation />} />
+            
+            {/* Referral Routes */}
+            <Route path="/referrals" element={<InviteAndEarn />} />
+            <Route path="/invite" element={<Navigate to="/referrals" replace />} />
 
             {/* Library Routes */}
             <Route path="/library" element={<Library />} />

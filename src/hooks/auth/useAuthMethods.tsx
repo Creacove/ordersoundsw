@@ -164,11 +164,11 @@ export const useAuthMethods = ({
     }
   };
 
-  const signup = async (email: string, password: string, name: string, role: 'buyer' | 'producer') => {
+  const signup = async (email: string, password: string, name: string, role: 'buyer' | 'producer', referralCode?: string | null) => {
     setIsLoading(true);
     try {
       setAuthError(null);
-      console.log("Attempting signup with:", { email, name, role });
+      console.log("Attempting signup with:", { email, name, role, hasReferral: !!referralCode });
       
       // Check if user already exists
       const { data: existingUser, error: checkError } = await supabase
@@ -235,10 +235,33 @@ export const useAuthMethods = ({
           });
         } else {
           console.log("User profile created successfully");
+          
+          // Create referral record if referral code was provided
+          if (referralCode) {
+            try {
+              const { error: refError } = await supabase.functions.invoke('referral-operations', {
+                body: {
+                  action: 'create',
+                  referralCode,
+                  newUserId: data.user.id,
+                  newUserEmail: email
+                }
+              });
+              
+              if (!refError) {
+                console.log("Referral record created successfully");
+              }
+            } catch (refError) {
+              console.warn("Could not create referral record:", refError);
+              // Non-critical, continue with signup flow
+            }
+          }
+          
           toast.success('Account created successfully!');
           await logSessionEvent('signup_success', { 
             user_id: data.user.id,
-            role: role
+            role: role,
+            has_referral: !!referralCode
           });
           
           // Try to sign in immediately

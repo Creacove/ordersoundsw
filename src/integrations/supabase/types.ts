@@ -631,6 +631,99 @@ export type Database = {
           },
         ]
       }
+      referral_logs: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          referral_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          referral_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          referral_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_logs_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          referred_email: string | null
+          referred_user_id: string | null
+          referrer_user_id: string
+          reward_points: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id: string
+          reward_points?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id?: string
+          reward_points?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_user_id_fkey"
+            columns: ["referrer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       royalty_splits: {
         Row: {
           beat_id: string
@@ -875,11 +968,15 @@ export type Database = {
           is_producer_of_week: boolean | null
           music_interests: string[] | null
           notifications_opt_in: boolean | null
+          onboarding_completed: boolean | null
           password_hash: string
           paystack_id: string | null
           paystack_split_code: string | null
           paystack_subaccount_code: string | null
           profile_picture: string | null
+          referral_code: string | null
+          referral_points: number | null
+          referred_count: number | null
           role: string
           settings: Json | null
           stage_name: string | null
@@ -904,11 +1001,15 @@ export type Database = {
           is_producer_of_week?: boolean | null
           music_interests?: string[] | null
           notifications_opt_in?: boolean | null
+          onboarding_completed?: boolean | null
           password_hash: string
           paystack_id?: string | null
           paystack_split_code?: string | null
           paystack_subaccount_code?: string | null
           profile_picture?: string | null
+          referral_code?: string | null
+          referral_points?: number | null
+          referred_count?: number | null
           role: string
           settings?: Json | null
           stage_name?: string | null
@@ -933,11 +1034,15 @@ export type Database = {
           is_producer_of_week?: boolean | null
           music_interests?: string[] | null
           notifications_opt_in?: boolean | null
+          onboarding_completed?: boolean | null
           password_hash?: string
           paystack_id?: string | null
           paystack_split_code?: string | null
           paystack_subaccount_code?: string | null
           profile_picture?: string | null
+          referral_code?: string | null
+          referral_points?: number | null
+          referred_count?: number | null
           role?: string
           settings?: Json | null
           stage_name?: string | null
@@ -958,6 +1063,15 @@ export type Database = {
         Args: { beat_id_param: string; user_id_param: string }
         Returns: undefined
       }
+      award_referral_success: {
+        Args: { referral_uuid: string; reward_points?: number }
+        Returns: {
+          message: string
+          referrer_id: string
+          success: boolean
+          total_points: number
+        }[]
+      }
       check_follow_status: {
         Args: { p_followee_id: string; p_follower_id: string }
         Returns: boolean
@@ -973,6 +1087,10 @@ export type Database = {
       follow_producer: {
         Args: { p_followee_id: string; p_follower_id: string }
         Returns: undefined
+      }
+      generate_referral_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_complete_schema: {
         Args: Record<PropertyKey, never>
@@ -995,11 +1113,15 @@ export type Database = {
           is_producer_of_week: boolean | null
           music_interests: string[] | null
           notifications_opt_in: boolean | null
+          onboarding_completed: boolean | null
           password_hash: string
           paystack_id: string | null
           paystack_split_code: string | null
           paystack_subaccount_code: string | null
           profile_picture: string | null
+          referral_code: string | null
+          referral_points: number | null
+          referred_count: number | null
           role: string
           settings: Json | null
           stage_name: string | null

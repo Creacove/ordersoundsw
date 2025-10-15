@@ -34,6 +34,11 @@ export interface User {
   music_interests?: string[];
   // Add favorites field
   favorites?: Array<{beat_id: string, added_at: string}>;
+  // Referral system fields
+  referral_code?: string;
+  referral_points?: number;
+  referred_count?: number;
+  onboarding_completed?: boolean;
 }
 
 export interface Beat {

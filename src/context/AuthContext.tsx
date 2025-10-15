@@ -13,7 +13,7 @@ interface AuthContextType {
   currency: 'NGN' | 'USD';
   setCurrency: (currency: 'NGN' | 'USD') => void;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, role: 'buyer' | 'producer') => Promise<void>;
+  signup: (email: string, password: string, name: string, role: 'buyer' | 'producer', referralCode?: string | null) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   updateUserInfo: (user: User) => void;

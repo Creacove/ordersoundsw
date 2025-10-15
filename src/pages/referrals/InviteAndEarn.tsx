@@ -1,0 +1,112 @@
+import { useState, useEffect } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { ReferralStatsCard } from "@/components/referrals/ReferralStatsCard";
+import { ReferralLinkSection } from "@/components/referrals/ReferralLinkSection";
+import { ReferralHistoryTable } from "@/components/referrals/ReferralHistoryTable";
+import { ReferralRulesCard } from "@/components/referrals/ReferralRulesCard";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import type { ReferralStats, Referral } from "@/types/referral";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
+
+export default function InviteAndEarn() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<ReferralStats | null>(null);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch stats and referral history
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const statsUrl = `https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=stats`;
+        const statsResponse = await fetch(statsUrl, {
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData);
+        }
+
+        const listUrl = `https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=list`;
+        const listResponse = await fetch(listUrl, {
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (listResponse.ok) {
+          const refData = await listResponse.json();
+          setReferrals(Array.isArray(refData) ? refData : []);
+        }
+      } catch (error) {
+        console.error('Error fetching referral data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user, navigate]);
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="container py-8 max-w-6xl mx-auto">
+          <Skeleton className="h-10 w-48 mb-8" />
+          <div className="grid gap-4 md:grid-cols-3 mb-8">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+          <Skeleton className="h-64 mb-8" />
+          <Skeleton className="h-96" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <MainLayout>
+        <div className="container py-8 max-w-6xl mx-auto text-center">
+          <p>Unable to load referral data. Please try again later.</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div className="container py-8 max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Invite & Earn</h1>
+          <p className="text-muted-foreground">
+            Share OrderSounds with friends and earn points for every successful referral
+          </p>
+        </div>
+
+        <ReferralStatsCard stats={stats} />
+        <ReferralLinkSection referralCode={stats.referralCode} />
+        <ReferralHistoryTable referrals={referrals} />
+        <ReferralRulesCard />
+      </div>
+    </MainLayout>
+  );
+}

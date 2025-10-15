@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 
 export default function Signup() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +22,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState<"buyer" | "producer">("buyer");
+  const [referralCode, setReferralCode] = useState<string | null>(null);
   const [errors, setErrors] = useState({
     name: "",
     email: "",
@@ -28,6 +30,15 @@ export default function Signup() {
     confirmPassword: ""
   });
   const { signup, isLoading } = useAuth();
+
+  // Extract referral code from URL on mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [location.search]);
 
   const validateForm = () => {
     let valid = true;
@@ -73,7 +84,7 @@ export default function Signup() {
     
     if (validateForm()) {
       try {
-        await signup(email, password, name, role);
+        await signup(email, password, name, role, referralCode);
       } catch (error: any) {
         toast.error(error.message || "Failed to sign up");
       }
