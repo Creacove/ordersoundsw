@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
           .from('users')
           .select('id')
           .eq('referral_code', referralCode)
-          .single();
+          .maybeSingle();
 
         if (refError || !referrer) {
           return new Response(
@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
           .select('id, referrer_user_id')
           .eq('referred_user_id', userId)
           .eq('status', 'pending')
-          .single();
+          .maybeSingle();
 
         if (findError || !referral) {
           return new Response(
