@@ -77,11 +77,12 @@ BEGIN
 END;
 $$;
 
--- Create trigger for favorites count sync
+-- Create trigger for favorites count sync (only when favorites actually changes)
 DROP TRIGGER IF EXISTS sync_favorites_count_trigger ON public.users;
 CREATE TRIGGER sync_favorites_count_trigger
-  AFTER INSERT OR UPDATE OR DELETE ON public.users
+  AFTER INSERT OR UPDATE ON public.users
   FOR EACH ROW
+  WHEN (OLD.favorites IS DISTINCT FROM NEW.favorites)
   EXECUTE FUNCTION public.sync_favorites_count();
 
 -- Phase 3: Create trigger function to auto-increment purchase count

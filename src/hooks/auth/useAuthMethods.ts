@@ -165,8 +165,7 @@ export const useAuthMethods = ({
             full_name: name,
             email: email,
             role: role,
-            status: 'active',
-            password_hash: 'managed-by-supabase'
+            status: 'active'
           });
 
         if (profileError) {
@@ -294,7 +293,6 @@ export const useAuthMethods = ({
               full_name: data.name || userData.user.user_metadata?.full_name || '',
               email: userData.user.email || '',
               role: data.role || 'buyer',
-              password_hash: 'managed-by-supabase',
               profile_picture: data.avatar_url || userData.user.user_metadata?.avatar_url || '',
               bio: data.bio || userData.user.user_metadata?.bio || '',
               country: data.country || userData.user.user_metadata?.country || 'Nigeria',
