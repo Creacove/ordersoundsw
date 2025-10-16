@@ -969,7 +969,6 @@ export type Database = {
           music_interests: string[] | null
           notifications_opt_in: boolean | null
           onboarding_completed: boolean | null
-          password_hash: string
           paystack_id: string | null
           paystack_split_code: string | null
           paystack_subaccount_code: string | null
@@ -1002,7 +1001,6 @@ export type Database = {
           music_interests?: string[] | null
           notifications_opt_in?: boolean | null
           onboarding_completed?: boolean | null
-          password_hash: string
           paystack_id?: string | null
           paystack_split_code?: string | null
           paystack_subaccount_code?: string | null
@@ -1035,7 +1033,6 @@ export type Database = {
           music_interests?: string[] | null
           notifications_opt_in?: boolean | null
           onboarding_completed?: boolean | null
-          password_hash?: string
           paystack_id?: string | null
           paystack_split_code?: string | null
           paystack_subaccount_code?: string | null
@@ -1114,7 +1111,6 @@ export type Database = {
           music_interests: string[] | null
           notifications_opt_in: boolean | null
           onboarding_completed: boolean | null
-          password_hash: string
           paystack_id: string | null
           paystack_split_code: string | null
           paystack_subaccount_code: string | null
