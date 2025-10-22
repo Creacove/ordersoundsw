@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ReferralStatsCard } from "@/components/referrals/ReferralStatsCard";
 import { ReferralLinkSection } from "@/components/referrals/ReferralLinkSection";
-import { ReferralHistoryTable } from "@/components/referrals/ReferralHistoryTable";
+import { TasksSection } from "@/components/referrals/TasksSection";
 import { ReferralRulesCard } from "@/components/referrals/ReferralRulesCard";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ export default function InviteAndEarn() {
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
+  const [todaysPoints, setTodaysPoints] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -54,6 +55,19 @@ export default function InviteAndEarn() {
         if (listResponse.ok) {
           const refData = await listResponse.json();
           setReferrals(Array.isArray(refData) ? refData : []);
+          
+          // Calculate today's points from successful referrals
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const pointsToday = (Array.isArray(refData) ? refData : [])
+            .filter((ref: Referral) => {
+              const refDate = new Date(ref.created_at);
+              refDate.setHours(0, 0, 0, 0);
+              return ref.status === 'successful' && refDate.getTime() === today.getTime();
+            })
+            .reduce((sum: number, ref: Referral) => sum + (ref.reward_points || 0), 0);
+          
+          setTodaysPoints(pointsToday);
         }
       } catch (error) {
         console.error('Error fetching referral data:', error);
@@ -102,9 +116,9 @@ export default function InviteAndEarn() {
           </p>
         </div>
 
-        <ReferralStatsCard stats={stats} />
+        <ReferralStatsCard stats={stats} todaysPoints={todaysPoints} />
         <ReferralLinkSection referralCode={stats.referralCode} />
-        <ReferralHistoryTable referrals={referrals} />
+        <TasksSection />
         <ReferralRulesCard />
       </div>
     </MainLayout>

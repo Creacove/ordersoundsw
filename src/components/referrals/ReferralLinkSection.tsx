@@ -2,10 +2,9 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Share2, MessageCircle } from "lucide-react";
+import { Copy, Share2 } from "lucide-react";
 import { referralService } from "@/services/referralService";
 import { toast } from "@/hooks/use-toast";
-import { FaXTwitter } from "react-icons/fa6";
 
 interface ReferralLinkSectionProps {
   referralCode: string;
@@ -23,10 +22,6 @@ export const ReferralLinkSection = ({ referralCode }: ReferralLinkSectionProps) 
       description: "Referral link copied to clipboard",
     });
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleShare = (platform: 'twitter' | 'whatsapp') => {
-    referralService.shareReferralLink(platform, referralCode);
   };
 
   return (
@@ -55,31 +50,6 @@ export const ReferralLinkSection = ({ referralCode }: ReferralLinkSectionProps) 
           >
             {copied ? "Copied!" : <><Copy className="h-4 w-4 mr-2" /> Copy</>}
           </Button>
-        </div>
-
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => handleShare('twitter')}
-            variant="outline"
-            className="flex-1"
-          >
-            <FaXTwitter className="h-4 w-4 mr-2" />
-            Share on X
-          </Button>
-          <Button 
-            onClick={() => handleShare('whatsapp')}
-            variant="outline"
-            className="flex-1"
-          >
-            <MessageCircle className="h-4 w-4 mr-2" />
-            Share on WhatsApp
-          </Button>
-        </div>
-
-        <div className="bg-muted/50 p-4 rounded-lg">
-          <p className="text-sm">
-            <strong>Your Referral Code:</strong> <code className="bg-background px-2 py-1 rounded font-mono">{referralCode}</code>
-          </p>
         </div>
       </div>
     </Card>
