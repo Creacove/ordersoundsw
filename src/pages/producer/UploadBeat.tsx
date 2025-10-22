@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isBeatPublished } from "@/services/beats";
 import { useUploadBeatTabs } from "@/hooks/useUploadBeatTabs";
 import { validateCurrentTab } from "@/utils/uploadBeatValidation";
+import { useOnboardingTracker } from "@/hooks/useOnboardingTracker";
 
 export default function UploadBeat() {
   const tabOrder = ["details", "licensing", "files", "pricing", "royalties"];
@@ -61,6 +62,7 @@ export default function UploadBeat() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { checkAndCompleteOnboarding } = useOnboardingTracker();
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
   const [isEditMode, setIsEditMode] = useState(false);
   const [beatId, setBeatId] = useState<string | null>(null);
@@ -421,6 +423,12 @@ export default function UploadBeat() {
       
       if (result.success) {
         toast.success(isEditMode ? "Beat updated successfully!" : "Beat published successfully!", { id: "publishing-beat" });
+        
+        // Check onboarding completion after successful upload
+        if (!isEditMode) {
+          checkAndCompleteOnboarding();
+        }
+        
         navigate("/producer/beats");
       } else {
         throw new Error(result.error || "Failed to upload beat");

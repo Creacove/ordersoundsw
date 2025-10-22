@@ -236,7 +236,7 @@ export const useAuthMethods = ({
           // Create referral record if referral code was provided
           if (referralCode) {
             try {
-              const { error: refError } = await supabase.functions.invoke('referral-operations', {
+              const { data: refData, error: refError } = await supabase.functions.invoke('referral-operations', {
                 body: {
                   action: 'create',
                   referralCode,
@@ -245,12 +245,29 @@ export const useAuthMethods = ({
                 }
               });
               
-              if (!refError) {
-                console.log("Referral record created successfully");
+              if (refError) {
+                console.error("Referral creation failed:", refError);
+                toast.error("Could not link referral code. Please contact support if this persists.");
+              } else {
+                console.log("Referral record created successfully", refData);
+                
+                // Verify referral was actually created
+                const { data: verifyData, error: verifyError } = await supabase
+                  .from('referrals')
+                  .select('id')
+                  .eq('referred_user_id', data.user.id)
+                  .single();
+                
+                if (verifyError || !verifyData) {
+                  console.error("Referral verification failed:", verifyError);
+                  toast.error("Referral link may not have been recorded. Please contact support.");
+                } else {
+                  console.log("Referral verified:", verifyData.id);
+                }
               }
             } catch (refError) {
-              console.warn("Could not create referral record:", refError);
-              // Non-critical, continue with signup flow
+              console.error("Exception creating referral record:", refError);
+              toast.error("Could not link referral code. Please contact support if this persists.");
             }
           }
           

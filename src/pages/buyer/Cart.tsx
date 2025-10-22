@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ShoppingCart } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { toast } from 'sonner';
+import { useOnboardingTracker } from "@/hooks/useOnboardingTracker";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PaymentHandler } from '@/components/payment/PaymentHandler';
@@ -22,6 +23,7 @@ import SoundpackCartItemCard from '@/components/cart/SoundpackCartItemCard';
 export default function Cart() {
   const { cartItems, removeFromCart, clearCart, totalAmount, itemCount, isLoading } = useCartWithBeatDetailsOptimized();
   const { user, currency } = useAuth();
+  const { checkAndCompleteOnboarding } = useOnboardingTracker();
   
   console.log('Cart Page - itemCount:', itemCount, 'cartItems:', cartItems, 'isLoading:', isLoading);
   const navigate = useNavigate();
@@ -133,6 +135,9 @@ export default function Cart() {
   // Handle successful payment
   const handlePaymentSuccess = () => {
     clearCart();
+    
+    // Check onboarding completion after successful purchase
+    checkAndCompleteOnboarding();
     
     localStorage.setItem('purchaseSuccess', 'true');
     localStorage.setItem('purchaseTime', Date.now().toString());
