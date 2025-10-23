@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Music } from "lucide-react";
+import { Music, TrendingUp, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FollowButton } from "@/components/buttons/FollowButton";
 import { FollowerCount } from "@/components/producer/profile/FollowerCount";
@@ -88,13 +88,33 @@ export function ProducersList({
           </Avatar>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center">
+            <div className="flex items-center flex-wrap gap-2">
               <h3 className="font-medium text-base sm:text-lg text-white truncate">
                 {producer.stage_name || producer.full_name}
               </h3>
-              {searchQuery && (producer.stage_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+
+              {/* Activity indicators based on beat count */}
+              {producer.beatCount > 20 && (
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Very Active
+                </Badge>
+              )}
+              {producer.beatCount > 10 && producer.beatCount <= 20 && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  Active
+                </Badge>
+              )}
+              {producer.beatCount > 0 && producer.beatCount <= 10 && (
+                <Badge variant="outline" className="text-xs">
+                  Getting Started
+                </Badge>
+              )}
+
+              {searchQuery && (producer.stage_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               producer.full_name?.toLowerCase().includes(searchQuery.toLowerCase())) && (
-                <Badge variant="secondary" className="ml-2 bg-purple-700/30 text-purple-300 text-xs">Match</Badge>
+                <Badge variant="secondary" className="bg-purple-700/30 text-purple-300 text-xs">Match</Badge>
               )}
             </div>
             <div className="text-xs sm:text-sm text-gray-400 flex flex-wrap items-center gap-2 sm:gap-4 mt-1">

@@ -27,56 +27,64 @@ export default function Producers() {
   const { producers, isLoading } = useProducers();
   
   useEffect(() => {
-    document.title = "Producers | OrderSOUNDS";
+    document.title = "Active Producers | OrderSOUNDS";
   }, []);
 
-  // Get only followed producers with improved caching
+  // Get only followed producers who have published beats
   const { data: followedProducers, isLoading: followedLoading } = useQuery({
     queryKey: ['followedProducers', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
+
       try {
         // Get producers that the user follows
         const { data: follows, error: followsError } = await supabase
           .from('followers')
           .select('followee_id')
           .eq('follower_id', user.id);
-          
+
         if (followsError || !follows.length) return [];
-        
+
         const followeeIds = follows.map(follow => follow.followee_id);
-        
+
+        // Get followed producers (reliable approach)
         const { data: producersData, error } = await supabase
           .from('users')
           .select('id, stage_name, full_name, bio, profile_picture, follower_count')
           .eq('role', 'producer')
           .in('id', followeeIds);
-          
+
         if (error) throw error;
         if (!producersData) return [];
-        
-        // Get beat counts in parallel
+
+        // Get beat counts for followed producers
         const producersWithBeats = await Promise.all(
           producersData.map(async (producer) => {
             const { count, error: beatError } = await supabase
               .from('beats')
               .select('id', { count: 'exact', head: true })
-              .eq('producer_id', producer.id);
+              .eq('producer_id', producer.id)
+              .eq('status', 'published')
+              .is('soundpack_id', null);
 
             if (beatError) {
               console.error('Error getting beat count:', beatError);
               return { ...producer, beatCount: 0 };
             }
 
-            return { 
-              ...producer, 
+            return {
+              ...producer,
               beatCount: count || 0
             };
           })
         );
-        
-        return producersWithBeats;
+
+        // Filter out followed producers with 0 beats and sort by activity
+        const activeFollowedProducers = producersWithBeats
+          .filter(producer => producer.beatCount > 0)
+          .sort((a, b) => b.beatCount - a.beatCount);
+
+        return activeFollowedProducers;
       } catch (error) {
         console.error("Error fetching followed producers:", error);
         return [];
@@ -149,7 +157,7 @@ export default function Producers() {
       <MainLayout>
         <div className="page-container bg-background text-foreground">
           <div className="w-full max-w-7xl mx-auto">
-            <SectionTitle title="Discover Producers" className="header-spacing" />
+            <SectionTitle title="Discover Active Producers" className="header-spacing" />
             
             <div className="w-full flex items-center justify-center mb-6">
               <div className="relative w-full max-w-md">
@@ -202,8 +210,8 @@ export default function Producers() {
     <MainLayout>
       <div className="page-container bg-background text-foreground">
         <div className="w-full max-w-7xl mx-auto">
-          <SectionTitle 
-            title="Discover Producers" 
+          <SectionTitle
+            title="Discover Active Producers"
             className="header-spacing"
           />
 

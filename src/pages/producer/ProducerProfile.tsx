@@ -2,11 +2,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase, mapSupabaseBeats } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
-import { Music, Share2, Users, Calendar } from 'lucide-react';
+import { Music, Share2, Users, Calendar, Package } from 'lucide-react';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BeatCardCompact } from '@/components/marketplace/BeatCardCompact';
+import { SoundpackCard } from '@/components/marketplace/SoundpackCard';
 import { FollowButton } from '@/components/buttons/FollowButton';
 import { FollowerCount } from '@/components/producer/profile/FollowerCount';
 import { useAuth } from '@/context/AuthContext';
@@ -81,17 +82,42 @@ export default function ProducerProfile() {
         `)
         .eq('producer_id', producerId)
         .eq('status', 'published')
+        .is('soundpack_id', null) // Exclude beats that are part of soundpacks
         .order('upload_date', { ascending: false });
 
       if (error) {
         console.error('Error fetching producer beats:', error);
         throw error;
       }
-      
+
       // Use the mapSupabaseBeats helper function to convert database beats to our Beat type
       return mapSupabaseBeats(data);
     },
     enabled: !!producerId && activeTab === 'beats',
+  });
+
+  const { data: soundpacks = [], isLoading: isLoadingSoundpacks } = useQuery({
+    queryKey: ['producerSoundpacks', producerId, activeTab],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('soundpacks')
+        .select('*')
+        .eq('producer_id', producerId)
+        .eq('published', true) // Only show published soundpacks on public profile
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching producer soundpacks:', error);
+        throw error;
+      }
+
+      // Transform soundpacks and add producer name
+      return (data || []).map(sp => ({
+        ...sp,
+        producer_name: producer?.stage_name || producer?.full_name || 'Unknown Producer'
+      }));
+    },
+    enabled: !!producerId && !!producer && activeTab === 'soundpacks',
   });
   
   const isOwnProfile = user?.id === producerId;
@@ -198,6 +224,7 @@ export default function ProducerProfile() {
         <Tabs defaultValue="beats" value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="beats">Beats</TabsTrigger>
+            <TabsTrigger value="soundpacks">Soundpacks</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
           
@@ -232,7 +259,44 @@ export default function ProducerProfile() {
               />
             )}
           </TabsContent>
-          
+
+          <TabsContent value="soundpacks" className="pt-6">
+            <SectionTitle
+              title="Soundpacks"
+              icon={<Package className="size-5" />}
+            />
+
+            {isLoadingSoundpacks ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-card animate-pulse rounded-lg h-56"></div>
+                ))}
+              </div>
+            ) : soundpacks.length > 0 ? (
+              <div className="grid grid-cols-2 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {soundpacks.map((soundpack) => (
+                  <SoundpackCard
+                    key={soundpack.id}
+                    soundpack={soundpack}
+                    showLicenseSelector={true}
+                    isProducerOwned={isOwnProfile}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Package}
+                title="No soundpacks available"
+                description={isOwnProfile
+                  ? "You haven't created any soundpacks yet. Create your first soundpack to offer curated collections!"
+                  : "This producer hasn't created any soundpacks yet."
+                }
+                actionLabel={isOwnProfile ? "Create Your First Soundpack" : undefined}
+                actionHref={isOwnProfile ? "/producer/upload" : undefined}
+              />
+            )}
+          </TabsContent>
+
           <TabsContent value="about" className="pt-6">
             <SectionTitle title="About" />
             

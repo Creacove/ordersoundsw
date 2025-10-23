@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw, X, TrendingUp, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { FollowButton } from "@/components/buttons/FollowButton";
 import { FollowerCount } from "@/components/producer/profile/FollowerCount";
@@ -64,13 +65,34 @@ export function SuggestedProducers({ producers, onDismiss, onShuffle }: Suggeste
                 </AvatarFallback>
               </Avatar>
               
-              <h3 className="text-responsive-base font-semibold mb-1 text-center truncate max-w-full">
-                {producer.stage_name || producer.full_name}
-              </h3>
-              
+              <div className="flex flex-col items-center gap-1 mb-1">
+                <h3 className="text-responsive-base font-semibold text-center truncate max-w-full">
+                  {producer.stage_name || producer.full_name}
+                </h3>
+
+                {/* Activity indicators */}
+                {producer.beatCount > 20 && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs flex items-center gap-1">
+                    <TrendingUp className="h-2 w-2" />
+                    Very Active
+                  </Badge>
+                )}
+                {producer.beatCount > 10 && producer.beatCount <= 20 && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs flex items-center gap-1">
+                    <Zap className="h-2 w-2" />
+                    Active
+                  </Badge>
+                )}
+                {producer.beatCount > 0 && producer.beatCount <= 10 && (
+                  <Badge variant="outline" className="text-xs">
+                    Getting Started
+                  </Badge>
+                )}
+              </div>
+
               <div className="text-muted-foreground text-xs mb-3">
-                <FollowerCount 
-                  count={producer.follower_count || 0} 
+                <FollowerCount
+                  count={producer.follower_count || 0}
                   className="text-xs text-muted-foreground"
                 />
               </div>
