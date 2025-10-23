@@ -109,25 +109,20 @@ export function Topbar({ sidebarVisible = false }) {
     >
       <div className={cn(
         "flex items-center justify-between h-16 py-2",
-        isMobile ? "container mx-auto px-2 xs:px-4 sm:px-6" : "pr-6 pl-2"
+        isMobile ? "container mx-auto px-2 xs:px-4 sm:px-6" : "pr-6 pl-6"
       )}>
-        <div className="flex items-center gap-2">          
-          <Link to="/" className="flex items-center gap-2 relative">
-            {isMobile ? (
+        {/* Logo - Mobile only */}
+        {isMobile && (
+          <div className="flex items-center gap-2">          
+            <Link to="/" className="flex items-center gap-2 relative">
               <img 
                 src="/lovable-uploads/86ceb56c-c6e8-400c-8c94-ec40647db5bc.png" 
                 alt="OrderSOUNDS"
                 className="h-8 w-auto"
               />
-            ) : (
-              <img 
-                src="/lovable-uploads/a5b2cdfb-b365-4bf2-a812-07636101b39f.png" 
-                alt="OrderSOUNDS"
-                className="h-36 w-auto"
-              />
-            )}
-          </Link>
-        </div>
+            </Link>
+          </div>
+        )}
         
         <div className="flex items-center gap-3">
           {(!isAuthPage || user) && (

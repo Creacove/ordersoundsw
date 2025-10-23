@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -43,7 +44,9 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
       <div className={`flex flex-col flex-1 w-full transition-all duration-300 ${!isMobile && !hideSidebar ? (isCollapsed ? "md:ml-[80px]" : "md:ml-[240px]") : ""}`}>
         {/* Only show topbar if not explicitly hidden or if it's not an auth page with hideSidebar */}
         {!(isAuthPage && hideSidebar) && (
-          <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+          <div className={cn(!isMobile && !hideSidebar && (isCollapsed ? "ml-[80px]" : "ml-[240px]"))}>
+            <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+          </div>
         )}
         <main className="flex-1 w-full pb-32 md:pb-24">
           <div className="w-full flex flex-col">

@@ -61,22 +61,42 @@ export function UnifiedSidebar({
         isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
         isCollapsed ? "w-[80px]" : "w-[240px]",
         isMobile ? "shadow-lg" : "",
-        "mt-16" // Add top margin to prevent topbar overlap
+        isMobile ? "mt-16" : "" // Only add top margin on mobile
       )}>
-        <div className="flex items-center justify-end p-3 border-b border-[#272727]">
-          <div className="flex items-center gap-2">
-            {isMobile && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8" 
-                onClick={() => setIsOpen(false)}
-              >
-                <ChevronLeft size={16} />
-              </Button>
-            )}
+        {/* Logo section - Desktop only */}
+        {!isMobile && (
+          <div className="flex items-center justify-center p-4 border-b border-[#272727]">
+            <NavLink to="/" className="flex items-center">
+              {isCollapsed ? (
+                <img 
+                  src="/lovable-uploads/86ceb56c-c6e8-400c-8c94-ec40647db5bc.png" 
+                  alt="OrderSOUNDS"
+                  className="h-8 w-auto"
+                />
+              ) : (
+                <img 
+                  src="/lovable-uploads/a5b2cdfb-b365-4bf2-a812-07636101b39f.png" 
+                  alt="OrderSOUNDS"
+                  className="h-16 w-auto"
+                />
+              )}
+            </NavLink>
           </div>
-        </div>
+        )}
+        
+        {/* Mobile close button */}
+        {isMobile && (
+          <div className="flex items-center justify-end p-3 border-b border-[#272727]">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8" 
+              onClick={() => setIsOpen(false)}
+            >
+              <ChevronLeft size={16} />
+            </Button>
+          </div>
+        )}
         
         <div className="flex flex-col flex-1 gap-2 p-4 overflow-y-auto">
           {getSidebarContent().map((section, index) => (
