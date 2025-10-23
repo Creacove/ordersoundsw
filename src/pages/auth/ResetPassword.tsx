@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -10,6 +10,7 @@ import { Eye, EyeOff, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Logo } from "@/components/ui/Logo";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -133,9 +134,9 @@ export default function ResetPassword() {
   };
 
   return (
-    <MainLayout hideSidebar>
-      <div className="container relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
+    <MainLayout hideSidebar currentPath={location.pathname}>
+      <div className="container relative h-screen flex flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+        <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r overflow-hidden">
           <div className="absolute inset-0 bg-zinc-900">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-purple-800/80 to-zinc-900/90" />
             <img
@@ -147,7 +148,7 @@ export default function ResetPassword() {
           <div className="relative z-20 mt-auto">
             <div className="mb-4">
               <div className="w-12 h-1 bg-primary mb-3 rounded-full"></div>
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-2">OrderSounds</h2>
+              <Logo size="desktop" showText className="mb-2" />
               <p className="text-white/70">Your ultimate sound experience</p>
             </div>
             <blockquote className="space-y-2">
@@ -158,10 +159,13 @@ export default function ResetPassword() {
             </blockquote>
           </div>
         </div>
-        <div className="lg:p-8 flex items-center justify-center w-full min-h-[calc(100vh-4rem)]">
+        <div className="lg:p-8 flex items-center justify-center w-full h-full overflow-y-auto">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-purple-800/20 to-zinc-900/10 lg:hidden" />
           <Card className="mx-auto flex w-full flex-col justify-center sm:w-[350px] bg-background/95 backdrop-blur-sm border border-border/20 shadow-xl animate-fade-in relative z-10">
             <CardHeader className="space-y-1">
+              <div className="flex justify-center mb-4">
+                <Logo size="mobile" />
+              </div>
               <CardTitle className="text-2xl font-bold tracking-tight text-center">Reset Password</CardTitle>
               <CardDescription className="text-center">
                 Create a new password for your account

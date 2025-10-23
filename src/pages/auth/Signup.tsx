@@ -4,13 +4,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/context/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { toast } from "sonner";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export default function Signup() {
   const location = useLocation();
@@ -101,8 +102,8 @@ export default function Signup() {
 
   return (
     <MainLayout hideSidebar currentPath={location.pathname}>
-      <div className="container relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
+      <div className="container relative h-screen flex flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+        <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r overflow-hidden">
           <div className="absolute inset-0 bg-zinc-900">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-purple-800/80 to-zinc-900/90" />
             <img
@@ -114,7 +115,7 @@ export default function Signup() {
           <div className="relative z-20 mt-auto">
             <div className="mb-4">
               <div className="w-12 h-1 bg-primary mb-3 rounded-full"></div>
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-2">OrderSounds</h2>
+              <Logo size="desktop" showText className="mb-2" />
               <p className="text-white/70">Your ultimate sound experience</p>
             </div>
             <blockquote className="space-y-2">
@@ -125,69 +126,77 @@ export default function Signup() {
             </blockquote>
           </div>
         </div>
-        <div className="lg:p-8 flex items-center justify-center w-full min-h-[calc(100vh-4rem)]">
+        <div className="lg:p-8 flex items-center justify-center w-full h-full overflow-y-auto">
           <div className="absolute inset-0 bg-gradient-to-tr from-purple-800/30 via-indigo-600/20 to-zinc-900/10 lg:hidden" />
-          <Card className="mx-auto flex w-full flex-col justify-center sm:w-[350px] bg-background/95 backdrop-blur-sm border border-border/20 shadow-xl animate-fade-in relative z-10 my-8">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold tracking-tight text-center">Create an account</CardTitle>
-              <CardDescription className="text-center">
+          <Card className="mx-auto flex w-full flex-col justify-center sm:w-[350px] bg-background/95 backdrop-blur-sm border border-border/20 shadow-xl animate-fade-in relative z-10 my-4">
+            <CardHeader className="space-y-1 pb-4">
+              <div className="flex justify-center mb-2">
+                <Logo size="mobile" />
+              </div>
+              <CardTitle className="text-xl font-bold tracking-tight text-center">Create an account</CardTitle>
+              <CardDescription className="text-center text-sm">
                 Sign up to access premium sound content
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6">
+            <CardContent className="grid gap-3 pt-2">
               <form onSubmit={handleSubmit}>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="name"
-                        placeholder="John Doe"
-                        type="text"
-                        className="pl-10"
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        disabled={isLoading}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                      />
+                <div className="grid gap-3">
+                  {/* Name and Email Row - Stacked vertically */}
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="grid gap-1">
+                      <Label htmlFor="name" className="text-sm">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="name"
+                          placeholder="John Doe"
+                          type="text"
+                          className="pl-10 h-10"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          disabled={isLoading}
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      {errors.name && (
+                        <p className="text-xs text-red-500">{errors.name}</p>
+                      )}
                     </div>
-                    {errors.name && (
-                      <p className="text-xs text-red-500">{errors.name}</p>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        placeholder="name@example.com"
-                        type="email"
-                        className="pl-10"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        autoCorrect="off"
-                        disabled={isLoading}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
+                    <div className="grid gap-1">
+                      <Label htmlFor="email" className="text-sm">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          placeholder="name@example.com"
+                          type="email"
+                          className="pl-10 h-10"
+                          autoCapitalize="none"
+                          autoComplete="email"
+                          autoCorrect="off"
+                          disabled={isLoading}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      {errors.email && (
+                        <p className="text-xs text-red-500">{errors.email}</p>
+                      )}
                     </div>
-                    {errors.email && (
-                      <p className="text-xs text-red-500">{errors.email}</p>
-                    )}
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+
+                  {/* Password Fields - Compact stacked */}
+                  <div className="grid gap-1">
+                    <Label htmlFor="password" className="text-sm">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        className="pl-10 pr-10"
+                        className="pl-10 pr-10 h-10"
                         autoCapitalize="none"
                         autoComplete="new-password"
                         disabled={isLoading}
@@ -198,7 +207,7 @@ export default function Signup() {
                       <button
                         type="button"
                         onClick={togglePasswordVisibility}
-                        className="absolute right-3 top-3 h-4 w-4 text-muted-foreground"
+                        className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
                         tabIndex={-1}
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -208,14 +217,15 @@ export default function Signup() {
                       <p className="text-xs text-red-500">{errors.password}</p>
                     )}
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+
+                  <div className="grid gap-1">
+                    <Label htmlFor="confirmPassword" className="text-sm">Confirm Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
-                        className="pl-10 pr-10"
+                        className="pl-10 pr-10 h-10"
                         autoCapitalize="none"
                         autoComplete="new-password"
                         disabled={isLoading}
@@ -226,7 +236,7 @@ export default function Signup() {
                       <button
                         type="button"
                         onClick={toggleConfirmPasswordVisibility}
-                        className="absolute right-3 top-3 h-4 w-4 text-muted-foreground"
+                        className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
                         tabIndex={-1}
                       >
                         {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -236,27 +246,20 @@ export default function Signup() {
                       <p className="text-xs text-red-500">{errors.confirmPassword}</p>
                     )}
                   </div>
+
+                  {/* Role Selection Toggle */}
                   <div className="grid gap-2">
-                    <Label>I am a:</Label>
-                    <RadioGroup 
-                      value={role} 
-                      onValueChange={(value) => setRole(value as "buyer" | "producer")}
-                      className="grid grid-cols-2 gap-4 pt-2"
-                    >
-                      <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-secondary/50 transition-colors cursor-pointer">
-                        <RadioGroupItem value="buyer" id="buyer" />
-                        <Label htmlFor="buyer" className="cursor-pointer">Buyer</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-secondary/50 transition-colors cursor-pointer">
-                        <RadioGroupItem value="producer" id="producer" />
-                        <Label htmlFor="producer" className="cursor-pointer">Producer</Label>
-                      </div>
-                    </RadioGroup>
+                    <Label className="text-sm">I am a:</Label>
+                    <ToggleGroup type="single" value={role} onValueChange={(value) => value && setRole(value as "buyer" | "producer")}>
+                      <ToggleGroupItem value="buyer">Buyer</ToggleGroupItem>
+                      <ToggleGroupItem value="producer">Producer</ToggleGroupItem>
+                    </ToggleGroup>
                   </div>
-                  <Button 
-                    type="submit" 
-                    disabled={isLoading} 
-                    className="mt-2 w-full transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.3)]"
+
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="mt-1 h-11 w-full transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.3)]"
                   >
                     {isLoading ? (
                       <>

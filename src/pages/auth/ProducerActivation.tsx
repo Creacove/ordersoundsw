@@ -1,10 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Rocket, Calendar, Clock3, Mail } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/ui/Logo';
 
 // Helper function to calculate time remaining
 const getTimeRemaining = (launchDate: string) => {
@@ -30,6 +32,7 @@ const formatLaunchDate = (dateString: string) => {
 
 export default function ProducerActivation() {
   const { user } = useAuth();
+  const location = useLocation();
   const launchDate = '2025-04-25T00:00:00';  // Updated launch date
   const formattedLaunchDate = formatLaunchDate(launchDate);
   
@@ -59,18 +62,23 @@ export default function ProducerActivation() {
   );
   
   return (
-    <MainLayout hideSidebar>
-      <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-background to-primary/5 flex items-center justify-center p-6 pb-24 sm:pb-6">
+    <MainLayout hideSidebar currentPath={location.pathname}>
+      <div className="h-screen bg-gradient-to-b from-background to-primary/5 flex items-center justify-center p-6">
         <div className="bg-card p-8 sm:p-10 rounded-lg shadow-lg max-w-md w-full text-center border border-border relative overflow-hidden">
           {/* Decorative elements */}
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-xl"></div>
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/5 rounded-full blur-xl"></div>
-          
+
+          {/* Logo */}
+          <div className="flex justify-center mb-6 relative z-10">
+            <Logo size="mobile" />
+          </div>
+
           {/* Icon and heading */}
           <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
             <Rocket className="h-10 w-10" />
           </div>
-          
+
           <h1 className="text-3xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
             Coming Soon
           </h1>

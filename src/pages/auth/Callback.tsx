@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RoleSelectionDialog } from '@/components/auth/RoleSelectionDialog';
+import { Logo } from '@/components/ui/Logo';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -81,6 +82,9 @@ export default function AuthCallback() {
     <MainLayout hideSidebar>
       <RoleSelectionDialog open={false} onOpenChange={() => {}} />
       <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="flex justify-center mb-8">
+          <Logo size="mobile" />
+        </div>
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
         <h2 className="mt-4 text-xl">Completing sign-in...</h2>
       </div>

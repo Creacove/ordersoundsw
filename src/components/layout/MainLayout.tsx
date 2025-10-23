@@ -30,7 +30,7 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
   }, []);
 
   // Check if the current path is an auth page
-  const isAuthPage = currentPath === "/login" || currentPath === "/signup";
+  const isAuthPage = currentPath === "/login" || currentPath === "/signup" || currentPath === "/reset-password";
 
   return (
     <div className="flex min-h-screen w-full">
@@ -48,7 +48,7 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
             <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
           </div>
         )}
-        <main className="flex-1 w-full pb-32 md:pb-24 overflow-x-hidden">
+        <main className={`flex-1 w-full overflow-x-hidden ${isAuthPage ? 'pb-0' : 'pb-32 md:pb-24'}`}>
           <div className="w-full max-w-full flex flex-col">
             {children}
           </div>
