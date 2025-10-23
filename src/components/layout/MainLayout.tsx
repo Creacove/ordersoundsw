@@ -33,7 +33,7 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
   const isAuthPage = currentPath === "/login" || currentPath === "/signup";
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
+    <div className="flex min-h-screen w-full">
       {!hideSidebar && (
         <Sidebar 
           activeTab={activeTab} 
