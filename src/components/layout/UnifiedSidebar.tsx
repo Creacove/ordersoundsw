@@ -61,7 +61,10 @@ export function UnifiedSidebar({
       >
         {/* Logo section - Desktop only */}
         {!isMobile && (
-          <div className="flex items-center justify-center h-16 border-b border-[#272727]">
+          <div className={cn(
+            "flex items-center h-16 border-b border-[#272727]",
+            isCollapsed ? "justify-center" : "px-4"
+          )}>
             <NavLink to="/" className="flex items-center">
               {isCollapsed ? (
                 <img
