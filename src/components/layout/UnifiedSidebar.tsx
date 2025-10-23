@@ -65,7 +65,7 @@ export function UnifiedSidebar({
       )}>
         {/* Logo section - Desktop only */}
         {!isMobile && (
-          <div className="flex items-center justify-center p-4 border-b border-[#272727]">
+          <div className="flex items-center justify-center h-16 border-b border-[#272727]">
             <NavLink to="/" className="flex items-center">
               {isCollapsed ? (
                 <img 
@@ -77,7 +77,7 @@ export function UnifiedSidebar({
                 <img 
                   src="/lovable-uploads/a5b2cdfb-b365-4bf2-a812-07636101b39f.png" 
                   alt="OrderSOUNDS"
-                  className="h-16 w-auto"
+                  className="h-24 w-auto"
                 />
               )}
             </NavLink>

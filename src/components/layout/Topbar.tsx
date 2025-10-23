@@ -108,8 +108,8 @@ export function Topbar({ sidebarVisible = false }) {
       )}
     >
       <div className={cn(
-        "flex items-center justify-between h-16 py-2",
-        isMobile ? "container mx-auto px-2 xs:px-4 sm:px-6" : "pr-6 pl-6"
+        "flex items-center h-16 py-2",
+        isMobile ? "container mx-auto px-2 xs:px-4 sm:px-6 justify-between" : "pr-6 pl-6 justify-end"
       )}>
         {/* Logo - Mobile only */}
         {isMobile && (
