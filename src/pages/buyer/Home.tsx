@@ -15,7 +15,7 @@ import { GamingBeats } from "@/components/marketplace/GamingBeats";
 const Home = () => {
   return (
     <MainLayoutWithPlayer activeTab="home">
-      <div className="container mx-auto px-2 xs:px-4 sm:px-6 py-6 space-y-12">
+      <div className="w-full max-w-7xl mx-auto px-2 xs:px-4 sm:px-6 py-6 space-y-12">
         <FeaturedBeat />
         <GenreQuickLinks />
         <TrendingBeats />
