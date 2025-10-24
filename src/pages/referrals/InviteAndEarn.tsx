@@ -28,30 +28,30 @@ export default function InviteAndEarn() {
       try {
         setLoading(true);
 
-        // Fetch stats and referral history
+        // Fetch session once
         const { data: { session } } = await supabase.auth.getSession();
         
-        const statsUrl = `https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=stats`;
-        const statsResponse = await fetch(statsUrl, {
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        if (!session?.access_token) {
+          setLoading(false);
+          return;
+        }
+
+        const headers = {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        };
+
+        // Fetch stats and referrals in parallel for faster loading
+        const [statsResponse, listResponse] = await Promise.all([
+          fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=stats`, { headers }),
+          fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=list`, { headers })
+        ]);
         
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
           setStats(statsData);
         }
 
-        const listUrl = `https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=list`;
-        const listResponse = await fetch(listUrl, {
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
         if (listResponse.ok) {
           const refData = await listResponse.json();
           setReferrals(Array.isArray(refData) ? refData : []);

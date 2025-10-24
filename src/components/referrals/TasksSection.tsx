@@ -23,16 +23,16 @@ const TASKS: Task[] = [
     actionUrl: "https://x.com/ordersounds"
   },
   {
-    id: "join-discord",
-    title: "Join our Discord community",
+    id: "join-community",
+    title: "Join our WhatsApp and Telegram community",
     description: "Connect with producers and buyers worldwide",
     points: 10,
     completed: false,
-    actionUrl: "https://discord.gg/ordersounds"
+    actionUrl: "https://chat.whatsapp.com/ordersounds"
   },
   {
     id: "like-post",
-    title: "Like our latest post",
+    title: "Like and share our latest post",
     description: "Show some love on our social media",
     points: 3,
     completed: false,
@@ -42,7 +42,7 @@ const TASKS: Task[] = [
     id: "complete-profile",
     title: "Complete your profile",
     description: "Add a bio and profile picture",
-    points: 15,
+    points: 10,
     completed: false
   }
 ];
