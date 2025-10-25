@@ -31,6 +31,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Force CommonJS module resolution for WalletConnect packages in dev mode
+    conditions: mode === 'development' ? ['module', 'import', 'require'] : undefined,
   },
   build: {
     // Increase chunk size warning limit
@@ -67,6 +69,11 @@ export default defineConfig(({ mode }) => ({
     // Increase memory for the build process
     target: 'esnext',
     minify: mode === 'production' ? 'esbuild' : false,
+    // Handle mixed ESM/CJS modules
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    }
   },
   // Optimize dependencies
   optimizeDeps: {
@@ -90,7 +97,19 @@ export default defineConfig(({ mode }) => ({
       // Exclude other problematic crypto libraries
       'viem',
       'ox'
-    ]
+    ],
+    // Force eager optimization with relaxed module handling
+    esbuildOptions: {
+      target: 'esnext',
+      supported: { bigint: true },
+    }
+  },
+  // Handle SSR/dev mode externals for WalletConnect
+  ssr: {
+    external: mode === 'development' ? [
+      '@walletconnect/heartbeat',
+      '@walletconnect/time',
+    ] : undefined,
   },
   // Define global constants to help with tree shaking and compatibility
   define: {
