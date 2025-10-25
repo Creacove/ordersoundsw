@@ -2,10 +2,16 @@
 import React, { FC, ReactNode, useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-// Import wallets from individual packages to avoid WalletConnect dependencies
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
-import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
-import { LedgerWalletAdapter } from '@solana/wallet-adapter-ledger';
+import {
+    PhantomWalletAdapter,
+    SolflareWalletAdapter,
+    CoinbaseWalletAdapter,
+    CloverWalletAdapter,
+    SalmonWalletAdapter,
+    TorusWalletAdapter,
+    LedgerWalletAdapter,
+    MathWalletAdapter,
+} from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 
 interface SolanaWalletProviderProps {
@@ -32,13 +38,16 @@ const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({ children }) => {
     }, []);
 
     // Configure wallet adapters dynamically based on network
-    // Note: Removed CoinbaseWalletAdapter, CloverWalletAdapter, SalmonWalletAdapter, 
-    // TorusWalletAdapter, and MathWalletAdapter due to WalletConnect dependency issues in dev mode
     const wallets = useMemo(
         () => [
             new PhantomWalletAdapter(),
             new SolflareWalletAdapter({ network }),
+            new CoinbaseWalletAdapter(),
+            new CloverWalletAdapter(),
+            new SalmonWalletAdapter(),
+            new TorusWalletAdapter(),
             new LedgerWalletAdapter(),
+            new MathWalletAdapter(),
         ],
         [network]
     );
