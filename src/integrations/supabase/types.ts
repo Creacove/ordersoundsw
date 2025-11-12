@@ -269,6 +269,50 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_tasks: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+          is_active: boolean | null
+          points: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+          is_active?: boolean | null
+          points?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean | null
+          points?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       followers: {
         Row: {
           created_at: string | null
@@ -861,6 +905,64 @@ export type Database = {
           },
         ]
       }
+      task_submissions: {
+        Row: {
+          admin_notes: string | null
+          created_at: string | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          screenshot_url: string
+          status: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url: string
+          status?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          screenshot_url?: string
+          status?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_submissions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "daily_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_purchased_beats: {
         Row: {
           beat_id: string
@@ -1069,14 +1171,15 @@ export type Database = {
           total_points: number
         }[]
       }
+      award_task_points: {
+        Args: { admin_user_id: string; submission_uuid: string }
+        Returns: boolean
+      }
       check_follow_status: {
         Args: { p_followee_id: string; p_follower_id: string }
         Returns: boolean
       }
-      check_table_exists: {
-        Args: { table_name: string }
-        Returns: boolean
-      }
+      check_table_exists: { Args: { table_name: string }; Returns: boolean }
       delete_beat_favorites: {
         Args: { beat_id_param: string }
         Returns: undefined
@@ -1085,16 +1188,10 @@ export type Database = {
         Args: { p_followee_id: string; p_follower_id: string }
         Returns: undefined
       }
-      generate_referral_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_complete_schema: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      generate_referral_code: { Args: never; Returns: string }
+      get_complete_schema: { Args: never; Returns: Json }
       get_producer_of_week: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           account_number: string | null
           bank_code: string | null
@@ -1127,6 +1224,12 @@ export type Database = {
           verified_account_name: string | null
           wallet_address: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "users"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_random_published_beats: {
         Args: { beat_count?: number }
@@ -1150,30 +1253,18 @@ export type Database = {
           beat_id: string
         }[]
       }
-      get_user_role: {
-        Args: { user_id: string }
-        Returns: string
-      }
+      get_user_role: { Args: { user_id: string }; Returns: string }
       increment_counter: {
         Args: { p_column_name: string; p_id: string; p_table_name: string }
         Returns: undefined
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_producer: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_admin: { Args: never; Returns: boolean }
+      is_producer: { Args: never; Returns: boolean }
       producer_has_beat_in_order: {
         Args: { order_id: string }
         Returns: boolean
       }
-      producer_owns_beat: {
-        Args: { beat_id: string }
-        Returns: boolean
-      }
+      producer_owns_beat: { Args: { beat_id: string }; Returns: boolean }
       refresh_auth_token: {
         Args: {
           p_new_access_token: string
@@ -1195,10 +1286,7 @@ export type Database = {
         Args: { p_user_id: string; p_version: string }
         Returns: undefined
       }
-      user_owns_order: {
-        Args: { order_id: string }
-        Returns: boolean
-      }
+      user_owns_order: { Args: { order_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
