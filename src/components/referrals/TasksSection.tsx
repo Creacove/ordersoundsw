@@ -69,30 +69,32 @@ export const TasksSection = () => {
                 </div>
 
                 {!submission && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 ml-4"
-                    onClick={() => {
-                      if (task.action_url) {
-                        window.open(task.action_url, '_blank');
-                        // Open submission dialog after slight delay
-                        setTimeout(() => {
-                          setSelectedTask({ id: task.id, title: task.title });
-                        }, 500);
-                      } else {
-                        setSelectedTask({ id: task.id, title: task.title });
-                      }
-                    }}
-                  >
-                    {task.action_url ? (
-                      <>
-                        Complete <ExternalLink className="h-3 w-3 ml-1" />
-                      </>
-                    ) : (
-                      "Complete"
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    {task.action_url && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          const url = task.action_url.match(/^https?:\/\//) 
+                            ? task.action_url 
+                            : `https://${task.action_url}`;
+                          window.open(url, '_blank');
+                        }}
+                      >
+                        Go to Task
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
                     )}
-                  </Button>
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedTask({ id: task.id, title: task.title })}
+                    >
+                      Complete
+                    </Button>
+                  </div>
                 )}
 
                 {isPending && (
