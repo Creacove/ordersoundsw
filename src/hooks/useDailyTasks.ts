@@ -2,12 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DailyTask, TaskSubmission, TaskWithSubmission } from '@/types/dailyTasks';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 export const useDailyTasks = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ['daily-tasks'],
+    queryKey: ['daily-tasks', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('daily-tasks-operations', {
         body: { action: 'list-tasks' },
@@ -19,7 +21,7 @@ export const useDailyTasks = () => {
   });
 
   const { data: submissions } = useQuery({
-    queryKey: ['my-task-submissions'],
+    queryKey: ['my-task-submissions', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('daily-tasks-operations', {
         body: { action: 'my-submissions' },
@@ -49,7 +51,7 @@ export const useDailyTasks = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-task-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-task-submissions', user?.id] });
       toast.success('Task submitted successfully! Awaiting admin review.');
     },
     onError: (error: Error) => {
@@ -67,9 +69,10 @@ export const useDailyTasks = () => {
 
 export const useAdminTasks = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: pendingSubmissions, isLoading } = useQuery({
-    queryKey: ['pending-task-submissions'],
+    queryKey: ['pending-task-submissions', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('daily-tasks-operations', {
         body: { action: 'pending-submissions' },
@@ -98,7 +101,7 @@ export const useAdminTasks = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['daily-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-tasks', user?.id] });
       toast.success('Task created successfully!');
     },
     onError: () => {
@@ -119,7 +122,7 @@ export const useAdminTasks = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-task-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-task-submissions', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['my-task-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['daily-tasks'] });
       toast.success('Points awarded successfully!');
@@ -143,7 +146,7 @@ export const useAdminTasks = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-task-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-task-submissions', user?.id] });
       toast.success('Submission rejected');
     },
     onError: () => {
