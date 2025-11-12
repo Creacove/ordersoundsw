@@ -120,6 +120,8 @@ export const useAdminTasks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-task-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-task-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-tasks'] });
       toast.success('Points awarded successfully!');
     },
     onError: () => {

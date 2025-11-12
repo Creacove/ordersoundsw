@@ -41,16 +41,24 @@ export default function InviteAndEarn() {
           'Content-Type': 'application/json'
         };
 
-        // Fetch stats and referrals in parallel for faster loading
-        const [statsResponse, listResponse] = await Promise.all([
+        // Fetch stats, referrals, and task submissions in parallel
+        const [statsResponse, listResponse, taskSubmissionsResponse] = await Promise.all([
           fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=stats`, { headers }),
-          fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=list`, { headers })
+          fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=list`, { headers }),
+          fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/daily-tasks-operations`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action: 'my-submissions' })
+          })
         ]);
         
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
           setStats(statsData);
         }
+
+        let referralPointsToday = 0;
+        let taskPointsToday = 0;
 
         if (listResponse.ok) {
           const refData = await listResponse.json();
@@ -59,16 +67,33 @@ export default function InviteAndEarn() {
           // Calculate today's points from successful referrals
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          const pointsToday = (Array.isArray(refData) ? refData : [])
+          referralPointsToday = (Array.isArray(refData) ? refData : [])
             .filter((ref: Referral) => {
               const refDate = new Date(ref.created_at);
               refDate.setHours(0, 0, 0, 0);
               return ref.status === 'successful' && refDate.getTime() === today.getTime();
             })
             .reduce((sum: number, ref: Referral) => sum + (ref.reward_points || 0), 0);
-          
-          setTodaysPoints(pointsToday);
         }
+
+        if (taskSubmissionsResponse.ok) {
+          const taskData = await taskSubmissionsResponse.json();
+          const submissions = taskData.submissions || [];
+          
+          // Calculate points from approved task submissions in last 24 hours
+          const twentyFourHoursAgo = new Date();
+          twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+          
+          taskPointsToday = submissions
+            .filter((sub: any) => {
+              if (sub.status !== 'approved' || !sub.reviewed_at) return false;
+              const reviewedDate = new Date(sub.reviewed_at);
+              return reviewedDate >= twentyFourHoursAgo;
+            })
+            .reduce((sum: number, sub: any) => sum + (sub.task?.points || 0), 0);
+        }
+
+        setTodaysPoints(referralPointsToday + taskPointsToday);
       } catch (error) {
         console.error('Error fetching referral data:', error);
       } finally {
