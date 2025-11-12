@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
           .select(`
             *,
             task:daily_tasks(title, points),
-            user:users(full_name, email)
+            user:users!task_submissions_user_id_fkey(full_name, email)
           `)
           .eq('status', 'pending')
           .order('created_at', { ascending: false });
