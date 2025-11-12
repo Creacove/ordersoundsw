@@ -9,7 +9,9 @@ export const useDailyTasks = () => {
   const { data: tasks, isLoading: tasksLoading } = useQuery({
     queryKey: ['daily-tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('daily-tasks-operations?action=list-tasks');
+      const { data, error } = await supabase.functions.invoke('daily-tasks-operations', {
+        body: { action: 'list-tasks' },
+      });
 
       if (error) throw error;
       return data.tasks as DailyTask[];
@@ -19,7 +21,9 @@ export const useDailyTasks = () => {
   const { data: submissions } = useQuery({
     queryKey: ['my-task-submissions'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('daily-tasks-operations?action=my-submissions');
+      const { data, error } = await supabase.functions.invoke('daily-tasks-operations', {
+        body: { action: 'my-submissions' },
+      });
 
       if (error) throw error;
       return data.submissions as TaskSubmission[];
@@ -67,7 +71,9 @@ export const useAdminTasks = () => {
   const { data: pendingSubmissions, isLoading } = useQuery({
     queryKey: ['pending-task-submissions'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('daily-tasks-operations?action=pending-submissions');
+      const { data, error } = await supabase.functions.invoke('daily-tasks-operations', {
+        body: { action: 'pending-submissions' },
+      });
 
       if (error) throw error;
       return data.submissions as TaskSubmission[];
