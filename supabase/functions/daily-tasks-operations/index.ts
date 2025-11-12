@@ -48,12 +48,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    // Parse body for all requests
+    const body = req.method === 'POST' ? await req.json() : {};
+    const action = body.action;
 
-    // GET requests
-    if (req.method === 'GET') {
-      if (action === 'list-tasks') {
+    if (action === 'list-tasks') {
         const { data: tasks, error } = await supabase
           .from('daily_tasks')
           .select('*')
@@ -65,9 +64,9 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ tasks }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
+    }
 
-      if (action === 'my-submissions') {
+    if (action === 'my-submissions') {
         const { data: submissions, error } = await supabase
           .from('task_submissions')
           .select('*')
@@ -78,9 +77,9 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ submissions }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
+    }
 
-      if (action === 'pending-submissions') {
+    if (action === 'pending-submissions') {
         // Check if user is admin
         const { data: userData } = await supabase
           .from('users')
@@ -110,14 +109,9 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ submissions }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
     }
 
-    // POST requests
-    if (req.method === 'POST') {
-      const body = await req.json();
-
-      if (body.action === 'create-task') {
+    if (action === 'create-task') {
         // Check if user is admin
         const { data: userData } = await supabase
           .from('users')
@@ -149,9 +143,9 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ task }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
+    }
 
-      if (body.action === 'submit-task') {
+    if (action === 'submit-task') {
         const { data: submission, error } = await supabase
           .from('task_submissions')
           .insert({
@@ -179,9 +173,9 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ submission }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
+    }
 
-      if (body.action === 'award-points') {
+    if (action === 'award-points') {
         // Check if user is admin
         const { data: userData } = await supabase
           .from('users')
@@ -206,9 +200,9 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
+    }
 
-      if (body.action === 'reject-submission') {
+    if (action === 'reject-submission') {
         // Check if user is admin
         const { data: userData } = await supabase
           .from('users')
@@ -238,7 +232,6 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      }
     }
 
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
