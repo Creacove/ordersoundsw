@@ -48,33 +48,37 @@ export const TasksSection = () => {
             return (
               <div
                 key={task.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
               >
-                <div className="flex items-start gap-3 flex-1">
+                {/* Task Info Section */}
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                   {isApproved ? (
                     <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                   ) : (
                     <Circle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
                   )}
 
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium">{task.title}</h4>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h4 className="font-medium text-sm sm:text-base">{task.title}</h4>
                       <Badge variant="secondary" className="text-xs">
                         +{task.points} pts
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{task.description}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                      {task.description}
+                    </p>
                   </div>
                 </div>
 
+                {/* Action Buttons Section */}
                 {!submission && (
-                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
                     {task.action_url && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-muted-foreground hover:text-foreground"
+                        className="w-full sm:w-auto justify-center text-muted-foreground hover:text-foreground min-h-[44px] sm:min-h-[36px]"
                         onClick={() => {
                           const url = task.action_url.match(/^https?:\/\//) 
                             ? task.action_url 
@@ -90,6 +94,7 @@ export const TasksSection = () => {
                     <Button
                       size="sm"
                       variant="outline"
+                      className="w-full sm:w-auto justify-center min-h-[44px] sm:min-h-[36px]"
                       onClick={() => setSelectedTask({ id: task.id, title: task.title })}
                     >
                       Complete
@@ -97,15 +102,17 @@ export const TasksSection = () => {
                   </div>
                 )}
 
+                {/* Status Badges Section */}
                 {isPending && (
-                  <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-600/20 ml-4">
+                  <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-600/20 w-full sm:w-auto justify-center py-2 sm:py-1">
                     <Clock className="h-3 w-3 mr-1" />
                     Under Review
                   </Badge>
                 )}
 
                 {isApproved && (
-                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-600/20 ml-4">
+                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-600/20 w-full sm:w-auto justify-center py-2 sm:py-1">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
                     Completed
                   </Badge>
                 )}
@@ -117,7 +124,7 @@ export const TasksSection = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="shrink-0 ml-4 text-orange-600 border-orange-600/20 hover:bg-orange-500/10"
+                          className="w-full sm:w-auto justify-center text-orange-600 border-orange-600/20 hover:bg-orange-500/10 min-h-[44px] sm:min-h-[36px]"
                           onClick={() => setSelectedTask({ id: task.id, title: task.title })}
                         >
                           <AlertCircle className="h-3 w-3 mr-1" />
