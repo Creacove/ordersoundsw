@@ -69,8 +69,12 @@ Deno.serve(async (req) => {
     if (action === 'my-submissions') {
         const { data: submissions, error } = await supabase
           .from('task_submissions')
-          .select('*')
-          .eq('user_id', user.id);
+          .select(`
+            *,
+            task:daily_tasks(title, points)
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
 
@@ -133,6 +137,7 @@ Deno.serve(async (req) => {
             description: body.description,
             points: body.points,
             action_url: body.action_url,
+            frequency: body.frequency || 'once',
             created_by: user.id,
           })
           .select()
@@ -146,6 +151,50 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'submit-task') {
+        // Get task frequency
+        const { data: task, error: taskError } = await supabase
+          .from('daily_tasks')
+          .select('frequency')
+          .eq('id', body.task_id)
+          .single();
+
+        if (taskError || !task) {
+          return new Response(
+            JSON.stringify({ error: 'Task not found' }), 
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check existing approved submissions
+        const { data: lastApproved } = await supabase
+          .from('task_submissions')
+          .select('reviewed_at')
+          .eq('task_id', body.task_id)
+          .eq('user_id', user.id)
+          .eq('status', 'approved')
+          .order('reviewed_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (lastApproved) {
+          if (task.frequency === 'once') {
+            return new Response(
+              JSON.stringify({ error: 'This task can only be completed once' }), 
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          if (task.frequency === 'daily') {
+            const hoursSince = (new Date().getTime() - new Date(lastApproved.reviewed_at).getTime()) / (1000 * 60 * 60);
+            if (hoursSince < 24) {
+              return new Response(
+                JSON.stringify({ error: `You can complete this task again in ${Math.ceil(24 - hoursSince)} hours` }), 
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+        }
+
         const { data: submission, error } = await supabase
           .from('task_submissions')
           .insert({
@@ -156,19 +205,7 @@ Deno.serve(async (req) => {
           .select()
           .single();
 
-        if (error) {
-          // Check for unique constraint violation
-          if (error.code === '23505') {
-            return new Response(
-              JSON.stringify({ error: 'You have already submitted this task' }), 
-              {
-                status: 400,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              }
-            );
-          }
-          throw error;
-        }
+        if (error) throw error;
 
         return new Response(JSON.stringify({ submission }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

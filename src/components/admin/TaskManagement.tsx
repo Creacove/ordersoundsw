@@ -21,6 +21,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -41,6 +48,7 @@ export const TaskManagement = () => {
     description: "",
     points: 0,
     action_url: "",
+    frequency: "once",
   });
 
   const [rejectDialog, setRejectDialog] = useState<{
@@ -66,7 +74,7 @@ export const TaskManagement = () => {
       return;
     }
     createTask(newTask);
-    setNewTask({ title: "", description: "", points: 0, action_url: "" });
+    setNewTask({ title: "", description: "", points: 0, action_url: "", frequency: "once" });
   };
 
   const handleReject = () => {
@@ -106,7 +114,7 @@ export const TaskManagement = () => {
                 placeholder="Stay updated with our latest beats and features"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="points">Points</Label>
                 <Input
@@ -119,6 +127,22 @@ export const TaskManagement = () => {
                   }
                   placeholder="10"
                 />
+              </div>
+              <div>
+                <Label htmlFor="frequency">Frequency</Label>
+                <Select
+                  value={newTask.frequency}
+                  onValueChange={(value) => setNewTask({ ...newTask, frequency: value })}
+                >
+                  <SelectTrigger id="frequency">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="once">Once</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="action_url">Action URL (Optional)</Label>
