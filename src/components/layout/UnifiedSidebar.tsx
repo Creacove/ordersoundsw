@@ -56,7 +56,7 @@ export function UnifiedSidebar({
           isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
           isCollapsed ? "w-[80px]" : "w-[240px]",
           isMobile ? "shadow-lg" : "",
-          isMobile ? "mt-16" : "", // Only add top margin on mobile
+          isMobile ? "mt-16" : "mt-10", // mt-10 for desktop (40px for announcement banner)
         )}
       >
         {/* Logo section - Desktop only */}
