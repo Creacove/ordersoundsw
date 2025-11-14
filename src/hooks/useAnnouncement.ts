@@ -5,6 +5,7 @@ interface Announcement {
   id: string;
   message: string;
   is_active: boolean;
+  link_url?: string;
 }
 
 export function useAnnouncement() {
@@ -39,7 +40,7 @@ export function useAnnouncement() {
     try {
       const { data, error } = await (supabase as any)
         .from('site_announcements')
-        .select('id, message, is_active')
+        .select('id, message, is_active, link_url')
         .eq('is_active', true)
         .single();
 

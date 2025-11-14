@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useAnnouncement } from '@/hooks/useAnnouncement';
 
 export function AnnouncementBanner() {
+  const navigate = useNavigate();
   const { announcement, isLoading } = useAnnouncement();
   const [isDismissed, setIsDismissed] = useState(false);
 
@@ -17,10 +19,21 @@ export function AnnouncementBanner() {
     }
   }, [announcement?.id]);
 
-  const handleDismiss = () => {
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (announcement) {
       setIsDismissed(true);
       localStorage.setItem(`announcement_dismissed_${announcement.id}`, 'true');
+    }
+  };
+
+  const handleAnnouncementClick = () => {
+    if (announcement?.link_url) {
+      if (announcement.link_url.startsWith('/')) {
+        navigate(announcement.link_url);
+      } else {
+        window.open(announcement.link_url, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 
@@ -28,9 +41,18 @@ export function AnnouncementBanner() {
     return null;
   }
 
+  const isClickable = !!announcement.link_url;
+
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-primary/90 backdrop-blur-sm overflow-hidden h-10 md:h-10">
-      <div className="relative w-full h-full flex items-center">
+      <div 
+        className={`relative w-full h-full flex items-center ${
+          isClickable ? 'cursor-pointer hover:bg-primary transition-colors' : ''
+        }`}
+        onClick={handleAnnouncementClick}
+        role={isClickable ? 'button' : undefined}
+        aria-label={isClickable ? 'Click to navigate' : undefined}
+      >
         <div className="flex animate-scroll-announcement">
           <div className="flex items-center gap-8 whitespace-nowrap text-primary-foreground font-medium text-sm px-4">
             <span>{announcement.message}</span>

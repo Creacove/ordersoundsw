@@ -5,9 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ExternalLink, Home } from 'lucide-react';
+
+const INTERNAL_ROUTES = {
+  'Home': '/',
+  'Library': '/library',
+  'Trending': '/trending',
+  'New Releases': '/new',
+  'Charts': '/charts',
+  'Genres': '/genres',
+  'Gaming Soundtracks': '/gaming-soundtrack',
+  'Producers': '/producers',
+  'Collections': '/collections',
+  'Invite & Earn': '/invite-and-earn',
+  'Cart': '/cart',
+  'Orders': '/orders',
+} as const;
 
 export function AnnouncementManagement() {
   const { user } = useAuth();
@@ -16,6 +34,9 @@ export function AnnouncementManagement() {
   const [announcementId, setAnnouncementId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [linkType, setLinkType] = useState<'none' | 'internal' | 'custom'>('none');
+  const [internalRoute, setInternalRoute] = useState('');
+  const [customUrl, setCustomUrl] = useState('');
 
   useEffect(() => {
     fetchAnnouncement();
@@ -39,6 +60,19 @@ export function AnnouncementManagement() {
         setAnnouncementId(data.id);
         setIsActive(data.is_active);
         setMessage(data.message);
+        
+        // Determine link type and set values
+        if (data.link_url) {
+          if (data.link_url.startsWith('/')) {
+            setLinkType('internal');
+            setInternalRoute(data.link_url);
+          } else {
+            setLinkType('custom');
+            setCustomUrl(data.link_url);
+          }
+        } else {
+          setLinkType('none');
+        }
       }
     } catch (error) {
       console.error('Error fetching announcement:', error);
@@ -47,11 +81,43 @@ export function AnnouncementManagement() {
     }
   }
 
+  function validateLinkUrl(): string | null {
+    if (linkType === 'none') return null;
+    
+    if (linkType === 'internal') {
+      if (!internalRoute) {
+        toast.error('Please select an internal page');
+        return undefined;
+      }
+      return internalRoute;
+    }
+    
+    if (linkType === 'custom') {
+      if (!customUrl.trim()) {
+        toast.error('Please enter a URL');
+        return undefined;
+      }
+      
+      const trimmedUrl = customUrl.trim();
+      if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+        toast.error('External URLs must start with http:// or https://');
+        return undefined;
+      }
+      
+      return trimmedUrl;
+    }
+    
+    return null;
+  }
+
   async function handleSave() {
     if (!message.trim()) {
       toast.error('Please enter an announcement message');
       return;
     }
+
+    const linkUrl = validateLinkUrl();
+    if (linkUrl === undefined) return; // Validation failed
 
     setIsSaving(true);
     try {
@@ -61,6 +127,7 @@ export function AnnouncementManagement() {
           .update({
             message: message.trim(),
             is_active: isActive,
+            link_url: linkUrl,
             updated_at: new Date().toISOString(),
           })
           .eq('id', announcementId);
@@ -72,6 +139,7 @@ export function AnnouncementManagement() {
           .insert({
             message: message.trim(),
             is_active: isActive,
+            link_url: linkUrl,
             created_by: user?.id,
           })
           .select()
@@ -128,6 +196,69 @@ export function AnnouncementManagement() {
             rows={3}
             className="resize-none"
           />
+        </div>
+
+        <div className="space-y-3">
+          <Label>Link Action (Optional)</Label>
+          <RadioGroup value={linkType} onValueChange={(value: any) => setLinkType(value)}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="none" id="none" />
+              <Label htmlFor="none" className="font-normal cursor-pointer">
+                No Link
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="internal" id="internal" />
+              <Label htmlFor="internal" className="font-normal cursor-pointer flex items-center gap-1">
+                <Home className="h-3 w-3" />
+                Internal Page
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="custom" id="custom" />
+              <Label htmlFor="custom" className="font-normal cursor-pointer flex items-center gap-1">
+                <ExternalLink className="h-3 w-3" />
+                Custom URL
+              </Label>
+            </div>
+          </RadioGroup>
+
+          {linkType === 'internal' && (
+            <div className="space-y-2 pl-6">
+              <Label htmlFor="internal-route">Select Page</Label>
+              <Select value={internalRoute} onValueChange={setInternalRoute}>
+                <SelectTrigger id="internal-route">
+                  <SelectValue placeholder="Choose a page..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {Object.entries(INTERNAL_ROUTES).map(([label, route]) => (
+                    <SelectItem key={route} value={route}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Users will navigate within the app
+              </p>
+            </div>
+          )}
+
+          {linkType === 'custom' && (
+            <div className="space-y-2 pl-6">
+              <Label htmlFor="custom-url">External URL</Label>
+              <Input
+                id="custom-url"
+                type="url"
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value)}
+                placeholder="https://example.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Must start with http:// or https://. Opens in new tab.
+              </p>
+            </div>
+          )}
         </div>
 
         {isActive && message.trim() && (
