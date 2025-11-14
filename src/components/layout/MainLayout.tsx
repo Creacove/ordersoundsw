@@ -5,6 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useAnnouncementVisible } from "@/hooks/useAnnouncement";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isMobile = useIsMobile();
+  const isAnnouncementVisible = useAnnouncementVisible();
 
   // Listen for sidebar open/close events
   useEffect(() => {
@@ -36,7 +38,7 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
   return (
     <>
       <AnnouncementBanner />
-      <div className="flex min-h-screen w-full pt-10">
+      <div className={`flex min-h-screen w-full transition-[padding] duration-300 ${isAnnouncementVisible ? 'pt-10' : 'pt-0'}`}>
         {!hideSidebar && (
           <Sidebar 
             activeTab={activeTab} 

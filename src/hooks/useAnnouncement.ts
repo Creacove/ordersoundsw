@@ -59,3 +59,20 @@ export function useAnnouncement() {
 
   return { announcement, isLoading };
 }
+
+export function useAnnouncementVisible() {
+  const { announcement, isLoading } = useAnnouncement();
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isLoading || !announcement) {
+      setIsVisible(false);
+      return;
+    }
+
+    const dismissed = localStorage.getItem(`announcement_dismissed_${announcement.id}`);
+    setIsVisible(dismissed !== 'true');
+  }, [announcement?.id, isLoading]);
+
+  return isVisible;
+}
