@@ -7,6 +7,7 @@ import { PersistentPlayer } from "@/components/player/PersistentPlayer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlayer } from "@/context/PlayerContext";
 import { useLocation } from "react-router-dom";
+import { useAnnouncementVisible } from "@/hooks/useAnnouncement";
 
 interface MainLayoutWithPlayerProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ export function MainLayoutWithPlayer({ children, activeTab, currentPath, hideSid
   const { currentBeat } = usePlayer();
   const location = useLocation();
   const hasPlayer = !!currentBeat;
+  const isAnnouncementVisible = useAnnouncementVisible();
   
   // Check if the current path is an auth page
   const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
@@ -41,7 +43,7 @@ export function MainLayoutWithPlayer({ children, activeTab, currentPath, hideSid
   return (
     <>
       <AnnouncementBanner />
-      <div className="flex min-h-screen w-full pt-10">
+      <div className={`flex min-h-screen w-full transition-[padding] duration-300 ${isAnnouncementVisible ? 'pt-10' : 'pt-0'}`}>
         {!hideSidebar && (
           <Sidebar 
             activeTab={activeTab} 
