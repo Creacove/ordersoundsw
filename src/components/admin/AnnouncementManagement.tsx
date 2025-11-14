@@ -23,7 +23,7 @@ export function AnnouncementManagement() {
 
   async function fetchAnnouncement() {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('site_announcements')
         .select('*')
         .order('created_at', { ascending: false })
@@ -56,7 +56,7 @@ export function AnnouncementManagement() {
     setIsSaving(true);
     try {
       if (announcementId) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('site_announcements')
           .update({
             message: message.trim(),
@@ -67,7 +67,7 @@ export function AnnouncementManagement() {
 
         if (error) throw error;
       } else {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('site_announcements')
           .insert({
             message: message.trim(),

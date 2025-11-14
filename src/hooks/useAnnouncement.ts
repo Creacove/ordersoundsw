@@ -37,7 +37,7 @@ export function useAnnouncement() {
 
   async function fetchAnnouncement() {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('site_announcements')
         .select('id, message, is_active')
         .eq('is_active', true)
