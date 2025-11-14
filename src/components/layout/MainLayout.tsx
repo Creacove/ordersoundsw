@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -33,27 +34,30 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
   const isAuthPage = currentPath === "/login" || currentPath === "/signup" || currentPath === "/reset-password";
 
   return (
-    <div className="flex min-h-screen w-full">
-      {!hideSidebar && (
-        <Sidebar 
-          activeTab={activeTab} 
-          currentPath={currentPath} 
-          onCollapsedChange={setIsCollapsed}
-        />
-      )}
-      <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${!isMobile && !hideSidebar ? (isCollapsed ? "md:ml-[80px]" : "md:ml-[240px]") : ""}`}>
-        {/* Only show topbar if not explicitly hidden or if it's not an auth page with hideSidebar */}
-        {!(isAuthPage && hideSidebar) && (
-          <div className={cn(!isMobile && !hideSidebar && (isCollapsed ? "ml-[80px]" : "ml-[240px]"))}>
-            <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
-          </div>
+    <>
+      <AnnouncementBanner />
+      <div className="flex min-h-screen w-full pt-10">
+        {!hideSidebar && (
+          <Sidebar 
+            activeTab={activeTab} 
+            currentPath={currentPath} 
+            onCollapsedChange={setIsCollapsed}
+          />
         )}
-        <main className={`flex-1 w-full overflow-x-hidden ${isAuthPage ? 'pb-0' : 'pb-32 md:pb-24'}`}>
-          <div className="w-full max-w-full flex flex-col">
-            {children}
-          </div>
-        </main>
+        <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${!isMobile && !hideSidebar ? (isCollapsed ? "md:ml-[80px]" : "md:ml-[240px]") : ""}`}>
+          {/* Only show topbar if not explicitly hidden or if it's not an auth page with hideSidebar */}
+          {!(isAuthPage && hideSidebar) && (
+            <div className={cn(!isMobile && !hideSidebar && (isCollapsed ? "ml-[80px]" : "ml-[240px]"))}>
+              <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+            </div>
+          )}
+          <main className={`flex-1 w-full overflow-x-hidden ${isAuthPage ? 'pb-0' : 'pb-32 md:pb-24'}`}>
+            <div className="w-full max-w-full flex flex-col">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

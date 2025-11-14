@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { PersistentPlayer } from "@/components/player/PersistentPlayer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlayer } from "@/context/PlayerContext";
@@ -38,26 +39,29 @@ export function MainLayoutWithPlayer({ children, activeTab, currentPath, hideSid
   }, []);
 
   return (
-    <div className="flex min-h-screen w-full">
-      {!hideSidebar && (
-        <Sidebar 
-          activeTab={activeTab} 
-          currentPath={currentPath} 
-          onCollapsedChange={setIsCollapsed}
-        />
-      )}
-      <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${!isMobile && !hideSidebar ? (isCollapsed ? "md:ml-[80px]" : "md:ml-[240px]") : ""}`}>
-        {/* Only show topbar if not explicitly hidden or if it's not an auth page with hideSidebar */}
-        {!(isAuthPage && hideSidebar) && (
-          <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+    <>
+      <AnnouncementBanner />
+      <div className="flex min-h-screen w-full pt-10">
+        {!hideSidebar && (
+          <Sidebar 
+            activeTab={activeTab} 
+            currentPath={currentPath} 
+            onCollapsedChange={setIsCollapsed}
+          />
         )}
-        <main className={`flex-1 w-full overflow-x-hidden ${hasPlayer ? (isMobile ? 'pb-36' : 'pb-28') : (isMobile ? 'pb-20' : 'pb-8')}`}>
-          <div className="w-full max-w-full flex flex-col">
-            {children}
-          </div>
-        </main>
-        <PersistentPlayer />
+        <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${!isMobile && !hideSidebar ? (isCollapsed ? "md:ml-[80px]" : "md:ml-[240px]") : ""}`}>
+          {/* Only show topbar if not explicitly hidden or if it's not an auth page with hideSidebar */}
+          {!(isAuthPage && hideSidebar) && (
+            <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+          )}
+          <main className={`flex-1 w-full overflow-x-hidden ${hasPlayer ? (isMobile ? 'pb-36' : 'pb-28') : (isMobile ? 'pb-20' : 'pb-8')}`}>
+            <div className="w-full max-w-full flex flex-col">
+              {children}
+            </div>
+          </main>
+          <PersistentPlayer />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
