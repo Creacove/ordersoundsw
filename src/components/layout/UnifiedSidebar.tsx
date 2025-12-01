@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { User } from "@/types";
 import { useProducers } from "@/hooks/useProducers";
 import { useState } from "react";
+import { useAnnouncementVisible } from "@/hooks/useAnnouncement";
 
 interface UnifiedSidebarProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function UnifiedSidebar({
 }: UnifiedSidebarProps) {
   const { prefetchProducers } = useProducers();
   const [prefetchedSections, setPrefetchedSections] = useState<Set<string>>(new Set());
+  const isAnnouncementVisible = useAnnouncementVisible();
 
   const handleMenuHover = (title: string) => {
     const sectionKey = title.toLowerCase();
@@ -56,7 +58,7 @@ export function UnifiedSidebar({
           isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
           isCollapsed ? "w-[80px]" : "w-[240px]",
           isMobile ? "shadow-lg" : "",
-          isMobile ? "mt-16" : "mt-10", // mt-10 for desktop (40px for announcement banner)
+          isMobile ? "mt-16" : (isAnnouncementVisible ? "mt-10" : "mt-0"),
         )}
       >
         {/* Logo section - Desktop only */}

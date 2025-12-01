@@ -37,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { useAnnouncementVisible } from "@/hooks/useAnnouncement";
 
 export function Topbar({ sidebarVisible = false }) {
   const { user, logout, currency, setCurrency } = useAuth();
@@ -44,6 +45,7 @@ export function Topbar({ sidebarVisible = false }) {
   const location = useLocation();
   const { itemCount } = useCartLightweight();
   const isMobile = useIsMobile();
+  const isAnnouncementVisible = useAnnouncementVisible();
   
   const [isScrolled, setIsScrolled] = useState(false);
   
@@ -103,7 +105,8 @@ export function Topbar({ sidebarVisible = false }) {
   return (
     <header 
       className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-200",
+        "sticky w-full transition-all duration-300 z-40",
+        isAnnouncementVisible ? "top-10" : "top-0",
         isScrolled ? "bg-background/90 backdrop-blur-md border-b shadow-sm" : "bg-transparent"
       )}
     >
