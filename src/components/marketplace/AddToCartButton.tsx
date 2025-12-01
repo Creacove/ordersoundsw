@@ -8,6 +8,7 @@ import { useCartLightweight } from '@/hooks/useCartLightweight';
 import { useFavorites } from '@/hooks/useFavorites';
 import { Beat } from '@/types';
 import { toast } from 'sonner';
+import { getFirstAvailableLicense } from '@/utils/licenseUtils';
 
 interface AddToCartButtonProps {
   beat: Beat;
@@ -22,6 +23,8 @@ export function AddToCartButton({ beat, className, iconOnly }: AddToCartButtonPr
   const { isInCart, addToCart, removeFromCart } = useCartLightweight();
   const { isFavorite, toggleFavorite } = useFavorites();
   const navigate = useNavigate();
+  
+  const firstLicense = getFirstAvailableLicense(beat);
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -42,7 +45,7 @@ export function AddToCartButton({ beat, className, iconOnly }: AddToCartButtonPr
         removeFromCart(beat.id);
         toast.success("Removed from cart");
       } else {
-        addToCart(beat.id, 'basic');
+        addToCart(beat.id, firstLicense.type);
         toast.success("Added to cart");
       }
     } catch (error) {

@@ -95,3 +95,25 @@ export const getAvailableLicenseTypes = (beat: any): string[] => {
   // If nothing is found, default to basic
   return available.length > 0 ? available : ['basic'];
 };
+
+// Get the first available license with pricing (fallback chain: basic → premium → exclusive → custom)
+export const getFirstAvailableLicense = (beat: any): { 
+  type: 'basic' | 'premium' | 'exclusive' | 'custom'; 
+  localPrice: number; 
+  diasporaPrice: number; 
+} => {
+  const licenseOrder = ['basic', 'premium', 'exclusive', 'custom'] as const;
+  
+  for (const license of licenseOrder) {
+    if (hasLicensePricing(beat, license)) {
+      return {
+        type: license,
+        localPrice: beat[`${license}_license_price_local`] || 0,
+        diasporaPrice: beat[`${license}_license_price_diaspora`] || 0,
+      };
+    }
+  }
+  
+  // Fallback to basic with 0 prices if nothing found
+  return { type: 'basic', localPrice: 0, diasporaPrice: 0 };
+};

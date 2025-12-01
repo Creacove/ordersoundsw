@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCartLightweight } from '@/hooks/useCartLightweight';
 import { supabase } from '@/integrations/supabase/client';
 import { ToggleFavoriteButton } from '@/components/buttons/ToggleFavoriteButton';
+import { getFirstAvailableLicense } from '@/utils/licenseUtils';
 
 interface BeatCardCompactProps {
   beat: Beat;
@@ -25,6 +26,7 @@ export function BeatCardCompact({ beat }: BeatCardCompactProps) {
   const [isPlayButtonClicked, setIsPlayButtonClicked] = useState(false);
   const [addToCartNotified, setAddToCartNotified] = useState(false);
   
+  const firstLicense = getFirstAvailableLicense(beat);
   const isCurrentBeat = currentBeat?.id === beat.id;
   const isCurrentlyPlaying = isCurrentBeat && isPlaying;
   
@@ -85,7 +87,7 @@ export function BeatCardCompact({ beat }: BeatCardCompactProps) {
     
     // Prevent duplicate toast notifications
     if (!addToCartNotified) {
-      addToCart(beat.id, 'basic');
+      addToCart(beat.id, firstLicense.type);
       toast.success(`Added ${beat.title} to cart`);
       setAddToCartNotified(true);
       
@@ -154,8 +156,8 @@ export function BeatCardCompact({ beat }: BeatCardCompactProps) {
         
         <div className="flex justify-between items-center mt-1">
           <PriceTag 
-            localPrice={beat.basic_license_price_local} 
-            diasporaPrice={beat.basic_license_price_diaspora || beat.basic_license_price_local}
+            localPrice={firstLicense.localPrice} 
+            diasporaPrice={firstLicense.diasporaPrice || firstLicense.localPrice}
             size="sm"
           />
           <div className="text-xs text-muted-foreground">
