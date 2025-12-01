@@ -275,6 +275,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string
+          frequency: string
           id: string
           is_active: boolean | null
           points: number
@@ -286,6 +287,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description: string
+          frequency?: string
           id?: string
           is_active?: boolean | null
           points?: number
@@ -297,6 +299,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string
+          frequency?: string
           id?: string
           is_active?: boolean | null
           points?: number
@@ -810,6 +813,44 @@ export type Database = {
           {
             foreignKeyName: "royalty_splits_party_id_fkey"
             columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_announcements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          link_url: string | null
+          message: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          link_url?: string | null
+          message: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          link_url?: string | null
+          message?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_announcements_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
