@@ -317,10 +317,19 @@ export default function PaymentAdmin() {
                 </div>
               ) : overviewStats ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Revenue breakdown by payment method */}
                   <StatCard
-                    title="Total Revenue"
-                    value={formatCurrency(overviewStats.totalRevenue)}
-                    icon={<TrendingUp className="h-5 w-5 text-primary" />}
+                    title="Paystack Revenue"
+                    value={formatCurrency(overviewStats.paystackRevenue, 'NGN')}
+                    icon={<CreditCard className="h-5 w-5 text-green-500" />}
+                    description={`${overviewStats.paystackOrders} orders`}
+                    variant="success"
+                  />
+                  <StatCard
+                    title="Crypto Revenue"
+                    value={formatCurrency(overviewStats.cryptoRevenue, 'USDC')}
+                    icon={<Wallet className="h-5 w-5 text-purple-500" />}
+                    description={`${overviewStats.cryptoOrders} orders`}
                     variant="success"
                   />
                   <StatCard

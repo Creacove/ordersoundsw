@@ -10,7 +10,10 @@ interface PaginationState {
 }
 
 interface OverviewStats {
-  totalRevenue: number;
+  paystackRevenue: number;
+  cryptoRevenue: number;
+  paystackOrders: number;
+  cryptoOrders: number;
   completedOrders: number;
   pendingOrders: number;
   totalUsers: number;
@@ -73,19 +76,28 @@ export function usePaystackAdmin() {
       ] = await Promise.all([
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
         supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('orders').select('total_price').eq('status', 'completed'),
+        supabase.from('orders').select('total_price, payment_method, currency_used').eq('status', 'completed'),
         supabase.from('users').select('*', { count: 'exact', head: true }),
         supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'producer'),
         supabase.from('users').select('id, bank_code, account_number, wallet_address').eq('role', 'producer')
       ]);
       
-      const totalRevenue = revenueData?.reduce((sum, order) => sum + (order.total_price || 0), 0) || 0;
+      // Separate revenue by payment method
+      const paystackOrders = revenueData?.filter(o => o.payment_method === 'Paystack') || [];
+      const cryptoOrders = revenueData?.filter(o => o.payment_method === 'solana_usdc') || [];
+      
+      const paystackRevenue = paystackOrders.reduce((sum, order) => sum + (order.total_price || 0), 0);
+      const cryptoRevenue = cryptoOrders.reduce((sum, order) => sum + (order.total_price || 0), 0);
+      
       const producersWithBank = producersData?.filter(p => p.bank_code && p.account_number).length || 0;
       const producersWithCrypto = producersData?.filter(p => p.wallet_address).length || 0;
       const producersNeedingSetup = producersData?.filter(p => !p.bank_code && !p.wallet_address).length || 0;
       
       setOverviewStats({
-        totalRevenue,
+        paystackRevenue,
+        cryptoRevenue,
+        paystackOrders: paystackOrders.length,
+        cryptoOrders: cryptoOrders.length,
         completedOrders: completedCount || 0,
         pendingOrders: pendingCount || 0,
         totalUsers: totalUsers || 0,
