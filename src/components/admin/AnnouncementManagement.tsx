@@ -22,7 +22,7 @@ const INTERNAL_ROUTES = {
   'Gaming Soundtracks': '/gaming-soundtrack',
   'Producers': '/producers',
   'Collections': '/collections',
-  'Invite & Earn': '/invite-and-earn',
+  'Invite & Earn': '/referral',
   'Cart': '/cart',
   'Orders': '/orders',
 } as const;
