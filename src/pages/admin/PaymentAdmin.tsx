@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { usePaystackAdmin } from '@/hooks/payment/usePaystackAdmin';
 import { Button } from '@/components/ui/button';
@@ -18,17 +17,33 @@ import {
   PaginationContent,
   PaginationEllipsis,
   PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertCircle, AlertTriangle, CheckCircle, Loader2, RefreshCw, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  AlertCircle, 
+  CheckCircle, 
+  RefreshCw, 
+  CreditCard, 
+  ChevronLeft, 
+  ChevronRight,
+  Users,
+  TrendingUp,
+  Wallet,
+  Building2,
+  AlertTriangle,
+  XCircle,
+  ShoppingCart
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 // Pagination Controls Component
 interface PaginationControlsProps {
@@ -62,12 +77,11 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
   
   const generatePageNumbers = () => {
     const pages = [];
-    const showPages = 5; // Show 5 page numbers max
+    const showPages = 5;
     
     let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
     let endPage = Math.min(totalPages, startPage + showPages - 1);
     
-    // Adjust start if we're near the end
     if (endPage - startPage < showPages - 1) {
       startPage = Math.max(1, endPage - showPages + 1);
     }
@@ -138,99 +152,101 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
   );
 };
 
+// Stat Card Component
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  description?: string;
+  variant?: 'default' | 'success' | 'warning' | 'danger';
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, description, variant = 'default' }) => {
+  const variantStyles = {
+    default: 'bg-card',
+    success: 'bg-green-500/10 border-green-500/20',
+    warning: 'bg-yellow-500/10 border-yellow-500/20',
+    danger: 'bg-red-500/10 border-red-500/20'
+  };
+  
+  return (
+    <Card className={variantStyles[variant]}>
+      <CardContent className="p-4 md:p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">{title}</p>
+            <p className="text-2xl font-bold mt-1">{value}</p>
+            {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+          </div>
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default function PaymentAdmin() {
   const [activeProducerId, setActiveProducerId] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editMode, setEditMode] = useState<'bank' | 'percentage'>('bank');
-  const [newPercentage, setNewPercentage] = useState<number>(90);
-  const [activeTab, setActiveTab] = useState('producers');
+  const [activeTab, setActiveTab] = useState('overview');
   
   const {
-    subaccounts,
-    splits,
     transactions,
+    buyers,
+    overviewStats,
     producers,
     isLoading,
     isUpdating,
     producersPagination,
     transactionsPagination,
-    fetchSubaccounts,
-    fetchSplits,
+    buyersPagination,
+    statusFilter,
+    producerFilter,
+    setStatusFilter,
+    setProducerFilter,
+    fetchOverviewStats,
     fetchProducers,
     fetchTransactions,
+    fetchBuyers,
     updateProducerBankInfo,
-    updateProducerShare,
-    retryFailedTransaction,
     handleProducersPageChange,
-    handleTransactionsPageChange
+    handleTransactionsPageChange,
+    handleBuyersPageChange
   } = usePaystackAdmin();
   
-  // Load producers data on component mount
+  // Load overview stats on mount
   useEffect(() => {
-    fetchProducers();
-  }, [fetchProducers]);
+    fetchOverviewStats();
+  }, [fetchOverviewStats]);
   
-  // Smart tab loading - only load data when tab is clicked
+  // Smart tab loading
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     
-    // Lazy load data for other tabs
     switch (tab) {
-      case 'subaccounts':
-        if (!subaccounts || subaccounts.length === 0) {
-          fetchSubaccounts();
-        }
+      case 'overview':
+        if (!overviewStats) fetchOverviewStats();
         break;
-      case 'splits':
-        if (!splits || splits.length === 0) {
-          fetchSplits();
-        }
+      case 'producers':
+        if (producers.length === 0) fetchProducers();
+        break;
+      case 'buyers':
+        if (buyers.length === 0) fetchBuyers();
         break;
       case 'transactions':
-        if (!transactions || transactions.length === 0) {
-          fetchTransactions();
-        }
+        if (transactions.length === 0) fetchTransactions();
         break;
-      default:
-        break;
-    }
-  };
-  
-  const handleRetryTransaction = async (transactionId: string) => {
-    const success = await retryFailedTransaction(transactionId);
-    if (success) {
-      toast.success('Transaction retry initiated successfully.');
-    } else {
-      toast.error('Failed to retry transaction. Please try again.');
-    }
-  };
-  
-  const handleUpdateSplitPercentage = async () => {
-    if (!activeProducerId) return;
-    
-    if (newPercentage < 1 || newPercentage > 99) {
-      toast.error('Percentage must be between 1 and 99.');
-      return;
-    }
-    
-    const success = await updateProducerShare(activeProducerId, newPercentage);
-    
-    if (success) {
-      toast.success('Producer share percentage updated successfully.');
-      setIsEditDialogOpen(false);
-      
-      // Refresh data
-      fetchSplits();
-      fetchProducers();
     }
   };
   
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'success':
       case 'settled':
       case 'completed':
-        return <Badge className="bg-green-500">Success</Badge>;
+        return <Badge className="bg-green-500">Completed</Badge>;
       case 'pending':
       case 'processing':
         return <Badge className="bg-yellow-500">Pending</Badge>;
@@ -242,12 +258,11 @@ export default function PaymentAdmin() {
     }
   };
   
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(amount);
+  const formatCurrency = (amount: number, currency: string = 'NGN') => {
+    if (currency === 'USDC' || currency === 'USD') {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    }
+    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
   };
   
   const LoadingSkeleton = ({ rows = 5 }) => (
@@ -266,279 +281,87 @@ export default function PaymentAdmin() {
           Payment Management
         </CardTitle>
         <CardDescription>
-          Manage producer payments, bank details, and transaction monitoring
+          Overview of platform transactions, producers, and buyers
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8">
-            <TabsTrigger value="producers" className="text-xs md:text-sm">Producers</TabsTrigger>
-            <TabsTrigger value="subaccounts" className="text-xs md:text-sm">Subaccounts</TabsTrigger>
-            <TabsTrigger value="splits" className="text-xs md:text-sm">Payment Splits</TabsTrigger>
+            <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
             <TabsTrigger value="transactions" className="text-xs md:text-sm">Transactions</TabsTrigger>
+            <TabsTrigger value="producers" className="text-xs md:text-sm">Producers</TabsTrigger>
+            <TabsTrigger value="buyers" className="text-xs md:text-sm">Buyers</TabsTrigger>
           </TabsList>
           
-          {/* Producers Tab */}
-          <TabsContent value="producers">
-            <div className="border rounded-lg p-4 md:p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Producer Accounts</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Manage producer bank details and payment information
-                  </p>
-                </div>
+          {/* Overview Tab */}
+          <TabsContent value="overview">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Platform Overview</h3>
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  onClick={() => fetchProducers()}
-                  className="flex items-center gap-2 w-full md:w-auto"
+                  onClick={() => fetchOverviewStats()}
                   disabled={isLoading}
                 >
-                  <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                  <RefreshCw size={16} className={isLoading ? "animate-spin mr-2" : "mr-2"} />
                   Refresh
                 </Button>
               </div>
-
-              {isLoading ? (
-                <LoadingSkeleton rows={5} />
-              ) : producers.length === 0 ? (
-                <div className="text-center py-12">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
-                  <h3 className="text-lg font-medium">No producers found</h3>
-                  <p className="text-muted-foreground">
-                    No registered producers with bank details.
-                  </p>
+              
+              {isLoading && !overviewStats ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
                 </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="min-w-[150px]">Producer</TableHead>
-                          <TableHead className="min-w-[200px]">Email</TableHead>
-                          <TableHead className="min-w-[150px]">Bank Details</TableHead>
-                          <TableHead className="min-w-[150px]">Paystack Integration</TableHead>
-                          <TableHead className="min-w-[100px]">Split Share</TableHead>
-                          <TableHead className="min-w-[200px]">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {producers.map((producer) => (
-                          <TableRow key={producer.id}>
-                            <TableCell className="font-medium">
-                              {producer.stage_name || producer.full_name}
-                            </TableCell>
-                            <TableCell className="break-all">{producer.email}</TableCell>
-                            <TableCell>
-                              {producer.bank_code && producer.account_number ? (
-                                <div>
-                                  <div className="text-sm font-medium">
-                                    {producer.verified_account_name || 'Account Verified'}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Account: ****{producer.account_number.slice(-4)}
-                                  </div>
-                                </div>
-                              ) : (
-                                <Badge variant="outline" className="text-amber-500 border-amber-200 bg-amber-50">
-                                  No bank details
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {producer.paystack_subaccount_code ? (
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle className="text-green-500 h-4 w-4" />
-                                  <span className="text-sm">Integrated</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <AlertTriangle className="text-amber-500 h-4 w-4" />
-                                  <span className="text-sm">Not integrated</span>
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {producer.paystack_split_code ? '90%' : 'Not set'}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="w-full md:w-auto text-xs"
-                                  onClick={() => {
-                                    setActiveProducerId(producer.id);
-                                    setEditMode('bank');
-                                    setIsEditDialogOpen(true);
-                                  }}
-                                >
-                                  Edit Bank
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="w-full md:w-auto text-xs"
-                                  onClick={() => {
-                                    setActiveProducerId(producer.id);
-                                    setEditMode('percentage');
-                                    setNewPercentage(90);
-                                    setIsEditDialogOpen(true);
-                                  }}
-                                  disabled={!producer.paystack_split_code}
-                                >
-                                  Edit Split
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  
-                  <PaginationControls
-                    currentPage={producersPagination.currentPage}
-                    totalCount={producersPagination.totalCount}
-                    pageSize={producersPagination.pageSize}
-                    onPageChange={handleProducersPageChange}
-                    isLoading={isLoading}
+              ) : overviewStats ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <StatCard
+                    title="Total Revenue"
+                    value={formatCurrency(overviewStats.totalRevenue)}
+                    icon={<TrendingUp className="h-5 w-5 text-primary" />}
+                    variant="success"
                   />
-                </>
-              )}
-            </div>
-          </TabsContent>
-          
-          {/* Subaccounts Tab */}
-          <TabsContent value="subaccounts">
-            <div className="border rounded-lg p-4 md:p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Paystack Subaccounts</h3>
-                  <p className="text-sm text-muted-foreground">
-                    View all subaccounts created in Paystack for producers
-                  </p>
+                  <StatCard
+                    title="Completed Orders"
+                    value={overviewStats.completedOrders}
+                    icon={<CheckCircle className="h-5 w-5 text-green-500" />}
+                  />
+                  <StatCard
+                    title="Pending Orders"
+                    value={overviewStats.pendingOrders}
+                    icon={<ShoppingCart className="h-5 w-5 text-yellow-500" />}
+                    variant={overviewStats.pendingOrders > 0 ? 'warning' : 'default'}
+                  />
+                  <StatCard
+                    title="Total Users"
+                    value={overviewStats.totalUsers}
+                    icon={<Users className="h-5 w-5 text-primary" />}
+                  />
+                  <StatCard
+                    title="Total Producers"
+                    value={overviewStats.totalProducers}
+                    icon={<Users className="h-5 w-5 text-primary" />}
+                  />
+                  <StatCard
+                    title="Producers with Bank"
+                    value={overviewStats.producersWithBank}
+                    icon={<Building2 className="h-5 w-5 text-green-500" />}
+                  />
+                  <StatCard
+                    title="Producers with Crypto"
+                    value={overviewStats.producersWithCrypto}
+                    icon={<Wallet className="h-5 w-5 text-purple-500" />}
+                  />
+                  <StatCard
+                    title="Need Payment Setup"
+                    value={overviewStats.producersNeedingSetup}
+                    icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
+                    variant={overviewStats.producersNeedingSetup > 0 ? 'danger' : 'default'}
+                  />
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => fetchSubaccounts()}
-                  className="flex items-center gap-2 w-full md:w-auto"
-                  disabled={isLoading}
-                >
-                  <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-                  Refresh
-                </Button>
-              </div>
-
-              {isLoading ? (
-                <LoadingSkeleton rows={3} />
-              ) : subaccounts?.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[150px]">Business Name</TableHead>
-                        <TableHead className="min-w-[150px]">Subaccount Code</TableHead>
-                        <TableHead className="min-w-[120px]">Bank</TableHead>
-                        <TableHead className="min-w-[150px]">Account Number</TableHead>
-                        <TableHead className="min-w-[100px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {subaccounts.map((account) => (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">{account.business_name}</TableCell>
-                          <TableCell>{account.subaccount_code}</TableCell>
-                          <TableCell>{account.settlement_bank}</TableCell>
-                          <TableCell>****{account.account_number.slice(-4)}</TableCell>
-                          <TableCell>{getStatusBadge(account.active ? 'active' : 'inactive')}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
-                  <h3 className="text-lg font-medium">No subaccounts found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    No Paystack subaccounts have been created yet.
-                  </p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-          
-          {/* Splits Tab */}
-          <TabsContent value="splits">
-            <div className="border rounded-lg p-4 md:p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Payment Splits</h3>
-                  <p className="text-sm text-muted-foreground">
-                    View and manage transaction split configurations
-                  </p>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => fetchSplits()}
-                  className="flex items-center gap-2 w-full md:w-auto"
-                  disabled={isLoading}
-                >
-                  <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-                  Refresh
-                </Button>
-              </div>
-
-              {isLoading ? (
-                <LoadingSkeleton rows={3} />
-              ) : splits?.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[150px]">Split Name</TableHead>
-                        <TableHead className="min-w-[150px]">Split Code</TableHead>
-                        <TableHead className="min-w-[100px]">Split Type</TableHead>
-                        <TableHead className="min-w-[120px]">Main Account</TableHead>
-                        <TableHead className="min-w-[150px]">Subaccounts</TableHead>
-                        <TableHead className="min-w-[100px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {splits.map((split) => (
-                        <TableRow key={split.id}>
-                          <TableCell className="font-medium">{split.name}</TableCell>
-                          <TableCell>{split.split_code}</TableCell>
-                          <TableCell>{split.split_type}</TableCell>
-                          <TableCell>{100 - (split.subaccounts?.[0]?.share || 0)}%</TableCell>
-                          <TableCell>
-                            {split.subaccounts?.map((sub: any, index: number) => (
-                              <div key={index} className="text-sm">
-                                {sub.subaccount.slice(0, 8)}...:{' '}
-                                <span className="font-medium">{sub.share}%</span>
-                              </div>
-                            ))}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(split.active ? 'active' : 'inactive')}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
-                  <h3 className="text-lg font-medium">No splits found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    No payment splits have been created yet.
-                  </p>
-                </div>
-              )}
+              ) : null}
             </div>
           </TabsContent>
           
@@ -547,67 +370,73 @@ export default function PaymentAdmin() {
             <div className="border rounded-lg p-4 md:p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Transactions</h3>
+                  <h3 className="text-lg font-semibold">All Transactions</h3>
                   <p className="text-sm text-muted-foreground">
-                    View transaction history with payment splits
+                    Complete transaction history across all payment methods
                   </p>
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => fetchTransactions()}
-                  className="flex items-center gap-2 w-full md:w-auto"
-                  disabled={isLoading}
-                >
-                  <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); fetchTransactions(); }}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Filter status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => fetchTransactions()}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                  </Button>
+                </div>
               </div>
 
               {isLoading ? (
-                <LoadingSkeleton rows={3} />
-              ) : transactions?.length > 0 ? (
+                <LoadingSkeleton rows={5} />
+              ) : transactions.length > 0 ? (
                 <>
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="min-w-[150px]">Reference</TableHead>
-                          <TableHead className="min-w-[120px]">Beat</TableHead>
-                          <TableHead className="min-w-[120px]">Producer</TableHead>
-                          <TableHead className="min-w-[120px]">Total Amount</TableHead>
-                          <TableHead className="min-w-[120px]">Platform Share</TableHead>
-                          <TableHead className="min-w-[120px]">Producer Share</TableHead>
+                          <TableHead className="min-w-[100px]">Date</TableHead>
+                          <TableHead className="min-w-[150px]">Buyer</TableHead>
+                          <TableHead className="min-w-[120px]">Amount</TableHead>
+                          <TableHead className="min-w-[100px]">Method</TableHead>
                           <TableHead className="min-w-[100px]">Status</TableHead>
-                          <TableHead className="min-w-[100px]">Actions</TableHead>
+                          <TableHead className="min-w-[120px]">Reference</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {transactions.map((tx) => (
                           <TableRow key={tx.id}>
-                            <TableCell className="font-medium break-all">{tx.reference}</TableCell>
-                            <TableCell>{tx.beat}</TableCell>
-                            <TableCell>{tx.producer}</TableCell>
-                            <TableCell>{formatCurrency(tx.amount)}</TableCell>
-                            <TableCell>{formatCurrency(tx.platform_share)}</TableCell>
-                            <TableCell>{formatCurrency(tx.producer_share)}</TableCell>
-                            <TableCell>{getStatusBadge(tx.status)}</TableCell>
+                            <TableCell className="text-sm">
+                              {tx.date ? format(new Date(tx.date), 'MMM d, yyyy') : '-'}
+                            </TableCell>
                             <TableCell>
-                              {tx.status === 'failed' && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="text-xs"
-                                  onClick={() => handleRetryTransaction(tx.id)}
-                                  disabled={isUpdating}
-                                >
-                                  {isUpdating ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    'Retry'
-                                  )}
-                                </Button>
-                              )}
+                              <div>
+                                <div className="font-medium">{tx.buyer}</div>
+                                <div className="text-xs text-muted-foreground">{tx.buyer_email}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {formatCurrency(tx.amount, tx.currency)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">
+                                {tx.payment_method}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{getStatusBadge(tx.status)}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono">
+                              {tx.reference.slice(0, 12)}...
                             </TableCell>
                           </TableRow>
                         ))}
@@ -627,70 +456,225 @@ export default function PaymentAdmin() {
                 <div className="text-center py-12">
                   <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
                   <h3 className="text-lg font-medium">No transactions found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    No transaction history available.
+                  <p className="text-muted-foreground">No transaction history available.</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          {/* Producers Tab */}
+          <TabsContent value="producers">
+            <div className="border rounded-lg p-4 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Producer Payment Status</h3>
+                  <p className="text-sm text-muted-foreground">
+                    View and manage producer payment setup
                   </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={producerFilter} onValueChange={(val: 'all' | 'needs-setup') => setProducerFilter(val)}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter producers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Producers</SelectItem>
+                      <SelectItem value="needs-setup">Needs Setup</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => fetchProducers()}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                  </Button>
+                </div>
+              </div>
+
+              {isLoading ? (
+                <LoadingSkeleton rows={5} />
+              ) : producers.length === 0 ? (
+                <div className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
+                  <h3 className="text-lg font-medium">No producers found</h3>
+                  <p className="text-muted-foreground">
+                    {producerFilter === 'needs-setup' ? 'All producers have payment setup!' : 'No registered producers.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[150px]">Producer</TableHead>
+                          <TableHead className="min-w-[200px]">Email</TableHead>
+                          <TableHead className="min-w-[100px]">Bank</TableHead>
+                          <TableHead className="min-w-[100px]">Crypto</TableHead>
+                          <TableHead className="min-w-[150px]">Verified Name</TableHead>
+                          <TableHead className="min-w-[100px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {producers.map((producer) => {
+                          const hasBank = producer.bank_code && producer.account_number;
+                          const hasCrypto = !!producer.wallet_address;
+                          const needsSetup = !hasBank && !hasCrypto;
+                          
+                          return (
+                            <TableRow key={producer.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  {producer.stage_name || producer.full_name}
+                                  {needsSetup && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Needs Setup
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="break-all text-sm">{producer.email}</TableCell>
+                              <TableCell>
+                                {hasBank ? (
+                                  <CheckCircle className="h-5 w-5 text-green-500" />
+                                ) : (
+                                  <XCircle className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {hasCrypto ? (
+                                  <CheckCircle className="h-5 w-5 text-purple-500" />
+                                ) : (
+                                  <XCircle className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {producer.verified_account_name || '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setActiveProducerId(producer.id);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  Edit Bank
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  <PaginationControls
+                    currentPage={producersPagination.currentPage}
+                    totalCount={producersPagination.totalCount}
+                    pageSize={producersPagination.pageSize}
+                    onPageChange={handleProducersPageChange}
+                    isLoading={isLoading}
+                  />
+                </>
+              )}
+            </div>
+          </TabsContent>
+          
+          {/* Buyers Tab */}
+          <TabsContent value="buyers">
+            <div className="border rounded-lg p-4 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Buyers</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Users who have purchased beats on the platform
+                  </p>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => fetchBuyers()}
+                  disabled={isLoading}
+                >
+                  <RefreshCw size={16} className={isLoading ? "animate-spin mr-2" : "mr-2"} />
+                  Refresh
+                </Button>
+              </div>
+
+              {isLoading ? (
+                <LoadingSkeleton rows={5} />
+              ) : buyers.length > 0 ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[150px]">Name</TableHead>
+                          <TableHead className="min-w-[200px]">Email</TableHead>
+                          <TableHead className="min-w-[100px]">Orders</TableHead>
+                          <TableHead className="min-w-[120px]">Total Spent</TableHead>
+                          <TableHead className="min-w-[120px]">Last Purchase</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {buyers.map((buyer) => (
+                          <TableRow key={buyer.id}>
+                            <TableCell className="font-medium">{buyer.full_name}</TableCell>
+                            <TableCell className="text-sm">{buyer.email}</TableCell>
+                            <TableCell>{buyer.total_orders}</TableCell>
+                            <TableCell className="font-medium">
+                              {formatCurrency(buyer.total_spent)}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {buyer.last_purchase ? format(new Date(buyer.last_purchase), 'MMM d, yyyy') : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  <PaginationControls
+                    currentPage={buyersPagination.currentPage}
+                    totalCount={buyersPagination.totalCount}
+                    pageSize={buyersPagination.pageSize}
+                    onPageChange={handleBuyersPageChange}
+                    isLoading={isLoading}
+                  />
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
+                  <h3 className="text-lg font-medium">No buyers found</h3>
+                  <p className="text-muted-foreground">No completed purchases yet.</p>
                 </div>
               )}
             </div>
           </TabsContent>
         </Tabs>
 
-        {/* Edit Dialog */}
+        {/* Edit Bank Details Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-md mx-auto">
             <DialogHeader>
-              <DialogTitle>
-                {editMode === 'bank' ? 'Edit Bank Details' : 'Edit Split Percentage'}
-              </DialogTitle>
+              <DialogTitle>Edit Bank Details</DialogTitle>
               <DialogDescription>
-                {editMode === 'bank' 
-                  ? 'Update the producer\'s bank account information'
-                  : 'Modify the producer\'s revenue share percentage'
-                }
+                Update the producer's bank account information
               </DialogDescription>
             </DialogHeader>
             
-            {editMode === 'bank' ? (
-              activeProducerId && (
-                <ProducerBankDetailsForm 
-                  producerId={activeProducerId}
-                  onSuccess={() => {
-                    setIsEditDialogOpen(false);
-                    fetchProducers();
-                  }}
-                />
-              )
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="percentage">Producer Share Percentage</Label>
-                  <Input
-                    id="percentage"
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={newPercentage}
-                    onChange={(e) => setNewPercentage(Number(e.target.value))}
-                  />
-                </div>
-                <DialogFooter>
-                  <Button 
-                    onClick={handleUpdateSplitPercentage}
-                    disabled={isUpdating}
-                    className="w-full md:w-auto"
-                  >
-                    {isUpdating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Updating...
-                      </>
-                    ) : (
-                      'Update Percentage'
-                    )}
-                  </Button>
-                </DialogFooter>
-              </div>
+            {activeProducerId && (
+              <ProducerBankDetailsForm 
+                producerId={activeProducerId}
+                onSuccess={() => {
+                  setIsEditDialogOpen(false);
+                  fetchProducers();
+                }}
+              />
             )}
           </DialogContent>
         </Dialog>
