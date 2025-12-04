@@ -2,15 +2,8 @@
 import React, { FC, ReactNode, useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import {
-    PhantomWalletAdapter,
-    SolflareWalletAdapter,
-    CoinbaseWalletAdapter,
-    CloverWalletAdapter,
-    SalmonWalletAdapter,
-    TorusWalletAdapter,
-    MathWalletAdapter,
-} from '@solana/wallet-adapter-wallets';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
+import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 
 interface SolanaWalletProviderProps {
@@ -36,16 +29,11 @@ const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({ children }) => {
         return rpcEndpoint;
     }, []);
 
-    // Configure wallet adapters dynamically based on network
+    // Configure wallet adapters - using browser-only adapters (no native deps)
     const wallets = useMemo(
         () => [
             new PhantomWalletAdapter(),
             new SolflareWalletAdapter({ network }),
-            new CoinbaseWalletAdapter(),
-            new CloverWalletAdapter(),
-            new SalmonWalletAdapter(),
-            new TorusWalletAdapter(),
-            new MathWalletAdapter(),
         ],
         [network]
     );
