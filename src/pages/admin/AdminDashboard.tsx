@@ -2,7 +2,6 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BeatsManagement } from '@/components/admin/BeatsManagement';
-import { ImageMigrationTool } from '@/components/admin/ImageMigrationTool';
 import { TaskManagement } from '@/components/admin/TaskManagement';
 import { AnnouncementManagement } from '@/components/admin/AnnouncementManagement';
 import PaymentAdmin from './PaymentAdmin';
@@ -36,7 +35,7 @@ export default function AdminDashboard() {
         </div>
         
         <Tabs defaultValue="beats" className="w-full">
-          <TabsList className="flex flex-wrap sm:grid sm:grid-cols-3 md:grid-cols-5 w-full mb-8 gap-1">
+          <TabsList className="flex flex-wrap sm:grid sm:grid-cols-2 md:grid-cols-4 w-full mb-8 gap-1">
             <TabsTrigger value="beats" className="text-xs sm:text-sm flex-1 sm:flex-none">
               <span className="hidden sm:inline">Beats Management</span>
               <span className="sm:hidden">Beats</span>
@@ -52,10 +51,6 @@ export default function AdminDashboard() {
             <TabsTrigger value="announcements" className="text-xs sm:text-sm flex-1 sm:flex-none">
               <span className="hidden sm:inline">Announcements</span>
               <span className="sm:hidden">Announce</span>
-            </TabsTrigger>
-            <TabsTrigger value="migration" className="text-xs sm:text-sm flex-1 sm:flex-none">
-              <span className="hidden sm:inline">Data Migration</span>
-              <span className="sm:hidden">Migration</span>
             </TabsTrigger>
           </TabsList>
           
@@ -73,10 +68,6 @@ export default function AdminDashboard() {
           
           <TabsContent value="announcements">
             <AnnouncementManagement />
-          </TabsContent>
-          
-          <TabsContent value="migration">
-            <ImageMigrationTool />
           </TabsContent>
         </Tabs>
       </div>
