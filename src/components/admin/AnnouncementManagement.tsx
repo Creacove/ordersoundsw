@@ -200,23 +200,23 @@ export function AnnouncementManagement() {
 
         <div className="space-y-3">
           <Label>Link Action (Optional)</Label>
-          <RadioGroup value={linkType} onValueChange={(value: any) => setLinkType(value)}>
-            <div className="flex items-center space-x-2">
+          <RadioGroup value={linkType} onValueChange={(value: any) => setLinkType(value)} className="space-y-3">
+            <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
               <RadioGroupItem value="none" id="none" />
-              <Label htmlFor="none" className="font-normal cursor-pointer">
+              <Label htmlFor="none" className="font-normal cursor-pointer flex-1">
                 No Link
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
               <RadioGroupItem value="internal" id="internal" />
-              <Label htmlFor="internal" className="font-normal cursor-pointer flex items-center gap-1">
+              <Label htmlFor="internal" className="font-normal cursor-pointer flex items-center gap-1 flex-1">
                 <Home className="h-3 w-3" />
                 Internal Page
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
               <RadioGroupItem value="custom" id="custom" />
-              <Label htmlFor="custom" className="font-normal cursor-pointer flex items-center gap-1">
+              <Label htmlFor="custom" className="font-normal cursor-pointer flex items-center gap-1 flex-1">
                 <ExternalLink className="h-3 w-3" />
                 Custom URL
               </Label>

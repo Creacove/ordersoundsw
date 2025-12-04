@@ -114,7 +114,7 @@ export const TaskManagement = () => {
                 placeholder="Stay updated with our latest beats and features"
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="points">Points</Label>
                 <Input
@@ -178,6 +178,7 @@ export const TaskManagement = () => {
               No pending submissions
             </p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -248,6 +249,7 @@ export const TaskManagement = () => {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
