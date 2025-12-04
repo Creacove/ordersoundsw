@@ -18,8 +18,11 @@ import {
   BookOpen,
   ShoppingCart,
   DollarSign,
-  RefreshCw
+  RefreshCw,
+  Wallet
 } from "lucide-react";
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +49,8 @@ export function Topbar({ sidebarVisible = false }) {
   const { itemCount } = useCartLightweight();
   const isMobile = useIsMobile();
   const isAnnouncementVisible = useAnnouncementVisible();
+  const { connected, publicKey, connecting } = useWallet();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
   
   const [isScrolled, setIsScrolled] = useState(false);
   
@@ -226,6 +231,39 @@ export function Topbar({ sidebarVisible = false }) {
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{getDisplayName(user)}</span>
                     <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                  </div>
+                </div>
+                {/* Wallet Status Section */}
+                <div 
+                  className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-accent rounded-sm mx-1 mt-1"
+                  onClick={() => {
+                    if (!connected) {
+                      setWalletModalVisible(true);
+                    } else {
+                      navigate(getSettingsPath());
+                    }
+                  }}
+                >
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col flex-1">
+                    {connecting ? (
+                      <span className="text-xs text-muted-foreground">Connecting...</span>
+                    ) : connected && publicKey ? (
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                          <span className="text-xs font-medium">Wallet Connected</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+                        </span>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                        <span className="text-xs text-muted-foreground">Connect Wallet</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <DropdownMenuSeparator />
