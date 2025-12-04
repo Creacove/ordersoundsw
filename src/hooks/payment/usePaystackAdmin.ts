@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -9,27 +9,34 @@ interface PaginationState {
   totalCount: number;
 }
 
-interface AdminStats {
-  totalBeats: number;
-  trendingCount: number;
-  featuredCount: number;
-  weeklyPicksCount: number;
-  publishedCount: number;
-  currentProducerOfWeek?: {
-    id: string;
-    name: string;
-    stageName?: string;
-    profilePicture?: string;
-    followerCount: number;
-  } | null;
+interface OverviewStats {
+  totalRevenue: number;
+  completedOrders: number;
+  pendingOrders: number;
+  totalUsers: number;
+  totalProducers: number;
+  producersWithBank: number;
+  producersWithCrypto: number;
+  producersNeedingSetup: number;
+}
+
+interface BuyerData {
+  id: string;
+  full_name: string;
+  email: string;
+  total_orders: number;
+  total_spent: number;
+  last_purchase: string | null;
 }
 
 export function usePaystackAdmin() {
-  const [subaccounts, setSubaccounts] = useState<any[]>([]);
-  const [splits, setSplits] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [buyers, setBuyers] = useState<BuyerData[]>([]);
+  const [overviewStats, setOverviewStats] = useState<OverviewStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [producerFilter, setProducerFilter] = useState<'all' | 'needs-setup'>('all');
   
   // Pagination states
   const [producersPagination, setProducersPagination] = useState<PaginationState>({
@@ -43,28 +50,83 @@ export function usePaystackAdmin() {
     pageSize: 20,
     totalCount: 0
   });
+
+  const [buyersPagination, setBuyersPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: 20,
+    totalCount: 0
+  });
   
-  // Use React Query for producers with pagination
+  // Fetch overview statistics
+  const fetchOverviewStats = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch all stats in parallel
+      const [
+        { count: completedCount },
+        { count: pendingCount },
+        { data: revenueData },
+        { count: totalUsers },
+        { count: totalProducers },
+        { data: producersData }
+      ] = await Promise.all([
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('orders').select('total_price').eq('status', 'completed'),
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'producer'),
+        supabase.from('users').select('id, bank_code, account_number, wallet_address').eq('role', 'producer')
+      ]);
+      
+      const totalRevenue = revenueData?.reduce((sum, order) => sum + (order.total_price || 0), 0) || 0;
+      const producersWithBank = producersData?.filter(p => p.bank_code && p.account_number).length || 0;
+      const producersWithCrypto = producersData?.filter(p => p.wallet_address).length || 0;
+      const producersNeedingSetup = producersData?.filter(p => !p.bank_code && !p.wallet_address).length || 0;
+      
+      setOverviewStats({
+        totalRevenue,
+        completedOrders: completedCount || 0,
+        pendingOrders: pendingCount || 0,
+        totalUsers: totalUsers || 0,
+        totalProducers: totalProducers || 0,
+        producersWithBank,
+        producersWithCrypto,
+        producersNeedingSetup
+      });
+    } catch (error) {
+      console.error('Error fetching overview stats:', error);
+      toast.error('Failed to fetch overview statistics');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Use React Query for producers with pagination and filter
   const { 
     data: producersData, 
     isLoading: producersLoading, 
     refetch: refetchProducers 
   } = useQuery({
-    queryKey: ['admin-producers', producersPagination.currentPage, producersPagination.pageSize],
+    queryKey: ['admin-producers', producersPagination.currentPage, producersPagination.pageSize, producerFilter],
     queryFn: async () => {
       const offset = (producersPagination.currentPage - 1) * producersPagination.pageSize;
       
-      // Get total count
-      const { count } = await supabase
+      // Build query based on filter
+      let countQuery = supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'producer');
+      let dataQuery = supabase
         .from('users')
-        .select('*', { count: 'exact', head: true })
+        .select('id, full_name, email, stage_name, bank_code, account_number, verified_account_name, wallet_address, created_date')
         .eq('role', 'producer');
       
-      // Get paginated data
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, email, stage_name, paystack_subaccount_code, paystack_split_code, bank_code, account_number, verified_account_name')
-        .eq('role', 'producer')
+      if (producerFilter === 'needs-setup') {
+        countQuery = countQuery.is('bank_code', null).is('wallet_address', null);
+        dataQuery = dataQuery.is('bank_code', null).is('wallet_address', null);
+      }
+      
+      const { count } = await countQuery;
+      
+      const { data, error } = await dataQuery
         .range(offset, offset + producersPagination.pageSize - 1)
         .order('created_date', { ascending: false });
       
@@ -73,135 +135,127 @@ export function usePaystackAdmin() {
         throw error;
       }
       
-      // Update total count
       setProducersPagination(prev => ({ ...prev, totalCount: count || 0 }));
       
       return data || [];
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
-    gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   
-  // Fetch subaccounts from Paystack
-  const fetchSubaccounts = async () => {
+  // Fetch buyers with order history
+  const fetchBuyers = useCallback(async () => {
     try {
       setIsLoading(true);
       
-      // Mock data for now - replace with real Paystack API call
-      const mockSubaccounts = [
-        {
-          id: '1',
-          business_name: 'Producer 1 Music',
-          subaccount_code: 'ACCT_abc123',
-          settlement_bank: 'GTBank',
-          account_number: '0123456789',
-          active: true
-        },
-        {
-          id: '2',
-          business_name: 'Producer 2 Beats',
-          subaccount_code: 'ACCT_def456',
-          settlement_bank: 'Access Bank',
-          account_number: '9876543210',
-          active: true
-        }
-      ];
+      const offset = (buyersPagination.currentPage - 1) * buyersPagination.pageSize;
       
-      setSubaccounts(mockSubaccounts);
+      // Get buyers who have made orders
+      const { data: ordersData, error } = await supabase
+        .from('orders')
+        .select(`
+          buyer_id,
+          total_price,
+          order_date,
+          status,
+          users:buyer_id (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('status', 'completed')
+        .order('order_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Aggregate by buyer
+      const buyerMap = new Map<string, BuyerData>();
+      
+      ordersData?.forEach(order => {
+        const user = order.users as any;
+        if (!user) return;
+        
+        const existing = buyerMap.get(user.id);
+        if (existing) {
+          existing.total_orders += 1;
+          existing.total_spent += order.total_price || 0;
+          if (!existing.last_purchase || order.order_date > existing.last_purchase) {
+            existing.last_purchase = order.order_date;
+          }
+        } else {
+          buyerMap.set(user.id, {
+            id: user.id,
+            full_name: user.full_name,
+            email: user.email,
+            total_orders: 1,
+            total_spent: order.total_price || 0,
+            last_purchase: order.order_date
+          });
+        }
+      });
+      
+      const buyersArray = Array.from(buyerMap.values())
+        .sort((a, b) => b.total_spent - a.total_spent);
+      
+      setBuyersPagination(prev => ({ ...prev, totalCount: buyersArray.length }));
+      setBuyers(buyersArray.slice(offset, offset + buyersPagination.pageSize));
     } catch (error) {
-      console.error('Error fetching subaccounts:', error);
-      toast.error('Failed to fetch subaccounts');
+      console.error('Error fetching buyers:', error);
+      toast.error('Failed to fetch buyers');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [buyersPagination.currentPage, buyersPagination.pageSize]);
   
-  // Fetch splits from Paystack
-  const fetchSplits = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Mock data for now - replace with real Paystack API call
-      const mockSplits = [
-        {
-          id: '1',
-          name: 'Producer Split 1',
-          split_code: 'SPL_abc123',
-          split_type: 'percentage',
-          active: true,
-          subaccounts: [
-            {
-              subaccount: 'ACCT_abc123',
-              share: 90
-            }
-          ]
-        }
-      ];
-      
-      setSplits(mockSplits);
-    } catch (error) {
-      console.error('Error fetching splits:', error);
-      toast.error('Failed to fetch splits');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Fetch transactions with pagination
-  const fetchTransactions = async () => {
+  // Fetch transactions with pagination and status filter
+  const fetchTransactions = useCallback(async () => {
     try {
       setIsLoading(true);
       
       const offset = (transactionsPagination.currentPage - 1) * transactionsPagination.pageSize;
       
-      // Get total count
-      const { count } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed');
+      // Build query with optional status filter
+      let countQuery = supabase.from('orders').select('*', { count: 'exact', head: true });
+      let dataQuery = supabase.from('orders').select(`
+        id,
+        payment_reference,
+        total_price,
+        status,
+        order_date,
+        payment_method,
+        currency_used,
+        users:buyer_id (
+          full_name,
+          email
+        )
+      `);
       
-      // Fetch paginated transaction data
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          payment_reference,
-          total_price,
-          status,
-          order_date,
-          line_items (
-            beat_id,
-            price_charged,
-            beats (
-              title,
-              producer_id,
-              users:producer_id (
-                stage_name,
-                full_name
-              )
-            )
-          )
-        `)
-        .eq('status', 'completed')
+      if (statusFilter !== 'all') {
+        countQuery = countQuery.eq('status', statusFilter);
+        dataQuery = dataQuery.eq('status', statusFilter);
+      }
+      
+      const { count } = await countQuery;
+      
+      const { data: ordersData, error } = await dataQuery
         .order('order_date', { ascending: false })
         .range(offset, offset + transactionsPagination.pageSize - 1);
       
-      if (ordersError) throw ordersError;
+      if (error) throw error;
       
-      // Transform data for display
-      const formattedTransactions = (ordersData || []).flatMap(order => 
-        order.line_items.map((item: any) => ({
-          id: `${order.id}-${item.beat_id}`,
-          reference: order.payment_reference || `ORDER_${order.id}`,
-          beat: item.beats?.title || 'Unknown Beat',
-          producer: item.beats?.users?.stage_name || item.beats?.users?.full_name || 'Unknown Producer',
-          amount: item.price_charged || 0,
-          platform_share: (item.price_charged || 0) * 0.1, // 10% platform share
-          producer_share: (item.price_charged || 0) * 0.9, // 90% producer share
-          status: order.status,
-          date: order.order_date
-        }))
-      );
+      // Transform for display
+      const formattedTransactions = (ordersData || []).map(order => ({
+        id: order.id,
+        reference: order.payment_reference || `ORDER_${order.id.slice(0, 8)}`,
+        buyer: (order.users as any)?.full_name || 'Unknown',
+        buyer_email: (order.users as any)?.email || '',
+        amount: order.total_price || 0,
+        currency: order.currency_used || 'NGN',
+        payment_method: order.payment_method || 'Unknown',
+        status: order.status,
+        date: order.order_date
+      }));
       
       setTransactions(formattedTransactions);
       setTransactionsPagination(prev => ({ ...prev, totalCount: count || 0 }));
@@ -211,7 +265,7 @@ export function usePaystackAdmin() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [transactionsPagination.currentPage, transactionsPagination.pageSize, statusFilter]);
   
   // Update a producer's bank details
   const updateProducerBankInfo = async (producerId: string, bankCode: string, accountNumber: string) => {
@@ -229,7 +283,7 @@ export function usePaystackAdmin() {
       if (error) throw error;
       
       toast.success('Bank details updated successfully');
-      refetchProducers(); // Refresh cached data
+      refetchProducers();
       return true;
     } catch (error) {
       console.error('Error updating bank details:', error);
@@ -240,73 +294,40 @@ export function usePaystackAdmin() {
     }
   };
   
-  // Update a producer's split percentage
-  const updateProducerShare = async (producerId: string, percentage: number) => {
-    try {
-      setIsUpdating(true);
-      
-      // This would typically call Paystack API to update split percentage
-      // For now, just simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Producer share updated successfully');
-      return true;
-    } catch (error) {
-      console.error('Error updating producer share:', error);
-      toast.error('Failed to update producer share');
-      return false;
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-  
-  // Retry a failed transaction
-  const retryFailedTransaction = async (transactionId: string) => {
-    try {
-      setIsUpdating(true);
-      
-      // Simulate retry operation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Transaction retry initiated');
-      fetchTransactions(); // Refresh transactions
-      return true;
-    } catch (error) {
-      console.error('Error retrying transaction:', error);
-      toast.error('Failed to retry transaction');
-      return false;
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-  
-  // Pagination functions
+  // Pagination handlers
   const handleProducersPageChange = (page: number) => {
     setProducersPagination(prev => ({ ...prev, currentPage: page }));
   };
   
   const handleTransactionsPageChange = (page: number) => {
     setTransactionsPagination(prev => ({ ...prev, currentPage: page }));
-    fetchTransactions();
+  };
+
+  const handleBuyersPageChange = (page: number) => {
+    setBuyersPagination(prev => ({ ...prev, currentPage: page }));
   };
   
   return {
-    subaccounts,
-    splits,
     transactions,
+    buyers,
+    overviewStats,
     producers: producersData || [],
     isLoading: isLoading || producersLoading,
     isUpdating,
     producersPagination,
     transactionsPagination,
-    fetchSubaccounts,
-    fetchSplits,
+    buyersPagination,
+    statusFilter,
+    producerFilter,
+    setStatusFilter,
+    setProducerFilter,
+    fetchOverviewStats,
     fetchProducers: refetchProducers,
     fetchTransactions,
+    fetchBuyers,
     updateProducerBankInfo,
-    updateProducerShare,
-    retryFailedTransaction,
     handleProducersPageChange,
-    handleTransactionsPageChange
+    handleTransactionsPageChange,
+    handleBuyersPageChange
   };
 }
