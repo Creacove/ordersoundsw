@@ -286,11 +286,11 @@ export default function PaymentAdmin() {
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8">
-            <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="transactions" className="text-xs md:text-sm">Transactions</TabsTrigger>
-            <TabsTrigger value="producers" className="text-xs md:text-sm">Producers</TabsTrigger>
-            <TabsTrigger value="buyers" className="text-xs md:text-sm">Buyers</TabsTrigger>
+          <TabsList className="flex flex-col sm:grid sm:grid-cols-4 w-full mb-8 h-auto gap-1">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm w-full">Overview</TabsTrigger>
+            <TabsTrigger value="transactions" className="text-xs sm:text-sm w-full">Transactions</TabsTrigger>
+            <TabsTrigger value="producers" className="text-xs sm:text-sm w-full">Producers</TabsTrigger>
+            <TabsTrigger value="buyers" className="text-xs sm:text-sm w-full">Buyers</TabsTrigger>
           </TabsList>
           
           {/* Overview Tab */}
@@ -310,10 +310,8 @@ export default function PaymentAdmin() {
               </div>
               
               {isLoading && !overviewStats ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {Array.from({ length: 8 }, (_, i) => (
-                    <Skeleton key={i} className="h-24 w-full" />
-                  ))}
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : overviewStats ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
