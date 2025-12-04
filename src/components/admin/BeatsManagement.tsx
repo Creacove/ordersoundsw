@@ -96,7 +96,7 @@ export function BeatsManagement() {
 
         {/* Featured Producer Management */}
         <div className="border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Crown className="h-5 w-5" />
@@ -106,7 +106,7 @@ export function BeatsManagement() {
                 Select and manage the featured producer of the week
               </p>
             </div>
-            <Badge variant="outline" className="ml-4">
+            <Badge variant="outline" className="self-start sm:self-auto">
               Featured Producer
             </Badge>
           </div>
@@ -153,7 +153,7 @@ export function BeatsManagement() {
 
         {/* Trending Beats Management */}
         <div className="border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -163,7 +163,7 @@ export function BeatsManagement() {
                 Randomly select 5 new beats to mark as trending
               </p>
             </div>
-            <Badge variant="outline" className="ml-4">
+            <Badge variant="outline" className="self-start sm:self-auto">
               Target: 5 beats
             </Badge>
           </div>
@@ -186,7 +186,7 @@ export function BeatsManagement() {
 
         {/* Featured Beats Management */}
         <div className="border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Star className="h-5 w-5" />
@@ -196,7 +196,7 @@ export function BeatsManagement() {
                 Select 1 new beat to mark as featured (premium spotlight)
               </p>
             </div>
-            <Badge variant="outline" className="ml-4">
+            <Badge variant="outline" className="self-start sm:self-auto">
               Target: 1 beat
             </Badge>
           </div>
@@ -220,7 +220,7 @@ export function BeatsManagement() {
 
         {/* Weekly Picks Management */}
         <div className="border rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
@@ -230,7 +230,7 @@ export function BeatsManagement() {
                 Randomly select 6 new beats to mark as weekly picks
               </p>
             </div>
-            <Badge variant="outline" className="ml-4">
+            <Badge variant="outline" className="self-start sm:self-auto">
               Target: 5-7 beats
             </Badge>
           </div>

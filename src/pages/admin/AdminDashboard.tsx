@@ -36,12 +36,27 @@ export default function AdminDashboard() {
         </div>
         
         <Tabs defaultValue="beats" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8">
-            <TabsTrigger value="beats">Beats Management</TabsTrigger>
-            <TabsTrigger value="payments">Payment Management</TabsTrigger>
-            <TabsTrigger value="tasks">Task Management</TabsTrigger>
-            <TabsTrigger value="announcements">Announcements</TabsTrigger>
-            <TabsTrigger value="migration">Data Migration</TabsTrigger>
+          <TabsList className="flex flex-wrap sm:grid sm:grid-cols-3 md:grid-cols-5 w-full mb-8 gap-1">
+            <TabsTrigger value="beats" className="text-xs sm:text-sm flex-1 sm:flex-none">
+              <span className="hidden sm:inline">Beats Management</span>
+              <span className="sm:hidden">Beats</span>
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs sm:text-sm flex-1 sm:flex-none">
+              <span className="hidden sm:inline">Payment Management</span>
+              <span className="sm:hidden">Payments</span>
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs sm:text-sm flex-1 sm:flex-none">
+              <span className="hidden sm:inline">Task Management</span>
+              <span className="sm:hidden">Tasks</span>
+            </TabsTrigger>
+            <TabsTrigger value="announcements" className="text-xs sm:text-sm flex-1 sm:flex-none">
+              <span className="hidden sm:inline">Announcements</span>
+              <span className="sm:hidden">Announce</span>
+            </TabsTrigger>
+            <TabsTrigger value="migration" className="text-xs sm:text-sm flex-1 sm:flex-none">
+              <span className="hidden sm:inline">Data Migration</span>
+              <span className="sm:hidden">Migration</span>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="beats">
