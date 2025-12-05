@@ -45,6 +45,7 @@ import ProtectedAdminRoute from "./components/auth/ProtectedAdminRoute";
 import Sandbox from "./pages/Sandbox";
 import Licenses from "./pages/Licenses";
 import InviteAndEarn from "./pages/referrals/InviteAndEarn";
+import Animations from "./pages/Animations";
 
 // Lazy load admin dashboard to avoid affecting main app performance
 import { lazy, Suspense } from "react";
@@ -152,6 +153,9 @@ const AppContent = () => (
                 </ProtectedAdminRoute>
               } 
             />
+
+            {/* Hidden cinematic animation page */}
+            <Route path="/animations" element={<Animations />} />
 
             {/* Catch-all Route */}
             <Route path="*" element={<NotFound />} />
