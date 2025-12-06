@@ -5,22 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
-  Wallet, 
-  Share2, 
   Copy, 
-  ShoppingCart, 
-  Play, 
-  Heart,
-  Music,
-  DollarSign,
-  Users,
-  TrendingUp,
-  Zap,
-  ArrowRight
+  Check,
+  Download,
+  Home,
+  Library,
+  Music2,
+  Settings,
+  Gift,
+  X
 } from "lucide-react";
 
 // ============================================
-// SHOWCASE COMPONENTS (Static versions of real UI)
+// SHOWCASE COMPONENTS (Clean, Minimal UI)
 // ============================================
 
 const ShowcaseBeatCard = ({ 
@@ -28,46 +25,23 @@ const ShowcaseBeatCard = ({
   producer, 
   price, 
   genre,
-  bpm,
-  plays
 }: { 
   title: string; 
   producer: string; 
   price: number; 
   genre: string;
-  bpm?: number;
-  plays?: string;
 }) => (
-  <Card className="group overflow-hidden w-64 bg-card/90 backdrop-blur-sm border-border/50">
-    <div className="relative aspect-square bg-gradient-to-br from-primary/20 to-primary/5">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Music className="h-16 w-16 text-primary/30" />
-      </div>
-      <div className="absolute top-2 left-2">
-        <Badge variant="secondary" className="text-xs">{genre}</Badge>
-      </div>
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button size="icon" variant="ghost" className="h-8 w-8 bg-black/50 hover:bg-black/70">
-          <Heart className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-        <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
-          <Play className="h-3 w-3" />
-          <span>{plays || "2.4k"}</span>
-          {bpm && <span>• {bpm} BPM</span>}
-        </div>
-      </div>
+  <Card className="w-56 bg-card border-border/30 overflow-hidden">
+    <div className="aspect-square bg-secondary/50 flex items-center justify-center">
+      <Music2 className="h-12 w-12 text-muted-foreground/30" />
     </div>
     <div className="p-4">
+      <Badge variant="secondary" className="text-xs mb-2">{genre}</Badge>
       <h3 className="font-semibold text-foreground truncate">{title}</h3>
-      <p className="text-sm text-muted-foreground">by {producer}</p>
+      <p className="text-sm text-muted-foreground">{producer}</p>
       <div className="flex justify-between items-center mt-3">
-        <span className="font-bold text-lg text-primary">${price}</span>
-        <Button size="sm" className="gap-1">
-          <ShoppingCart className="h-3 w-3" />
-          Add
-        </Button>
+        <span className="font-bold text-lg">${price}</span>
+        <Button size="sm" variant="secondary">Add to Cart</Button>
       </div>
     </div>
   </Card>
@@ -77,877 +51,754 @@ const ShowcaseCartItem = ({
   title, 
   producer, 
   price, 
-  license 
 }: { 
   title: string; 
   producer: string; 
   price: number; 
-  license: string;
 }) => (
-  <div className="border border-border/50 rounded-xl bg-card/80 backdrop-blur-sm shadow-lg p-4 flex gap-4 w-80">
-    <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center flex-shrink-0">
-      <Music className="h-8 w-8 text-primary/50" />
+  <div className="border border-border/30 rounded-lg bg-card p-4 flex gap-4 w-72">
+    <div className="w-14 h-14 rounded bg-secondary/50 flex items-center justify-center flex-shrink-0">
+      <Music2 className="h-6 w-6 text-muted-foreground/40" />
     </div>
     <div className="flex-1 min-w-0">
-      <h3 className="font-semibold text-foreground truncate">{title}</h3>
-      <p className="text-xs text-muted-foreground">{producer}</p>
-      <Badge variant="secondary" className="text-xs mt-1">{license} License</Badge>
+      <h3 className="font-medium text-foreground truncate">{title}</h3>
+      <p className="text-sm text-muted-foreground">{producer}</p>
     </div>
-    <span className="font-bold text-primary">${price}</span>
+    <span className="font-semibold">${price}</span>
   </div>
 );
 
 const ShowcaseStatsCard = ({ 
   label, 
   value, 
-  icon: Icon,
   highlight
 }: { 
   label: string; 
   value: string; 
-  icon: React.ElementType;
   highlight?: boolean;
 }) => (
-  <Card className={`p-6 ${highlight ? 'ring-2 ring-primary shadow-[0_0_30px_rgba(124,58,237,0.3)]' : ''}`}>
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        <p className="text-3xl font-bold text-foreground">{value}</p>
-      </div>
-      <Icon className={`h-10 w-10 ${highlight ? 'text-primary' : 'text-primary/70'}`} />
-    </div>
+  <Card className={`p-6 ${highlight ? 'border-primary/50 bg-primary/5' : 'border-border/30'}`}>
+    <p className="text-sm text-muted-foreground mb-1">{label}</p>
+    <p className={`text-3xl font-bold ${highlight ? 'text-primary' : 'text-foreground'}`}>{value}</p>
   </Card>
 );
 
-const ShowcaseWalletButton = ({ connected }: { connected?: boolean }) => (
-  <Button className="gap-2 bg-gradient-to-r from-primary to-purple-600 text-white hover:opacity-90 shadow-lg">
-    <Wallet className="h-4 w-4" />
-    {connected ? "Wallet Connected" : "Connect Wallet"}
-  </Button>
+const ShowcaseSidebar = ({ highlightItem }: { highlightItem?: string }) => (
+  <div className="w-56 bg-sidebar border border-sidebar-border rounded-lg p-4 space-y-1">
+    <div className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/70">
+      <Home className="h-4 w-4" />
+      <span className="text-sm">Home</span>
+    </div>
+    <div className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/70">
+      <Library className="h-4 w-4" />
+      <span className="text-sm">Library</span>
+    </div>
+    <div className={`flex items-center gap-3 px-3 py-2 rounded-md ${highlightItem === 'invite' ? 'bg-primary text-primary-foreground' : 'text-sidebar-foreground/70'}`}>
+      <Gift className="h-4 w-4" />
+      <span className="text-sm font-medium">Invite & Earn</span>
+    </div>
+    <div className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/70">
+      <Settings className="h-4 w-4" />
+      <span className="text-sm">Settings</span>
+    </div>
+  </div>
 );
 
-const ShowcaseReferralLink = () => (
-  <Card className="p-6 w-96">
-    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-foreground">
-      <Share2 className="h-5 w-5 text-primary" /> Your Referral Link
-    </h3>
+const ShowcaseReferralLink = ({ copied }: { copied?: boolean }) => (
+  <Card className="p-5 w-80 border-border/30">
+    <h3 className="text-base font-medium mb-3 text-foreground">Your Invite Link</h3>
     <div className="flex gap-2">
       <Input 
         value="ordersounds.app/ref/yourcode" 
         readOnly 
-        className="font-mono text-sm bg-muted/50" 
+        className="font-mono text-sm bg-secondary/30 border-border/30" 
       />
-      <Button variant="outline" className="gap-1 flex-shrink-0">
-        <Copy className="h-4 w-4" /> Copy
+      <Button variant={copied ? "default" : "outline"} size="icon" className="flex-shrink-0">
+        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
       </Button>
     </div>
   </Card>
 );
 
-const ShowcaseCheckoutCard = ({ total, items }: { total: number; items: number }) => (
-  <Card className="p-6 w-80 bg-card/90 backdrop-blur-sm">
-    <h3 className="text-lg font-semibold mb-4 text-foreground">Checkout</h3>
-    <div className="space-y-3 mb-4">
-      <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">{items} items</span>
-        <span className="text-foreground">${total.toFixed(2)}</span>
+const ShowcaseCheckoutCard = ({ total, usdcHighlight }: { total: number; usdcHighlight?: boolean }) => (
+  <Card className="p-5 w-72 border-border/30">
+    <h3 className="font-medium mb-4 text-foreground">Payment</h3>
+    <div className="space-y-2 mb-4">
+      <div className={`flex items-center gap-3 p-3 rounded-lg border ${usdcHighlight ? 'border-primary bg-primary/5' : 'border-border/30'}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${usdcHighlight ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
+          $
+        </div>
+        <span className={`text-sm font-medium ${usdcHighlight ? 'text-foreground' : 'text-muted-foreground'}`}>USDC</span>
+        {usdcHighlight && <Badge className="ml-auto text-xs">100% to you</Badge>}
       </div>
-      <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">Platform Fee</span>
-        <span className="text-green-500 font-medium">$0.00</span>
-      </div>
-      <div className="border-t border-border pt-3 flex justify-between font-semibold">
-        <span>Total</span>
-        <span className="text-primary">${total.toFixed(2)}</span>
+      <div className="flex items-center gap-3 p-3 rounded-lg border border-border/20 opacity-50">
+        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground">
+          ₦
+        </div>
+        <span className="text-sm text-muted-foreground">Card / Bank</span>
       </div>
     </div>
-    <ShowcaseWalletButton />
+    <div className="border-t border-border/30 pt-3 flex justify-between items-center">
+      <span className="text-sm text-muted-foreground">Total</span>
+      <span className="text-xl font-bold">${total}</span>
+    </div>
   </Card>
 );
+
+const ShowcaseExpiredNotification = () => (
+  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 w-80 flex items-start gap-3">
+    <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
+      <X className="h-4 w-4 text-destructive" />
+    </div>
+    <div>
+      <p className="font-medium text-destructive">Link Expired</p>
+      <p className="text-sm text-muted-foreground mt-1">You have 7 days to download your files before the link expires.</p>
+    </div>
+  </div>
+);
+
+const ShowcaseFileIcon = ({ type }: { type: 'wav' | 'zip' | 'stems' }) => {
+  const labels = { wav: 'WAV', zip: 'ZIP', stems: 'STEMS' };
+  return (
+    <div className="w-16 h-20 bg-card border border-border/30 rounded-lg flex flex-col items-center justify-center">
+      <div className="w-8 h-8 bg-secondary/50 rounded flex items-center justify-center mb-1">
+        <Download className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <span className="text-xs font-medium text-muted-foreground">{labels[type]}</span>
+    </div>
+  );
+};
 
 // ============================================
 // MOCK DATA
 // ============================================
 
 const mockBeats = [
-  { id: '1', title: 'Midnight Vibes', producer: 'BeatMaster', price: 29.99, genre: 'Trap', bpm: 140, plays: '2.4k' },
-  { id: '2', title: 'Summer Heat', producer: 'ProducerX', price: 49.99, genre: 'Afrobeats', bpm: 105, plays: '5.1k' },
-  { id: '3', title: 'Dark Energy', producer: 'SoundWave', price: 39.99, genre: 'Drill', bpm: 145, plays: '1.8k' },
-  { id: '4', title: 'Golden Hour', producer: 'MelodyKing', price: 34.99, genre: 'R&B', bpm: 90, plays: '3.2k' },
-  { id: '5', title: 'Street Dreams', producer: 'UrbanFlow', price: 44.99, genre: 'Hip-Hop', bpm: 95, plays: '4.7k' },
+  { id: '1', title: 'Midnight Vibes', producer: 'BeatMaster', price: 29, genre: 'Trap' },
+  { id: '2', title: 'Summer Heat', producer: 'ProducerX', price: 49, genre: 'Afrobeats' },
+  { id: '3', title: 'Dark Energy', producer: 'SoundWave', price: 39, genre: 'Drill' },
+  { id: '4', title: 'Golden Hour', producer: 'MelodyKing', price: 34, genre: 'R&B' },
 ];
-
-// ============================================
-// PARTICLE COMPONENT
-// ============================================
-
-const Particle = ({ delay = 0, x = 0, y = 0, size = 4 }: { delay?: number; x?: number; y?: number; size?: number }) => (
-  <motion.div
-    className="absolute rounded-full bg-primary"
-    style={{ width: size, height: size, left: `${50 + x}%`, top: `${50 + y}%` }}
-    initial={{ scale: 0, opacity: 0 }}
-    animate={{
-      scale: [0, 1, 0],
-      opacity: [0, 1, 0],
-      x: [0, x * 10, x * 20],
-      y: [0, y * 10, y * 20],
-    }}
-    transition={{ duration: 2, delay, ease: "easeOut" }}
-  />
-);
 
 // ============================================
 // SCENE COMPONENTS
 // ============================================
 
+// Scene 1: Cold Open - Black. Slow fade. Typography focus.
 const Scene1 = () => {
   return (
-    <motion.div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-      {/* Particle explosion */}
-      {Array.from({ length: 40 }).map((_, i) => (
-        <Particle
-          key={i}
-          delay={0.5 + i * 0.02}
-          x={(Math.random() - 0.5) * 100}
-          y={(Math.random() - 0.5) * 100}
-          size={Math.random() * 8 + 2}
-        />
-      ))}
-
-      {/* Floating beat cards in background */}
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
+      {/* Faded beat cards in background - very subtle */}
       <motion.div
-        className="absolute -left-20 top-1/4 opacity-20 scale-75"
-        initial={{ opacity: 0, x: -100 }}
-        animate={{ opacity: 0.2, x: 0 }}
-        transition={{ delay: 1.5, duration: 1 }}
+        className="absolute opacity-[0.03] scale-75"
+        style={{ left: '10%', top: '20%' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.03 }}
+        transition={{ delay: 2, duration: 1 }}
       >
         <ShowcaseBeatCard {...mockBeats[0]} />
       </motion.div>
       <motion.div
-        className="absolute -right-20 top-1/3 opacity-20 scale-75"
-        initial={{ opacity: 0, x: 100 }}
-        animate={{ opacity: 0.2, x: 0 }}
-        transition={{ delay: 1.7, duration: 1 }}
+        className="absolute opacity-[0.03] scale-75"
+        style={{ right: '10%', bottom: '25%' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.03 }}
+        transition={{ delay: 2.5, duration: 1 }}
       >
         <ShowcaseBeatCard {...mockBeats[1]} />
       </motion.div>
 
-      {/* Logo slam */}
-      <motion.img
-        src="/lovable-uploads/86ceb56c-c6e8-400c-8c94-ec40647db5bc.png"
-        alt="OrderSounds"
-        className="h-24 mb-8"
-        initial={{ scale: 3, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 15 }}
-      />
-
-      {/* Shockwave ring */}
-      <motion.div
-        className="absolute w-40 h-40 rounded-full border-4 border-primary"
-        initial={{ scale: 0, opacity: 1 }}
-        animate={{ scale: 10, opacity: 0 }}
-        transition={{ delay: 0.3, duration: 1.5, ease: "easeOut" }}
-      />
-
-      {/* Main text */}
-      <motion.h1
-        className="text-6xl md:text-8xl font-black text-center"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 1, type: "spring", stiffness: 150 }}
-        style={{ textShadow: "0 0 40px rgba(124, 58, 237, 0.5)" }}
-      >
-        <span className="text-primary">DECEMBER</span> & <span className="text-primary">JANUARY</span>
-      </motion.h1>
-
-      <motion.p
-        className="text-2xl md:text-4xl font-bold mt-6 text-muted-foreground"
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 2, duration: 0.5 }}
-      >
-        WE'RE BREAKING THE RULES.
-      </motion.p>
+      {/* Main text - word by word fade */}
+      <div className="text-center">
+        <motion.span
+          className="text-3xl md:text-5xl font-light text-foreground/80 block"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+        >
+          Producers...
+        </motion.span>
+        <motion.span
+          className="text-3xl md:text-5xl font-light text-foreground/80 block mt-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2, duration: 0.8 }}
+        >
+          imagine keeping every dollar you earn.
+        </motion.span>
+      </div>
     </motion.div>
   );
 };
 
+// Scene 2: Reveal - SNAP to contrast. Bold typography.
 const Scene2 = () => {
   return (
-    <motion.div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-      {/* Flying UI components collage */}
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+      {/* Stats card floating in background */}
       <motion.div
-        className="absolute"
-        initial={{ x: -500, y: -200, rotate: -20, opacity: 0 }}
-        animate={{ x: -300, y: -150, rotate: -10, opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
-      >
-        <ShowcaseBeatCard {...mockBeats[0]} />
-      </motion.div>
-
-      <motion.div
-        className="absolute"
-        initial={{ x: 500, y: 200, rotate: 20, opacity: 0 }}
-        animate={{ x: 300, y: 150, rotate: 10, opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.4 }}
-      >
-        <ShowcaseBeatCard {...mockBeats[1]} />
-      </motion.div>
-
-      <motion.div
-        className="absolute"
-        initial={{ x: -500, y: 300, rotate: -15, opacity: 0 }}
-        animate={{ x: -250, y: 200, rotate: -5, opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.6 }}
-      >
-        <ShowcaseCartItem title="Midnight Vibes" producer="BeatMaster" price={29.99} license="Premium" />
-      </motion.div>
-
-      <motion.div
-        className="absolute"
-        initial={{ x: 500, y: -300, rotate: 15, opacity: 0 }}
-        animate={{ x: 280, y: -180, rotate: 5, opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.8 }}
-      >
-        <ShowcaseStatsCard label="Total Revenue" value="$1,247" icon={DollarSign} />
-      </motion.div>
-
-      {/* Slicing text */}
-      <motion.div className="relative z-10 text-center">
-        <motion.h2
-          className="text-7xl md:text-9xl font-black text-primary"
-          initial={{ x: -200, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 1, type: "spring", stiffness: 100 }}
-          style={{ textShadow: "0 0 60px rgba(124, 58, 237, 0.8)" }}
-        >
-          NO FEES.
-        </motion.h2>
-        <motion.h2
-          className="text-7xl md:text-9xl font-black text-foreground"
-          initial={{ x: 200, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 1.5, type: "spring", stiffness: 100 }}
-        >
-          NO CUTS.
-        </motion.h2>
-        <motion.h2
-          className="text-7xl md:text-9xl font-black text-primary"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 2, type: "spring", stiffness: 150 }}
-          style={{ textShadow: "0 0 60px rgba(124, 58, 237, 0.8)" }}
-        >
-          NO LIMITS.
-        </motion.h2>
-      </motion.div>
-    </motion.div>
-  );
-};
-
-const Scene3 = () => {
-  return (
-    <motion.div className="absolute inset-0 flex flex-col items-center justify-center">
-      {/* Floating stats cards */}
-      <motion.div
-        className="absolute left-10 top-1/4"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 0.6, y: 0 }}
-        transition={{ delay: 1.5, duration: 0.8 }}
-      >
-        <ShowcaseStatsCard label="Beat Sale" value="$100" icon={Music} />
-      </motion.div>
-
-      <motion.div
-        className="absolute right-10 top-1/4"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 0.6, y: 0 }}
-        transition={{ delay: 1.7, duration: 0.8 }}
-      >
-        <ShowcaseStatsCard label="You Earn" value="$100" icon={DollarSign} highlight />
-      </motion.div>
-
-      {/* Main reveal */}
-      <motion.h1
-        className="text-8xl md:text-[12rem] font-black text-center leading-none"
-        initial={{ scale: 0.3, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.5, type: "spring", stiffness: 80, damping: 12 }}
-        style={{
-          textShadow: "0 0 80px rgba(124, 58, 237, 0.8), 0 0 120px rgba(124, 58, 237, 0.4)",
-        }}
-      >
-        <span className="text-primary">EARN</span>
-        <br />
-        <span className="text-foreground">100%</span>
-      </motion.h1>
-
-      <motion.p
-        className="text-xl md:text-3xl text-muted-foreground mt-8 text-center"
-        initial={{ y: 30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 2, duration: 0.5 }}
-      >
-        When your invited buyer pays with crypto.
-      </motion.p>
-
-      {/* Glowing orbs */}
-      {[...Array(5)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-20 h-20 rounded-full bg-primary/20 blur-xl"
-          style={{
-            left: `${20 + i * 15}%`,
-            top: `${60 + Math.sin(i) * 10}%`,
-          }}
-          animate={{
-            y: [0, -20, 0],
-            opacity: [0.3, 0.6, 0.3],
-          }}
-          transition={{
-            duration: 3,
-            delay: i * 0.2,
-            repeat: Infinity,
-          }}
-        />
-      ))}
-    </motion.div>
-  );
-};
-
-const Scene4 = () => {
-  return (
-    <motion.div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-      {/* Flow line */}
-      <motion.div
-        className="absolute h-1 bg-gradient-to-r from-transparent via-primary to-transparent"
-        style={{ width: "100%", top: "50%" }}
-        initial={{ scaleX: 0, opacity: 0 }}
-        animate={{ scaleX: 1, opacity: 1 }}
-        transition={{ duration: 1 }}
-      />
-
-      {/* Step 1: Share link */}
-      <motion.div
-        className="absolute left-[5%]"
-        initial={{ x: -100, opacity: 0, scale: 0.8 }}
-        animate={{ x: 0, opacity: 1, scale: 1 }}
-        transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
-      >
-        <ShowcaseReferralLink />
-        <motion.div
-          className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 text-primary font-semibold"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-        >
-          <Share2 className="h-5 w-5" /> Share
-        </motion.div>
-      </motion.div>
-
-      {/* Arrow */}
-      <motion.div
-        className="absolute left-[32%] text-primary"
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1.2 }}
-      >
-        <ArrowRight className="h-12 w-12" />
-      </motion.div>
-
-      {/* Step 2: Beat card */}
-      <motion.div
-        className="absolute left-[38%]"
-        initial={{ y: 100, opacity: 0, scale: 0.8 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ delay: 1.5, type: "spring", stiffness: 100 }}
-      >
-        <ShowcaseBeatCard {...mockBeats[2]} />
-        <motion.div
-          className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 text-primary font-semibold whitespace-nowrap"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-        >
-          <Music className="h-5 w-5" /> Buyer Finds Beat
-        </motion.div>
-      </motion.div>
-
-      {/* Arrow */}
-      <motion.div
-        className="absolute left-[58%] text-primary"
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 2.2 }}
-      >
-        <ArrowRight className="h-12 w-12" />
-      </motion.div>
-
-      {/* Step 3: Checkout with wallet */}
-      <motion.div
-        className="absolute right-[5%]"
-        initial={{ x: 100, opacity: 0, scale: 0.8 }}
-        animate={{ x: 0, opacity: 1, scale: 1 }}
-        transition={{ delay: 2.5, type: "spring", stiffness: 100 }}
-      >
-        <ShowcaseCheckoutCard total={39.99} items={1} />
-        <motion.div
-          className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 text-primary font-semibold whitespace-nowrap"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 3 }}
-        >
-          <Wallet className="h-5 w-5" /> Pays Crypto
-        </motion.div>
-      </motion.div>
-
-      {/* Final message */}
-      <motion.div
-        className="absolute bottom-20 text-center"
+        className="absolute right-[10%] top-[20%] opacity-60"
         initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 3.5 }}
+        animate={{ opacity: 0.6, y: 0 }}
+        transition={{ delay: 2.5, duration: 0.6 }}
       >
-        <p className="text-4xl font-bold text-primary" style={{ textShadow: "0 0 30px rgba(124, 58, 237, 0.5)" }}>
-          YOU EARN 100%
-        </p>
+        <ShowcaseStatsCard label="Beat Sale" value="$100" />
       </motion.div>
-    </motion.div>
-  );
-};
-
-const Scene5 = () => {
-  return (
-    <motion.div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-      {/* Split screen */}
       <motion.div
-        className="absolute left-0 top-0 w-1/2 h-full bg-gradient-to-r from-primary/10 to-transparent flex items-center justify-center"
-        initial={{ x: "-100%" }}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          <ShowcaseStatsCard label="You Earn (Crypto)" value="$100" icon={Wallet} highlight />
-          <motion.p
-            className="text-center mt-4 text-3xl font-bold text-green-500"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-          >
-            0% Fee
-          </motion.p>
-        </motion.div>
-      </motion.div>
-
-      <motion.div
-        className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-muted/30 to-transparent flex items-center justify-center"
-        initial={{ x: "100%" }}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          <ShowcaseStatsCard label="You Earn (Regular)" value="$80" icon={DollarSign} />
-          <motion.p
-            className="text-center mt-4 text-3xl font-bold text-muted-foreground"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-          >
-            20% Fee
-          </motion.p>
-        </motion.div>
-      </motion.div>
-
-      {/* Divider */}
-      <motion.div
-        className="absolute w-1 h-full bg-primary"
-        initial={{ scaleY: 0 }}
-        animate={{ scaleY: 1 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
-        style={{ boxShadow: "0 0 30px rgba(124, 58, 237, 0.8)" }}
-      />
-
-      {/* Crypto side expands */}
-      <motion.div
-        className="absolute left-0 top-0 w-full h-full bg-gradient-to-r from-primary/20 to-primary/5"
-        initial={{ scaleX: 0, originX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ delay: 3, duration: 1 }}
-      />
-
-      <motion.h2
-        className="absolute text-6xl md:text-8xl font-black text-primary z-10"
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 3.5, type: "spring" }}
-        style={{ textShadow: "0 0 60px rgba(124, 58, 237, 0.8)" }}
-      >
-        CRYPTO WINS
-      </motion.h2>
-    </motion.div>
-  );
-};
-
-const Scene6 = () => {
-  return (
-    <motion.div className="absolute inset-0 overflow-hidden">
-      {/* Rapid montage of beat cards */}
-      {mockBeats.map((beat, i) => (
-        <motion.div
-          key={beat.id}
-          className="absolute"
-          style={{
-            left: `${(i % 3) * 35}%`,
-            top: `${Math.floor(i / 3) * 40 + 10}%`,
-          }}
-          initial={{ 
-            x: i % 2 === 0 ? -500 : 500, 
-            y: i % 3 === 0 ? -300 : 300,
-            rotate: (Math.random() - 0.5) * 40,
-            opacity: 0,
-            scale: 0.5
-          }}
-          animate={{ 
-            x: 0, 
-            y: 0,
-            rotate: (Math.random() - 0.5) * 10,
-            opacity: 1,
-            scale: 0.9
-          }}
-          transition={{ 
-            delay: i * 0.15, 
-            type: "spring",
-            stiffness: 80
-          }}
-        >
-          <ShowcaseBeatCard {...beat} />
-        </motion.div>
-      ))}
-
-      {/* Genre badges flying */}
-      {['TRAP', 'AFROBEATS', 'DRILL', 'R&B', 'HIP-HOP'].map((genre, i) => (
-        <motion.div
-          key={genre}
-          className="absolute"
-          style={{ left: `${10 + i * 18}%`, top: `${70 + (i % 2) * 10}%` }}
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1 + i * 0.1 }}
-        >
-          <Badge className="text-lg px-4 py-2 bg-primary/20 text-primary border-primary">
-            {genre}
-          </Badge>
-        </motion.div>
-      ))}
-
-      {/* Flashing text */}
-      <motion.div className="absolute inset-0 flex items-center justify-center z-20">
-        <AnimatePresence mode="wait">
-          <motion.h2
-            key="producers"
-            className="text-6xl md:text-9xl font-black text-primary absolute"
-            initial={{ opacity: 0, scale: 1.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.3 }}
-            style={{ textShadow: "0 0 60px rgba(124, 58, 237, 0.8)" }}
-          >
-            FOR PRODUCERS.
-          </motion.h2>
-        </AnimatePresence>
-      </motion.div>
-
-      <motion.h2
-        className="absolute bottom-20 left-1/2 -translate-x-1/2 text-4xl md:text-6xl font-black text-foreground"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-      >
-        FOR THE CULTURE.
-      </motion.h2>
-    </motion.div>
-  );
-};
-
-const Scene7 = () => {
-  return (
-    <motion.div className="absolute inset-0 flex flex-col items-center justify-center">
-      {/* Glitch overlay */}
-      <motion.div
-        className="absolute inset-0 bg-primary/5"
-        animate={{
-          opacity: [0, 0.1, 0, 0.05, 0],
-          x: [0, -5, 5, -2, 0],
-        }}
-        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
-      />
-
-      {/* Countdown style */}
-      <motion.div
-        className="text-center"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100 }}
-      >
-        <motion.h1
-          className="text-7xl md:text-[10rem] font-black text-primary"
-          animate={{
-            textShadow: [
-              "0 0 20px rgba(124, 58, 237, 0.5)",
-              "0 0 60px rgba(124, 58, 237, 0.8)",
-              "0 0 20px rgba(124, 58, 237, 0.5)",
-            ],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          DEC → JAN
-        </motion.h1>
-        <motion.p
-          className="text-3xl md:text-5xl font-bold text-foreground mt-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-        >
-          ONLY
-        </motion.p>
-      </motion.div>
-
-      {/* Neon clock effect */}
-      <motion.div
-        className="absolute w-64 h-64 rounded-full border-4 border-primary/30"
-        animate={{
-          scale: [1, 1.1, 1],
-          borderColor: ["rgba(124, 58, 237, 0.3)", "rgba(124, 58, 237, 0.8)", "rgba(124, 58, 237, 0.3)"],
-        }}
-        transition={{ duration: 2, repeat: Infinity }}
-        style={{ boxShadow: "0 0 40px rgba(124, 58, 237, 0.3)" }}
-      />
-
-      <motion.p
-        className="absolute bottom-20 text-xl text-muted-foreground"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-      >
-        Limited time. Unlimited potential.
-      </motion.p>
-    </motion.div>
-  );
-};
-
-const Scene8 = () => {
-  return (
-    <motion.div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-      {/* Cash particles */}
-      {Array.from({ length: 30 }).map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute text-2xl"
-          style={{
-            left: "50%",
-            top: "50%",
-          }}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{
-            x: (Math.random() - 0.5) * 800,
-            y: (Math.random() - 0.5) * 600,
-            scale: [0, 1, 0.5],
-            opacity: [0, 1, 0],
-            rotate: Math.random() * 360,
-          }}
-          transition={{
-            delay: 1.5 + i * 0.05,
-            duration: 2,
-            ease: "easeOut",
-          }}
-        >
-          💰
-        </motion.div>
-      ))}
-
-      {/* Flying stats card */}
-      <motion.div
-        initial={{ scale: 0.3, y: 200, opacity: 0 }}
-        animate={{ scale: 1.2, y: 0, opacity: 1 }}
-        transition={{ delay: 0.5, type: "spring", stiffness: 80 }}
-        style={{ filter: "drop-shadow(0 0 40px rgba(124, 58, 237, 0.6))" }}
-      >
-        <Card className="p-8 bg-card/90 backdrop-blur-sm">
-          <p className="text-sm text-muted-foreground mb-2">Your Earnings</p>
-          <motion.p
-            className="text-6xl md:text-8xl font-black text-primary"
-            animate={{
-              textShadow: [
-                "0 0 20px rgba(124, 58, 237, 0.5)",
-                "0 0 40px rgba(124, 58, 237, 0.8)",
-                "0 0 20px rgba(124, 58, 237, 0.5)",
-              ],
-            }}
-            transition={{ duration: 1, repeat: Infinity }}
-          >
-            $10,000
-          </motion.p>
-          <div className="flex items-center gap-2 mt-4 text-green-500">
-            <TrendingUp className="h-6 w-6" />
-            <span className="text-xl font-semibold">100% Yours</span>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* YOU: 100% */}
-      <motion.h2
-        className="absolute bottom-20 text-5xl md:text-7xl font-black"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 2.5 }}
-      >
-        <span className="text-foreground">YOU:</span>{" "}
-        <span className="text-primary" style={{ textShadow: "0 0 40px rgba(124, 58, 237, 0.8)" }}>
-          100%
-        </span>
-      </motion.h2>
-    </motion.div>
-  );
-};
-
-const Scene9 = () => {
-  return (
-    <motion.div className="absolute inset-0 flex flex-col items-center justify-center">
-      {/* Slow drift particles */}
-      {Array.from({ length: 20 }).map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-2 h-2 rounded-full bg-primary/30"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0.2, 0.5, 0.2],
-          }}
-          transition={{
-            duration: 4,
-            delay: i * 0.2,
-            repeat: Infinity,
-          }}
-        />
-      ))}
-
-      {/* Closing statements */}
-      <motion.div className="text-center space-y-6">
-        <motion.p
-          className="text-4xl md:text-6xl font-bold text-foreground"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          Start Inviting.
-        </motion.p>
-        <motion.p
-          className="text-4xl md:text-6xl font-bold text-foreground"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.5 }}
-        >
-          Start Earning.
-        </motion.p>
-        <motion.p
-          className="text-4xl md:text-6xl font-bold text-primary"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2.5 }}
-          style={{ textShadow: "0 0 40px rgba(124, 58, 237, 0.6)" }}
-        >
-          Start Winning.
-        </motion.p>
-      </motion.div>
-
-      {/* Light sweep */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
-        initial={{ x: "-100%" }}
-        animate={{ x: "100%" }}
-        transition={{ delay: 4, duration: 1.5 }}
-      />
-
-      {/* Referral link at bottom */}
-      <motion.div
-        className="absolute bottom-20"
+        className="absolute right-[15%] top-[45%] opacity-80"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 0.8, y: 0 }}
-        transition={{ delay: 5 }}
+        transition={{ delay: 2.8, duration: 0.6 }}
       >
-        <ShowcaseReferralLink />
+        <ShowcaseStatsCard label="You Keep" value="$100" highlight />
       </motion.div>
+
+      {/* Massive 100% */}
+      <motion.h1
+        className="text-[8rem] md:text-[14rem] font-black text-foreground leading-none"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
+      >
+        100%
+      </motion.h1>
+
+      {/* Quick cuts - phrases */}
+      <div className="flex flex-col items-center gap-2 mt-6">
+        <motion.p
+          className="text-2xl md:text-4xl font-medium text-muted-foreground"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.8, duration: 0.3 }}
+        >
+          Every sale.
+        </motion.p>
+        <motion.p
+          className="text-2xl md:text-4xl font-medium text-muted-foreground"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 1.2, duration: 0.3 }}
+        >
+          No fees.
+        </motion.p>
+        <motion.p
+          className="text-2xl md:text-4xl font-medium text-muted-foreground"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 1.6, duration: 0.3 }}
+        >
+          Zero cuts.
+        </motion.p>
+      </div>
+
+      {/* USDC callout */}
+      <motion.p
+        className="text-lg md:text-xl text-primary font-medium mt-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.2, duration: 0.4 }}
+      >
+        When your invited buyers pay with USDC.
+      </motion.p>
     </motion.div>
   );
 };
 
-const Scene10 = () => {
+// Scene 3: Tutorial - 4 steps. Clean Apple-style instruction.
+const Scene3 = () => {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setStep(1), 500),
+      setTimeout(() => setStep(2), 3500),
+      setTimeout(() => setStep(3), 6500),
+      setTimeout(() => setStep(4), 9500),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <motion.div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+      <AnimatePresence mode="wait">
+        {/* Step 1: Find invite link */}
+        {step === 1 && (
+          <motion.div
+            key="step1"
+            className="flex flex-col items-center gap-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
+          >
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+            >
+              <ShowcaseSidebar highlightItem="invite" />
+            </motion.div>
+            <motion.p
+              className="text-2xl md:text-3xl font-medium text-foreground text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
+              Find your invite link.
+            </motion.p>
+          </motion.div>
+        )}
+
+        {/* Step 2: Copy it */}
+        {step === 2 && (
+          <motion.div
+            key="step2"
+            className="flex flex-col items-center gap-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              <ShowcaseReferralLink copied />
+            </motion.div>
+            <motion.p
+              className="text-2xl md:text-3xl font-medium text-foreground text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              Copy it.
+            </motion.p>
+          </motion.div>
+        )}
+
+        {/* Step 3: Share with buyers */}
+        {step === 3 && (
+          <motion.div
+            key="step3"
+            className="flex flex-col items-center gap-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Simple avatar silhouettes */}
+            <div className="flex gap-4">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-14 h-14 rounded-full bg-secondary/50 border border-border/30"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + i * 0.15, duration: 0.3 }}
+                />
+              ))}
+            </div>
+            <motion.p
+              className="text-2xl md:text-3xl font-medium text-foreground text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+            >
+              Share with your buyers.
+            </motion.p>
+            <motion.p
+              className="text-base text-muted-foreground text-center max-w-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+            >
+              Artists, labels, clients — anyone who buys your beats.
+            </motion.p>
+          </motion.div>
+        )}
+
+        {/* Step 4: The flow */}
+        {step === 4 && (
+          <motion.div
+            key="step4"
+            className="flex flex-col items-center gap-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Flow: Cards connected */}
+            <div className="flex items-center gap-4 flex-wrap justify-center">
+              <motion.div
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="scale-90"
+              >
+                <ShowcaseBeatCard {...mockBeats[2]} />
+              </motion.div>
+              <motion.div
+                className="text-2xl text-muted-foreground hidden md:block"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                →
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.4 }}
+              >
+                <ShowcaseCheckoutCard total={39} usdcHighlight />
+              </motion.div>
+              <motion.div
+                className="text-2xl text-muted-foreground hidden md:block"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+              >
+                →
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 1.2, duration: 0.4 }}
+              >
+                <ShowcaseStatsCard label="Your Earnings" value="$39" highlight />
+              </motion.div>
+            </div>
+            <motion.p
+              className="text-2xl md:text-3xl font-medium text-foreground text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.8 }}
+            >
+              They pay with USDC. You keep 100%.
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+// Scene 4: Transition - "But that's not all."
+const Scene4 = () => {
+  return (
+    <motion.div className="absolute inset-0 flex items-center justify-center">
+      <motion.p
+        className="text-3xl md:text-5xl font-light text-foreground/70"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5, duration: 0.8 }}
+      >
+        But that's not all.
+      </motion.p>
+    </motion.div>
+  );
+};
+
+// Scene 5: Storage Value - Files, catalog, forever
+const Scene5 = () => {
+  return (
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+      {/* File icons organizing */}
+      <div className="flex gap-6 mb-8">
+        {(['wav', 'zip', 'stems'] as const).map((type, i) => (
+          <motion.div
+            key={type}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 + i * 0.2, duration: 0.4 }}
+          >
+            <ShowcaseFileIcon type={type} />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Beat card grid - catalog */}
+      <motion.div
+        className="flex gap-4 mb-8 opacity-60"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.6 }}
+        transition={{ delay: 1.5, duration: 0.6 }}
+      >
+        {mockBeats.slice(0, 3).map((beat, i) => (
+          <motion.div
+            key={beat.id}
+            className="scale-[0.7]"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.5 + i * 0.15, duration: 0.4 }}
+          >
+            <ShowcaseBeatCard {...beat} />
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Text */}
+      <motion.h2
+        className="text-3xl md:text-5xl font-bold text-foreground text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.2, duration: 0.5 }}
+      >
+        Your beats. Your stems. Your files.
+      </motion.h2>
+      <motion.p
+        className="text-2xl md:text-3xl text-primary font-medium mt-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.8, duration: 0.5 }}
+      >
+        Forever.
+      </motion.p>
+    </motion.div>
+  );
+};
+
+// Scene 6: Pain Point - Expired link fades away
+const Scene6 = () => {
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDismissed(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <motion.div className="absolute inset-0 flex flex-col items-center justify-center">
-      {/* Flash */}
+      {/* Expired notification */}
       <motion.div
-        className="absolute inset-0 bg-primary"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 1, 0] }}
-        transition={{ duration: 0.3, delay: 0.5 }}
-      />
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ 
+          opacity: dismissed ? 0 : 1, 
+          scale: dismissed ? 0.9 : 1,
+        }}
+        transition={{ duration: dismissed ? 0.6 : 0.4 }}
+      >
+        <ShowcaseExpiredNotification />
+      </motion.div>
 
-      {/* Logo with breathing glow */}
+      {/* Text appears after notification fades */}
+      <motion.h2
+        className="text-4xl md:text-6xl font-bold text-foreground mt-12"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: dismissed ? 1 : 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        That era is over.
+      </motion.h2>
+    </motion.div>
+  );
+};
+
+// Scene 7: Professional Delivery - Comparison
+const Scene7 = () => {
+  return (
+    <motion.div className="absolute inset-0 flex items-center justify-center">
+      <div className="flex gap-12 md:gap-20 items-start">
+        {/* Old way - crossed out */}
+        <motion.div
+          className="text-left opacity-40"
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 0.4, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          <p className="text-xl md:text-2xl text-muted-foreground line-through mb-3">WeTransfer</p>
+          <p className="text-xl md:text-2xl text-muted-foreground line-through mb-3">Expired links</p>
+          <p className="text-xl md:text-2xl text-muted-foreground line-through">Re-upload requests</p>
+        </motion.div>
+
+        {/* Divider */}
+        <motion.div
+          className="w-px h-32 bg-border/50"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+        />
+
+        {/* New way */}
+        <motion.div
+          className="text-left"
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.7, duration: 0.5 }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <Check className="h-5 w-5 text-primary" />
+            <p className="text-xl md:text-2xl text-foreground font-medium">Instant delivery</p>
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <Check className="h-5 w-5 text-primary" />
+            <p className="text-xl md:text-2xl text-foreground font-medium">Forever access</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Check className="h-5 w-5 text-primary" />
+            <p className="text-xl md:text-2xl text-foreground font-medium">Professional</p>
+          </div>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Scene 8: Promo Callback - USDC = 100%
+const Scene8 = () => {
+  return (
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center">
+      {/* Checkout card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        <ShowcaseCheckoutCard total={100} usdcHighlight />
+      </motion.div>
+
+      {/* Text */}
+      <motion.p
+        className="text-2xl md:text-3xl text-muted-foreground mt-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2, duration: 0.5 }}
+      >
+        Pay with USDC.
+      </motion.p>
+      <motion.h2
+        className="text-4xl md:text-6xl font-bold text-primary mt-4"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1.8, duration: 0.4 }}
+      >
+        Keep 100%.
+      </motion.h2>
+    </motion.div>
+  );
+};
+
+// Scene 9: Comparison - Simple side by side
+const Scene9 = () => {
+  return (
+    <motion.div className="absolute inset-0 flex items-center justify-center">
+      <div className="flex gap-8 md:gap-16 items-center">
+        {/* Card/Bank */}
+        <motion.div
+          className="text-center opacity-50"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 0.5, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+        >
+          <p className="text-lg text-muted-foreground mb-2">Card / Bank</p>
+          <p className="text-4xl md:text-5xl font-bold text-muted-foreground">80%</p>
+        </motion.div>
+
+        {/* VS */}
+        <motion.p
+          className="text-xl text-muted-foreground/50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.3 }}
+        >
+          vs
+        </motion.p>
+
+        {/* USDC */}
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.7, duration: 0.4 }}
+        >
+          <p className="text-lg text-primary mb-2">USDC</p>
+          <p className="text-4xl md:text-5xl font-bold text-primary">100%</p>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Scene 10: Emotional Payoff - Slow, deliberate reveals
+const Scene10 = () => {
+  return (
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
+      {/* Faded catalog in background */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center opacity-[0.02]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.02 }}
+        transition={{ delay: 0.5, duration: 1 }}
+      >
+        <div className="flex gap-4 scale-75">
+          {mockBeats.map((beat) => (
+            <ShowcaseBeatCard key={beat.id} {...beat} />
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Text reveals */}
+      <div className="text-center space-y-6">
+        <motion.p
+          className="text-2xl md:text-4xl font-light text-foreground/80"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+        >
+          You made the beat.
+        </motion.p>
+        <motion.p
+          className="text-2xl md:text-4xl font-light text-foreground/80"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2, duration: 0.8 }}
+        >
+          You did the work.
+        </motion.p>
+        <motion.p
+          className="text-2xl md:text-4xl font-medium text-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 3.5, duration: 0.8 }}
+        >
+          You deserve every dollar.
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+};
+
+// Scene 11: Close - Urgency + Logo
+const Scene11 = () => {
+  return (
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center">
+      {/* Deadline */}
+      <motion.p
+        className="text-xl md:text-2xl text-muted-foreground mb-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        Through January 31.
+      </motion.p>
+
+      {/* Logo */}
       <motion.img
         src="/lovable-uploads/86ceb56c-c6e8-400c-8c94-ec40647db5bc.png"
         alt="OrderSounds"
-        className="h-32 md:h-40"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.8, type: "spring", stiffness: 100 }}
-        style={{
-          filter: "drop-shadow(0 0 40px rgba(124, 58, 237, 0.6))",
-        }}
+        className="h-16 md:h-20"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1, duration: 0.6, ease: "easeOut" }}
       />
 
-      {/* Breathing glow ring */}
+      {/* Subtle scale breathe - very minimal */}
       <motion.div
-        className="absolute w-48 h-48 rounded-full border-2 border-primary/50"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.5, 0.8, 0.5],
-        }}
-        transition={{ duration: 3, repeat: Infinity }}
-        style={{ boxShadow: "0 0 60px rgba(124, 58, 237, 0.4)" }}
-      />
-
-      <motion.p
-        className="text-xl md:text-2xl text-muted-foreground mt-12 font-light tracking-wide"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5 }}
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        animate={{ scale: [1, 1.02, 1] }}
+        transition={{ delay: 2, duration: 3, repeat: Infinity, ease: "easeInOut" }}
       >
-        The future is in your hands.
-      </motion.p>
-
-      {/* Final CTA */}
-      <motion.div
-        className="mt-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 2.5 }}
-      >
-        <Button size="lg" className="gap-2 text-lg">
-          <Zap className="h-5 w-5" />
-          Start Now
-        </Button>
+        <div className="w-32 h-32 rounded-full border border-primary/10" />
       </motion.div>
     </motion.div>
   );
@@ -957,9 +808,9 @@ const Scene10 = () => {
 // SCENE DURATIONS (in seconds)
 // ============================================
 
-const SCENE_DURATIONS = [4, 4, 5, 5, 5, 5, 5, 5, 8, 4]; // Total: 50 seconds
+const SCENE_DURATIONS = [4, 5, 13, 3, 5, 4, 5, 4, 3, 5, 4]; // Total: 55 seconds
 
-const scenes = [Scene1, Scene2, Scene3, Scene4, Scene5, Scene6, Scene7, Scene8, Scene9, Scene10];
+const scenes = [Scene1, Scene2, Scene3, Scene4, Scene5, Scene6, Scene7, Scene8, Scene9, Scene10, Scene11];
 
 // ============================================
 // MAIN COMPONENT
@@ -982,9 +833,9 @@ const Animations = () => {
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
-      {/* Grain overlay */}
+      {/* Subtle grain overlay */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03] z-50"
+        className="absolute inset-0 pointer-events-none opacity-[0.015] z-50"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         }}
@@ -997,20 +848,20 @@ const Animations = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
           className="absolute inset-0"
         >
           <CurrentSceneComponent />
         </motion.div>
       </AnimatePresence>
 
-      {/* Progress bar */}
-      <div className="absolute bottom-4 left-4 right-4 h-1 bg-muted/30 rounded-full overflow-hidden z-50">
+      {/* Progress bar - minimal */}
+      <div className="absolute bottom-6 left-6 right-6 h-0.5 bg-muted/20 rounded-full overflow-hidden z-50">
         <motion.div
-          className="h-full bg-primary"
+          className="h-full bg-primary/60"
           initial={{ width: "0%" }}
           animate={{ width: `${((currentScene + 1) / scenes.length) * 100}%` }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         />
       </div>
     </div>
