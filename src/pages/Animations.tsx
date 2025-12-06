@@ -313,13 +313,13 @@ const Scene3 = () => {
       setTimeout(() => setStep(1), 500),
       setTimeout(() => setStep(2), 3500),
       setTimeout(() => setStep(3), 6500),
-      setTimeout(() => setStep(4), 9500),
+      setTimeout(() => setStep(4), 10000),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
 
   return (
-    <motion.div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+    <motion.div className="absolute inset-0 flex items-center justify-center overflow-hidden px-6">
       <AnimatePresence mode="wait">
         {/* Step 1: Find invite link */}
         {step === 1 && (
@@ -418,63 +418,57 @@ const Scene3 = () => {
           </motion.div>
         )}
 
-        {/* Step 4: The flow */}
+        {/* Step 4: The flow - LONGER, better mobile layout */}
         {step === 4 && (
           <motion.div
             key="step4"
-            className="flex flex-col items-center gap-8"
+            className="flex flex-col items-center gap-6 w-full max-w-4xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
           >
-            {/* Flow: Cards connected */}
-            <div className="flex items-center gap-4 flex-wrap justify-center">
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2, duration: 0.4 }}
-                className="scale-90"
-              >
-                <ShowcaseBeatCard {...mockBeats[2]} />
-              </motion.div>
-              <motion.div
-                className="text-2xl text-muted-foreground hidden md:block"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                →
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.4 }}
-              >
-                <ShowcaseCheckoutCard total={39} usdcHighlight />
-              </motion.div>
-              <motion.div
-                className="text-2xl text-muted-foreground hidden md:block"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
-              >
-                →
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.2, duration: 0.4 }}
-              >
-                <ShowcaseStatsCard label="Your Earnings" value="$39" highlight />
-              </motion.div>
-            </div>
+            {/* Main message first on mobile */}
             <motion.p
-              className="text-2xl md:text-3xl font-medium text-foreground text-center"
+              className="text-2xl md:text-3xl font-medium text-foreground text-center px-4"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              They pay with USDC.
+            </motion.p>
+            
+            {/* Checkout card - centered and prominent */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+              className="my-4"
+            >
+              <ShowcaseCheckoutCard total={39} usdcHighlight />
+            </motion.div>
+
+            {/* Result */}
+            <motion.div
+              className="flex flex-col items-center gap-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.5, duration: 0.5 }}
+            >
+              <p className="text-lg text-muted-foreground">Your earnings:</p>
+              <div className="flex items-center gap-4">
+                <span className="text-4xl md:text-5xl font-bold text-primary">$39</span>
+                <Badge className="text-lg px-3 py-1">100%</Badge>
+              </div>
+            </motion.div>
+
+            {/* Final emphasis */}
+            <motion.p
+              className="text-2xl md:text-3xl font-bold text-primary text-center mt-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1.8 }}
+              transition={{ delay: 2.5, duration: 0.5 }}
             >
-              They pay with USDC. You keep 100%.
+              You keep 100%.
             </motion.p>
           </motion.div>
         )}
@@ -482,7 +476,6 @@ const Scene3 = () => {
     </motion.div>
   );
 };
-
 // Scene 4: Transition - "But that's not all."
 const Scene4 = () => {
   return (
@@ -502,58 +495,65 @@ const Scene4 = () => {
 // Scene 5: Storage Value - Files, catalog, forever
 const Scene5 = () => {
   return (
-    <motion.div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-      {/* File icons organizing */}
-      <div className="flex gap-6 mb-8">
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden px-6">
+      {/* Main heading first - centered */}
+      <motion.h2
+        className="text-2xl md:text-4xl font-bold text-foreground text-center mb-6"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        Store everything. Forever.
+      </motion.h2>
+
+      {/* File icons with labels - explanatory */}
+      <motion.div 
+        className="flex gap-4 md:gap-8 mb-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8, duration: 0.5 }}
+      >
         {(['wav', 'zip', 'stems'] as const).map((type, i) => (
           <motion.div
             key={type}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 + i * 0.2, duration: 0.4 }}
-          >
-            <ShowcaseFileIcon type={type} />
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Beat card grid - catalog */}
-      <motion.div
-        className="flex gap-4 mb-8 opacity-60"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.6 }}
-        transition={{ delay: 1.5, duration: 0.6 }}
-      >
-        {mockBeats.slice(0, 3).map((beat, i) => (
-          <motion.div
-            key={beat.id}
-            className="scale-[0.7]"
+            className="flex flex-col items-center gap-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.5 + i * 0.15, duration: 0.4 }}
+            transition={{ delay: 1 + i * 0.2, duration: 0.4 }}
           >
-            <ShowcaseBeatCard {...beat} />
+            <ShowcaseFileIcon type={type} />
+            <span className="text-xs text-muted-foreground">
+              {type === 'wav' ? 'Audio' : type === 'zip' ? 'Projects' : 'Stems'}
+            </span>
           </motion.div>
         ))}
       </motion.div>
 
-      {/* Text */}
-      <motion.h2
-        className="text-3xl md:text-5xl font-bold text-foreground text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2.2, duration: 0.5 }}
-      >
-        Your beats. Your stems. Your files.
-      </motion.h2>
+      {/* Explanatory text - centered */}
       <motion.p
-        className="text-2xl md:text-3xl text-primary font-medium mt-4"
+        className="text-base md:text-lg text-muted-foreground text-center max-w-md mb-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 2.8, duration: 0.5 }}
+        transition={{ delay: 1.8, duration: 0.5 }}
       >
-        Forever.
+        Upload your beats, stems, and project files. 
+        Buyers get instant, permanent access.
       </motion.p>
+
+      {/* Final emphasis - centered */}
+      <motion.div
+        className="text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.5, duration: 0.5 }}
+      >
+        <p className="text-xl md:text-2xl font-medium text-foreground">
+          Your beats. Your stems. Your files.
+        </p>
+        <p className="text-2xl md:text-3xl text-primary font-bold mt-2">
+          Forever.
+        </p>
+      </motion.div>
     </motion.div>
   );
 };
@@ -597,46 +597,67 @@ const Scene6 = () => {
 // Scene 7: Professional Delivery - Comparison
 const Scene7 = () => {
   return (
-    <motion.div className="absolute inset-0 flex items-center justify-center">
-      <div className="flex gap-12 md:gap-20 items-start">
+    <motion.div className="absolute inset-0 flex flex-col items-center justify-center px-6">
+      {/* Heading */}
+      <motion.h2
+        className="text-xl md:text-3xl font-bold text-foreground text-center mb-8"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+      >
+        No more file sharing headaches.
+      </motion.h2>
+
+      {/* Comparison - stacked on mobile, side by side on desktop */}
+      <div className="flex flex-col md:flex-row gap-8 md:gap-16 items-center">
         {/* Old way - crossed out */}
         <motion.div
-          className="text-left opacity-40"
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 0.4, x: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
+          className="text-center md:text-left opacity-50"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 0.5, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
         >
-          <p className="text-xl md:text-2xl text-muted-foreground line-through mb-3">WeTransfer</p>
-          <p className="text-xl md:text-2xl text-muted-foreground line-through mb-3">Expired links</p>
-          <p className="text-xl md:text-2xl text-muted-foreground line-through">Re-upload requests</p>
+          <p className="text-sm text-muted-foreground mb-3 uppercase tracking-wide">The old way</p>
+          <p className="text-lg md:text-xl text-muted-foreground line-through mb-2">WeTransfer links</p>
+          <p className="text-lg md:text-xl text-muted-foreground line-through mb-2">Expired after 7 days</p>
+          <p className="text-lg md:text-xl text-muted-foreground line-through">"Can you resend?"</p>
         </motion.div>
 
-        {/* Divider */}
+        {/* Arrow / Divider */}
         <motion.div
-          className="w-px h-32 bg-border/50"
-          initial={{ scaleY: 0 }}
-          animate={{ scaleY: 1 }}
-          transition={{ delay: 0.5, duration: 0.4 }}
+          className="text-3xl text-muted-foreground/30 hidden md:block"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.3 }}
+        >
+          →
+        </motion.div>
+        <motion.div
+          className="w-16 h-px bg-border/50 md:hidden"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ delay: 0.8, duration: 0.3 }}
         />
 
         {/* New way */}
         <motion.div
-          className="text-left"
-          initial={{ opacity: 0, x: 30 }}
+          className="text-center md:text-left"
+          initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.7, duration: 0.5 }}
+          transition={{ delay: 1.1, duration: 0.4 }}
         >
-          <div className="flex items-center gap-3 mb-3">
-            <Check className="h-5 w-5 text-primary" />
-            <p className="text-xl md:text-2xl text-foreground font-medium">Instant delivery</p>
+          <p className="text-sm text-primary mb-3 uppercase tracking-wide font-medium">OrderSounds</p>
+          <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
+            <Check className="h-5 w-5 text-primary flex-shrink-0" />
+            <p className="text-lg md:text-xl text-foreground font-medium">Instant delivery</p>
           </div>
-          <div className="flex items-center gap-3 mb-3">
-            <Check className="h-5 w-5 text-primary" />
-            <p className="text-xl md:text-2xl text-foreground font-medium">Forever access</p>
+          <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
+            <Check className="h-5 w-5 text-primary flex-shrink-0" />
+            <p className="text-lg md:text-xl text-foreground font-medium">Links never expire</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Check className="h-5 w-5 text-primary" />
-            <p className="text-xl md:text-2xl text-foreground font-medium">Professional</p>
+          <div className="flex items-center gap-2 justify-center md:justify-start">
+            <Check className="h-5 w-5 text-primary flex-shrink-0" />
+            <p className="text-lg md:text-xl text-foreground font-medium">Professional storefront</p>
           </div>
         </motion.div>
       </div>
@@ -808,7 +829,7 @@ const Scene11 = () => {
 // SCENE DURATIONS (in seconds)
 // ============================================
 
-const SCENE_DURATIONS = [4, 5, 13, 3, 5, 4, 5, 4, 3, 5, 4]; // Total: 55 seconds
+const SCENE_DURATIONS = [4, 5, 16, 3, 7, 4, 7, 5, 4, 5, 4]; // Total: 64 seconds
 
 const scenes = [Scene1, Scene2, Scene3, Scene4, Scene5, Scene6, Scene7, Scene8, Scene9, Scene10, Scene11];
 
