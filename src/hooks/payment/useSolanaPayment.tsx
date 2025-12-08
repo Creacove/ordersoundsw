@@ -261,11 +261,12 @@ export const useSolanaPayment = () => {
         }
       }
       
+      // TODO: HOLIDAY PROMO - Revert to 80/20 message after January 31, 2025
       if (isMounted) {
-        const platformFee = (amount * 0.2).toFixed(2);
-        const producerAmount = (amount * 0.8).toFixed(2);
+        // Original: const platformFee = (amount * 0.2).toFixed(2);
+        // Original: const producerAmount = (amount * 0.8).toFixed(2);
         toast.success("✅ USDC payment successful!", {
-          description: `$${amount} paid ($${producerAmount} to producer + $${platformFee} platform fee)`
+          description: `$${amount} paid (100% to producer - Holiday Promo! 🎉)`
         });
       }
       onSuccess?.(signature);

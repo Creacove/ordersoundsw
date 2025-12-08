@@ -561,15 +561,15 @@ export const SolanaCheckoutDialog = ({
                   <span>${totalPrice.toFixed(2)} USDC</span>
                 </div>
                 
-                {/* Payment breakdown */}
+                {/* Payment breakdown - TODO: HOLIDAY PROMO - Revert to 80/20 after January 31, 2025 */}
                 <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">To Producers (80%)</span>
-                    <span>${(totalPrice * 0.8).toFixed(2)}</span>
+                    <span className="text-muted-foreground">To Producers</span>
+                    <span className="text-green-500 font-medium">100% 🎉</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Platform Fee (20%)</span>
-                    <span>${(totalPrice * 0.2).toFixed(2)}</span>
+                  <div className="flex justify-between text-green-600">
+                    <span>Holiday Promo - Zero Platform Fees!</span>
+                    <span>$0.00</span>
                   </div>
                 </div>
                 

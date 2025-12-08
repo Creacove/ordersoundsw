@@ -228,18 +228,22 @@ const processAtomicSplitPayment = async (
       throw new Error(`Insufficient ${networkLabel} USDC balance. You have ${availableUSDC.toFixed(2)} USDC but need ${requiredUSDC.toFixed(2)} USDC.`);
     }
     
-    // Create single transaction with memo + two transfer instructions
+    // Create single transaction with memo + transfer instructions
     const transaction = new Transaction();
     
     // Add memo instruction FIRST for wallet preview clarity
     const totalUSDC = (producerAmount + platformAmount).toFixed(2);
-    const memoText = `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer + $${platformAmount.toFixed(2)} platform fee)`;
+    // TODO: HOLIDAY PROMO - Revert memo after January 31, 2025
+    // Original: const memoText = `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer + $${platformAmount.toFixed(2)} platform fee)`;
+    const memoText = platformAmount > 0 
+      ? `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer + $${platformAmount.toFixed(2)} platform fee)`
+      : `USDC Payment: $${totalUSDC} (100% to producer - Holiday Promo 🎉)`;
     const memoInstruction = createMemoInstruction(memoText, [wallet.publicKey]);
     transaction.add(memoInstruction);
     
     console.log(`📝 Added memo: ${memoText}`);
     
-    // Producer transfer instruction (80%)
+    // Producer transfer instruction (100% during promo)
     const producerTransfer = createTransferInstruction(
       atas.senderATA,
       atas.producerATA,
@@ -249,26 +253,31 @@ const processAtomicSplitPayment = async (
       TOKEN_PROGRAM_ID
     );
     
-    // Platform transfer instruction (20%)
-    const platformTransfer = createTransferInstruction(
-      atas.senderATA,
-      atas.platformATA,
-      wallet.publicKey,
-      platformUSDCAmount,
-      [],
-      TOKEN_PROGRAM_ID
-    );
-    
-    // Add both transfer instructions to transaction
+    // Add producer transfer
     transaction.add(producerTransfer);
-    transaction.add(platformTransfer);
+    
+    // TODO: HOLIDAY PROMO - Uncomment platform transfer after January 31, 2025
+    // Platform transfer instruction - SKIP when platformAmount is 0 (promo period)
+    if (platformUSDCAmount > BigInt(0)) {
+      const platformTransfer = createTransferInstruction(
+        atas.senderATA,
+        atas.platformATA,
+        wallet.publicKey,
+        platformUSDCAmount,
+        [],
+        TOKEN_PROGRAM_ID
+      );
+      transaction.add(platformTransfer);
+    }
     
     // Set transaction metadata
     const { blockhash } = await connection.getLatestBlockhash('confirmed');
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
     
-    console.log(`🧪 Transaction contains ${transaction.instructions.length} instructions (1 memo + 2 transfers)`);
+    // TODO: HOLIDAY PROMO - Update log after January 31, 2025
+    const transferCount = platformUSDCAmount > BigInt(0) ? 2 : 1;
+    console.log(`🧪 Transaction contains ${transaction.instructions.length} instructions (1 memo + ${transferCount} transfer${transferCount > 1 ? 's' : ''})`);
     
     // Simulate transaction before sending
     const simulation = await simulateTransaction(connection, transaction);
@@ -383,14 +392,17 @@ export const processUSDCPayment = async (
       
       // Use provided network or environment default
       const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
-      console.log(`💰 Processing ${activeNetwork.toUpperCase()} USDC payment with 80/20 split: $${usdAmount} to ${recipientAddress}`);
+      // TODO: HOLIDAY PROMO - Revert to 80/20 split after January 31, 2025
+      console.log(`💰 Processing ${activeNetwork.toUpperCase()} USDC payment with 100/0 split (Holiday Promo): $${usdAmount} to ${recipientAddress}`);
     
-    // Calculate splits: 80% to producer, 20% to platform
-    const producerAmount = usdAmount * 0.8;
-    const platformAmount = usdAmount * 0.2;
+    // Calculate splits: 100% to producer, 0% to platform (HOLIDAY PROMO)
+    // Original: const producerAmount = usdAmount * 0.8;
+    // Original: const platformAmount = usdAmount * 0.2;
+    const producerAmount = usdAmount * 1.0; // 100% to producer during promo
+    const platformAmount = usdAmount * 0.0; // 0% to platform during promo
     
-    console.log(`🎯 Producer gets: $${producerAmount.toFixed(2)} (80%)`);
-    console.log(`🏢 Platform gets: $${platformAmount.toFixed(2)} (20%)`);
+    console.log(`🎯 Producer gets: $${producerAmount.toFixed(2)} (100% - Holiday Promo 🎉)`);
+    console.log(`🏢 Platform gets: $${platformAmount.toFixed(2)} (0% - Holiday Promo)`);
     
     const usdcMint = getUSDCMint(activeNetwork);
     const producerPublicKey = new PublicKey(recipientAddress);
