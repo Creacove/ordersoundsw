@@ -11,7 +11,7 @@ import {
 } from '@solana/spl-token';
 import { createMemoInstruction } from '@solana/spl-memo';
 import { toast } from 'sonner';
-// Smart contract imports removed for direct transfer with platform fee
+// Smart contract imports removed for direct transfer with platform fee - Holiday Promo Active
 
 // USDC Mint addresses for different networks
 const USDC_MINT_ADDRESSES = {
