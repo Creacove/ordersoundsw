@@ -66,6 +66,7 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       title: "Library",
       items: [
         { icon: Heart, title: "Favorites", href: "/favorites" },
+        { icon: ShoppingCart, title: "Cart", href: "/cart" },
         { icon: LayoutGrid, title: "My Playlists", href: "/my-playlists" },
         { icon: Music, title: "Purchased", href: "/purchased" },
       ]
