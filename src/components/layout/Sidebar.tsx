@@ -28,8 +28,8 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
 
   // Dispatch sidebar change event when isOpen changes
   useEffect(() => {
-    const event = new CustomEvent('sidebarChange', { 
-      detail: { isOpen: isOpen } 
+    const event = new CustomEvent('sidebarChange', {
+      detail: { isOpen: isOpen }
     });
     window.dispatchEvent(event);
   }, [isOpen]);
@@ -55,7 +55,7 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
       else if (path === "/producers") setActiveBottomTab("producers");
       else if (path === "/producer/dashboard") setActiveBottomTab("producer");
       else if (path === "/producer/beats") setActiveBottomTab("beats");
-      else if (path === "/producer/royalties") setActiveBottomTab("royalties");
+      else if (path === "/producer/earnings") setActiveBottomTab("earnings");
       else if (path === "/library" || path === "/purchased" || path === "/my-playlists") setActiveBottomTab("library");
       else setActiveBottomTab("");
     }
@@ -68,7 +68,7 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
   const toggleCollapsed = () => {
     const newCollapsedState = !isCollapsed;
     setIsCollapsed(newCollapsedState);
-    
+
     // Notify parent component about the collapse state change
     if (onCollapsedChange) {
       onCollapsedChange(newCollapsedState);
@@ -82,7 +82,7 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
   return (
     <>
       {/* Show unified sidebar */}
-      <UnifiedSidebar 
+      <UnifiedSidebar
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         user={user}
@@ -92,10 +92,10 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
         toggleCollapsed={toggleCollapsed}
         isMobile={isMobile}
       />
-      
+
       {/* Only show bottom nav on mobile */}
       {isMobile && (
-        <MobileBottomNav 
+        <MobileBottomNav
           activeBottomTab={activeBottomTab}
           user={user}
           itemCount={itemCount}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency, formatDate } from "@/utils/formatters";
-import { Music } from "lucide-react";
+import { Music, ChevronRight } from "lucide-react";
+import { BeatSalesDetailsSheet } from "./BeatSalesDetailsSheet";
 
 interface BeatSaleData {
   beat_id: string;
@@ -18,10 +18,6 @@ interface BeatSaleData {
   sales_count: number;
   total_revenue: number;
   last_purchase_date: string;
-  currency_breakdown: {
-    NGN: number;
-    USD: number;
-  };
 }
 
 interface BeatSalesTableProps {
@@ -32,6 +28,11 @@ interface BeatSalesTableProps {
 export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
   const [salesData, setSalesData] = useState<BeatSaleData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Drill-down state
+  const [selectedBeatId, setSelectedBeatId] = useState<string | null>(null);
+  const [selectedBeatTitle, setSelectedBeatTitle] = useState<string>("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     const fetchBeatSalesData = async () => {
@@ -66,7 +67,7 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
           .eq('orders.status', 'completed')
           .order('purchase_date', { ascending: false });
 
-        // Apply currency filter
+        // Apply strict currency filter
         if (currency === 'NGN') {
           salesQuery = salesQuery.eq('orders.currency_used', 'NGN');
         } else {
@@ -86,11 +87,11 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
         beatSales?.forEach(sale => {
           const beat = sale.beats;
           const order = sale.orders;
-          
+
           if (!beat || !order) return;
 
           const beatId = beat.id;
-          
+
           if (!salesMap.has(beatId)) {
             salesMap.set(beatId, {
               beat_id: beatId,
@@ -102,23 +103,12 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
               sales_count: 0,
               total_revenue: 0,
               last_purchase_date: sale.purchase_date || '',
-              currency_breakdown: {
-                NGN: 0,
-                USD: 0
-              }
             });
           }
 
           const beatData = salesMap.get(beatId)!;
           beatData.sales_count += 1;
           beatData.total_revenue += (order.total_price || 0);
-          
-          // Track currency breakdown
-          if (order.currency_used === 'NGN') {
-            beatData.currency_breakdown.NGN += (order.total_price || 0);
-          } else if (order.currency_used === 'USD') {
-            beatData.currency_breakdown.USD += (order.total_price || 0);
-          }
 
           // Update last purchase date if more recent
           if (sale.purchase_date && sale.purchase_date > beatData.last_purchase_date) {
@@ -140,6 +130,12 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
 
     fetchBeatSalesData();
   }, [producerId, currency]);
+
+  const handleRowClick = (beat: BeatSaleData) => {
+    setSelectedBeatId(beat.beat_id);
+    setSelectedBeatTitle(beat.beat_title);
+    setDetailsOpen(true);
+  };
 
   if (loading) {
     return (
@@ -176,8 +172,8 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
         <CardContent>
           <div className="text-center py-8">
             <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-2">No sales data available</p>
-            <p className="text-sm text-muted-foreground">Sales will appear here once your beats are purchased</p>
+            <p className="text-muted-foreground mb-2">No sales data available for {currency}</p>
+            <p className="text-sm text-muted-foreground">Sales made in {currency} will appear here.</p>
           </div>
         </CardContent>
       </Card>
@@ -185,155 +181,157 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Beat Sales Performance</CardTitle>
-        <CardDescription>Revenue breakdown for your beats with completed sales</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Mobile-first responsive design */}
-        <div className="space-y-4 md:hidden">
-          {/* Mobile card layout */}
-          {salesData.map((beat) => (
-            <div key={beat.beat_id} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-3">
-                {beat.beat_cover_image ? (
-                  <img
-                    src={beat.beat_cover_image}
-                    alt={beat.beat_title}
-                    className="h-12 w-12 rounded-md object-cover"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
-                    <Music className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium truncate">{beat.beat_title}</h3>
-                  {beat.beat_genre && (
-                    <Badge variant="outline" className="text-xs mt-1">
-                      {beat.beat_genre}
-                    </Badge>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Beat Sales Performance</CardTitle>
+          <CardDescription>
+            Revenue breakdown for your beats ({currency === 'NGN' ? 'Naira Sales' : 'USD/USDC Sales'})
+            <span className="block text-xs text-muted-foreground mt-1 font-normal">
+              Click on a row to view transaction details
+            </span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Mobile-first responsive design */}
+          <div className="space-y-4 md:hidden">
+            {/* Mobile card layout */}
+            {salesData.map((beat) => (
+              <div
+                key={beat.beat_id}
+                className="border rounded-lg p-4 space-y-3 active:bg-muted/50 transition-colors cursor-pointer"
+                onClick={() => handleRowClick(beat)}
+              >
+                <div className="flex items-center gap-3">
+                  {beat.beat_cover_image ? (
+                    <img
+                      src={beat.beat_cover_image}
+                      alt={beat.beat_title}
+                      className="h-12 w-12 rounded-md object-cover"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
+                      <Music className="h-6 w-6 text-muted-foreground" />
+                    </div>
                   )}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Sales</p>
-                  <p className="font-semibold">{beat.sales_count}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Revenue</p>
-                  <p className="font-semibold">
-                    {formatCurrency(beat.total_revenue, currency)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Price</p>
-                  <p className="font-semibold">
-                    {formatCurrency(
-                      currency === 'NGN' ? beat.basic_price_local : beat.basic_price_diaspora, 
-                      currency
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Last Sale</p>
-                  <p className="font-semibold">
-                    {formatDate(beat.last_purchase_date)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Currency breakdown for mobile */}
-              {(beat.currency_breakdown.NGN > 0 || beat.currency_breakdown.USD > 0) && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-2">Revenue Breakdown:</p>
-                  <div className="flex gap-4 text-xs">
-                    {beat.currency_breakdown.NGN > 0 && (
-                      <span>NGN: {formatCurrency(beat.currency_breakdown.NGN, 'NGN')}</span>
-                    )}
-                    {beat.currency_breakdown.USD > 0 && (
-                      <span>USD: {formatCurrency(beat.currency_breakdown.USD, 'USD')}</span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium truncate">{beat.beat_title}</h3>
+                    {beat.beat_genre && (
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {beat.beat_genre}
+                      </Badge>
                     )}
                   </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        {/* Desktop table layout */}
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Beat</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead className="text-center">Sales</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead>Last Sale</TableHead>
-                <TableHead>Currency Split</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {salesData.map((beat) => (
-                <TableRow key={beat.beat_id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {beat.beat_cover_image ? (
-                        <img
-                          src={beat.beat_cover_image}
-                          alt={beat.beat_title}
-                          className="h-10 w-10 rounded-md object-cover"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                          <Music className="h-5 w-5 text-muted-foreground" />
-                        </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Sales</p>
+                    <p className="font-semibold">{beat.sales_count}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Revenue</p>
+                    <p className="font-semibold">
+                      {formatCurrency(beat.total_revenue, currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Unit Price</p>
+                    <p className="font-semibold">
+                      {formatCurrency(
+                        currency === 'NGN' ? beat.basic_price_local : beat.basic_price_diaspora,
+                        currency
                       )}
-                      <div>
-                        <p className="font-medium">{beat.beat_title}</p>
-                        {beat.beat_genre && (
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {beat.beat_genre}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {formatCurrency(
-                      currency === 'NGN' ? beat.basic_price_local : beat.basic_price_diaspora,
-                      currency
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary">{beat.sales_count}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {formatCurrency(beat.total_revenue, currency)}
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(beat.last_purchase_date)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 text-xs">
-                      {beat.currency_breakdown.NGN > 0 && (
-                        <div>NGN: {formatCurrency(beat.currency_breakdown.NGN, 'NGN')}</div>
-                      )}
-                      {beat.currency_breakdown.USD > 0 && (
-                        <div>USD: {formatCurrency(beat.currency_breakdown.USD, 'USD')}</div>
-                      )}
-                    </div>
-                  </TableCell>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Last Sale</p>
+                    <p className="font-semibold">
+                      {formatDate(beat.last_purchase_date)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Beat</TableHead>
+                  <TableHead>Unit Price</TableHead>
+                  <TableHead className="text-center">Sales</TableHead>
+                  <TableHead className="text-right">Total Revenue</TableHead>
+                  <TableHead>Last Sale</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {salesData.map((beat) => (
+                  <TableRow
+                    key={beat.beat_id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(beat)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {beat.beat_cover_image ? (
+                          <img
+                            src={beat.beat_cover_image}
+                            alt={beat.beat_title}
+                            className="h-10 w-10 rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
+                            <Music className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium">{beat.beat_title}</p>
+                          {beat.beat_genre && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {beat.beat_genre}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(
+                        currency === 'NGN' ? beat.basic_price_local : beat.basic_price_diaspora,
+                        currency
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary">{beat.sales_count}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatCurrency(beat.total_revenue, currency)}
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(beat.last_purchase_date)}
+                    </TableCell>
+                    <TableCell>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <BeatSalesDetailsSheet
+        isOpen={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        beatId={selectedBeatId}
+        beatTitle={selectedBeatTitle}
+        currency={currency}
+      />
+    </>
   );
 }
