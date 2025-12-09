@@ -50,6 +50,7 @@ import Animations from "./pages/Animations";
 // Lazy load admin dashboard to avoid affecting main app performance
 import { lazy, Suspense } from "react";
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const EmailMarketing = lazy(() => import("./pages/admin/EmailMarketing"));
 
 // Add custom wallet styles
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -149,6 +150,20 @@ const AppContent = () => (
                     </div>
                   }>
                     <AdminDashboard />
+                  </Suspense>
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route
+              path="/admin/marketing"
+              element={
+                <ProtectedAdminRoute>
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center h-screen">
+                      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+                    </div>
+                  }>
+                    <EmailMarketing />
                   </Suspense>
                 </ProtectedAdminRoute>
               }
