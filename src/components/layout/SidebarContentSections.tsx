@@ -32,7 +32,7 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       items: [
         { icon: LayoutDashboard, title: "Dashboard", href: "/producer/dashboard" },
         { icon: Music, title: "My Beats", href: "/producer/beats" },
-        { icon: DollarSign, title: "Earnings", href: "/producer/earnings" },
+        { icon: DollarSign, title: "Royalty Splits", href: "/producer/royalties" },
       ]
     });
 
@@ -48,8 +48,8 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       ]
     });
   } else {
-    sections.push({
-      title: "Explore Beats",
+    sections.push({ 
+      title: "Explore Beats", 
       items: [
         { icon: Home, title: "Home", href: "/" },
         { icon: TrendingUp, title: "Trending", href: "/trending" },
@@ -62,11 +62,10 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       ]
     });
 
-    sections.push({
-      title: "Library",
+    sections.push({ 
+      title: "Library", 
       items: [
         { icon: Heart, title: "Favorites", href: "/favorites" },
-        { icon: ShoppingCart, title: "Cart", href: "/cart" },
         { icon: LayoutGrid, title: "My Playlists", href: "/my-playlists" },
         { icon: Music, title: "Purchased", href: "/purchased" },
       ]

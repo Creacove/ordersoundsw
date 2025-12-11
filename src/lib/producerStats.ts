@@ -38,12 +38,12 @@ export async function getProducerStats(producerId: string, selectedCurrency?: 'N
       .from('beats')
       .select('id, plays, favorites_count, genre, upload_date')
       .eq('producer_id', producerId);
-
+    
     if (beatsError) throw beatsError;
-
+    
     // Extract beat IDs
     const beatIds = producerBeats?.map(beat => beat.id) || [];
-
+    
     if (beatIds.length === 0) {
       return getDefaultStats(selectedCurrency);
     }
@@ -51,7 +51,7 @@ export async function getProducerStats(producerId: string, selectedCurrency?: 'N
     // Calculate total plays and favorites
     const totalPlays = producerBeats.reduce((sum, beat) => sum + (beat.plays || 0), 0);
     const totalFavorites = producerBeats.reduce((sum, beat) => sum + (beat.favorites_count || 0), 0);
-
+    
     // Get completed sales data with optimized query
     let salesQuery = supabase
       .from('user_purchased_beats')
@@ -73,37 +73,34 @@ export async function getProducerStats(producerId: string, selectedCurrency?: 'N
 
     // Apply currency filter if specified
     if (selectedCurrency) {
-      if (selectedCurrency === 'NGN') {
-        salesQuery = salesQuery.eq('orders.currency_used', 'NGN');
-      } else {
-        salesQuery = salesQuery.in('orders.currency_used', ['USD', 'USDC']);
-      }
+      const currencyFilter = selectedCurrency === 'NGN' ? 'NGN' : 'USDC';
+      salesQuery = salesQuery.eq('orders.currency_used', currencyFilter);
     }
 
     const { data: salesData, error: salesError } = await salesQuery;
-
+    
     if (salesError) throw salesError;
-
+    
     // Filter and process completed sales
-    const completedSales = salesData?.filter(sale =>
+    const completedSales = salesData?.filter(sale => 
       sale.orders && sale.orders.status === 'completed'
     ) || [];
-
+    
     // Calculate total beats sold (unique completed sales)
     const beatsSold = completedSales.length;
-
+    
     // Calculate revenue from unique orders to avoid double counting
     const uniqueOrders = new Map();
     let totalRevenue = 0;
     let ngnCount = 0;
     let usdCount = 0;
-
+    
     completedSales.forEach(sale => {
       if (sale.orders && !uniqueOrders.has(sale.orders.id)) {
         const orderData = sale.orders;
         uniqueOrders.set(orderData.id, orderData);
         totalRevenue += (orderData.total_price || 0);
-
+        
         if (orderData.currency_used === 'NGN') {
           ngnCount++;
         } else if (orderData.currency_used === 'USD' || orderData.currency_used === 'USDC') {
@@ -111,71 +108,71 @@ export async function getProducerStats(producerId: string, selectedCurrency?: 'N
         }
       }
     });
-
+    
     // Determine primary currency (use selected currency if provided, otherwise determine from data)
     const primaryCurrency = selectedCurrency || (ngnCount >= usdCount ? 'NGN' : 'USD');
-
+    
     // Calculate monthly metrics
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
     const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
+    
     const currentMonthStart = new Date(currentYear, currentMonth, 1);
     const previousMonthStart = new Date(previousYear, previousMonth, 1);
-
+    
     // Filter sales for current and previous month
     const thisMonthSales = completedSales.filter(sale => {
       if (!sale.purchase_date) return false;
       const purchaseDate = new Date(sale.purchase_date);
       return purchaseDate >= currentMonthStart;
     });
-
+    
     const lastMonthSales = completedSales.filter(sale => {
       if (!sale.purchase_date) return false;
       const purchaseDate = new Date(sale.purchase_date);
       return purchaseDate >= previousMonthStart && purchaseDate < currentMonthStart;
     });
-
+    
     // Calculate monthly revenue from unique orders
     const thisMonthOrders = new Set();
     let thisMonthRevenue = 0;
-
+    
     thisMonthSales.forEach(sale => {
       if (sale.orders && !thisMonthOrders.has(sale.orders.id)) {
         thisMonthOrders.add(sale.orders.id);
         thisMonthRevenue += (sale.orders.total_price || 0);
       }
     });
-
+    
     const lastMonthOrders = new Set();
     let lastMonthRevenue = 0;
-
+    
     lastMonthSales.forEach(sale => {
       if (sale.orders && !lastMonthOrders.has(sale.orders.id)) {
         lastMonthOrders.add(sale.orders.id);
         lastMonthRevenue += (sale.orders.total_price || 0);
       }
     });
-
+    
     // Calculate plays and favorites changes (simplified)
     const currentMonthPlays = Math.floor(totalPlays * 0.1); // Estimate current month plays
     const previousMonthPlays = Math.floor(totalPlays * 0.08); // Estimate previous month plays
     const currentMonthFavorites = Math.floor(totalFavorites * 0.15);
     const previousMonthFavorites = Math.floor(totalFavorites * 0.12);
-
+    
     // Calculate percentage changes
     const revenueChange = calculatePercentageChange(thisMonthRevenue, lastMonthRevenue);
     const salesChange = calculatePercentageChange(thisMonthSales.length, lastMonthSales.length);
     const playsChange = calculatePercentageChange(currentMonthPlays, previousMonthPlays);
     const favoritesChange = calculatePercentageChange(currentMonthFavorites, previousMonthFavorites);
-
+    
     // Generate optimized chart data
     const revenueByMonth = await generateOptimizedRevenueData(completedSales, 6);
     const playsByMonth = generateOptimizedPlaysData(producerBeats, 6);
     const genreDistribution = generateOptimizedGenreDistribution(producerBeats);
-
+    
     return {
       totalRevenue,
       monthlyRevenue: thisMonthRevenue,
@@ -220,62 +217,62 @@ function getDefaultStats(selectedCurrency?: 'NGN' | 'USD'): ProducerStats {
 async function generateOptimizedRevenueData(salesData: any[], monthsCount: number = 6): Promise<ChartDataPoint[]> {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const result: ChartDataPoint[] = [];
-
+  
   const now = new Date();
   const currentMonth = now.getMonth();
-
+  
   // Initialize result array
   for (let i = monthsCount - 1; i >= 0; i--) {
     const monthIndex = (currentMonth - i + 12) % 12;
     result.push({ name: months[monthIndex], value: 0 });
   }
-
+  
   // Process sales data efficiently
   const monthlyRevenue = new Map<string, { orders: Set<string>, revenue: number }>();
-
+  
   salesData.forEach(sale => {
     if (!sale.purchase_date || !sale.orders) return;
-
+    
     const purchaseDate = new Date(sale.purchase_date);
     const purchaseMonth = purchaseDate.getMonth();
     const purchaseYear = purchaseDate.getFullYear();
-
+    
     // Check if within our range
     for (let i = monthsCount - 1; i >= 0; i--) {
       const monthIndex = (currentMonth - i + 12) % 12;
       const monthYear = monthIndex <= currentMonth ? now.getFullYear() : now.getFullYear() - 1;
-
+      
       if (purchaseMonth === monthIndex && purchaseYear === monthYear) {
         const monthKey = `${monthYear}-${monthIndex}`;
-
+        
         if (!monthlyRevenue.has(monthKey)) {
           monthlyRevenue.set(monthKey, { orders: new Set(), revenue: 0 });
         }
-
+        
         const monthData = monthlyRevenue.get(monthKey)!;
-
+        
         // Only count each order once
         if (!monthData.orders.has(sale.orders.id)) {
           monthData.orders.add(sale.orders.id);
           monthData.revenue += (sale.orders.total_price || 0);
         }
-
+        
         break;
       }
     }
   });
-
+  
   // Update result with calculated revenue
   monthlyRevenue.forEach((data, monthKey) => {
     const [year, month] = monthKey.split('-').map(Number);
     const monthIndex = (currentMonth - (currentMonth - month + 12) % 12 + 12) % 12;
     const resultIndex = monthsCount - 1 - Math.floor((currentMonth - month + 12) % 12);
-
+    
     if (resultIndex >= 0 && resultIndex < result.length) {
       result[resultIndex].value = data.revenue;
     }
   });
-
+  
   return result;
 }
 
@@ -284,7 +281,7 @@ function generateOptimizedPlaysData(beats: any[], monthsCount: number = 6): Char
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const now = new Date();
   const currentMonth = now.getMonth();
-
+  
   const result: ChartDataPoint[] = [];
   for (let i = monthsCount - 1; i >= 0; i--) {
     const monthIndex = (currentMonth - i + 12) % 12;
@@ -294,16 +291,16 @@ function generateOptimizedPlaysData(beats: any[], monthsCount: number = 6): Char
   // Distribute plays across months based on upload dates
   beats.forEach(beat => {
     if (!beat.upload_date || !beat.plays) return;
-
+    
     const uploadDate = new Date(beat.upload_date);
     const uploadMonth = uploadDate.getMonth();
     const uploadYear = uploadDate.getFullYear();
-
+    
     // Find corresponding month in result
     for (let i = monthsCount - 1; i >= 0; i--) {
       const monthIndex = (currentMonth - i + 12) % 12;
       const monthYear = monthIndex <= currentMonth ? now.getFullYear() : now.getFullYear() - 1;
-
+      
       if (uploadMonth === monthIndex && uploadYear === monthYear) {
         const resultIndex = monthsCount - 1 - i;
         if (resultIndex >= 0 && resultIndex < result.length) {
@@ -313,21 +310,21 @@ function generateOptimizedPlaysData(beats: any[], monthsCount: number = 6): Char
       }
     }
   });
-
+  
   return result;
 }
 
 // Optimized genre distribution
 function generateOptimizedGenreDistribution(beats: any[]): GenreDataPoint[] {
   const genreCounts = new Map<string, number>();
-
+  
   beats.forEach(beat => {
     if (beat.genre && beat.genre.trim()) {
       const genre = beat.genre.trim();
       genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1);
     }
   });
-
+  
   // Convert to array and sort
   return Array.from(genreCounts.entries())
     .map(([name, value]) => ({ name, value }))

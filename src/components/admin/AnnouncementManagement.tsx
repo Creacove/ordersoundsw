@@ -10,9 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, ExternalLink, Home, Megaphone, Mail } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EmailBroadcasts } from './EmailBroadcasts';
+import { Loader2, ExternalLink, Home } from 'lucide-react';
 
 const INTERNAL_ROUTES = {
   'Home': '/',
@@ -62,7 +60,7 @@ export function AnnouncementManagement() {
         setAnnouncementId(data.id);
         setIsActive(data.is_active);
         setMessage(data.message);
-
+        
         // Determine link type and set values
         if (data.link_url) {
           if (data.link_url.startsWith('/')) {
@@ -85,7 +83,7 @@ export function AnnouncementManagement() {
 
   function validateLinkUrl(): string | null {
     if (linkType === 'none') return null;
-
+    
     if (linkType === 'internal') {
       if (!internalRoute) {
         toast.error('Please select an internal page');
@@ -93,22 +91,22 @@ export function AnnouncementManagement() {
       }
       return internalRoute;
     }
-
+    
     if (linkType === 'custom') {
       if (!customUrl.trim()) {
         toast.error('Please enter a URL');
         return undefined;
       }
-
+      
       const trimmedUrl = customUrl.trim();
       if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
         toast.error('External URLs must start with http:// or https://');
         return undefined;
       }
-
+      
       return trimmedUrl;
     }
-
+    
     return null;
   }
 
@@ -169,137 +167,116 @@ export function AnnouncementManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="banner" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-          <TabsTrigger value="banner" className="flex items-center gap-2">
-            <Megaphone className="h-4 w-4" />
-            Site Banner
-          </TabsTrigger>
-          <TabsTrigger value="email" className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            Email Newsletter
-          </TabsTrigger>
-        </TabsList>
+    <Card>
+      <CardHeader>
+        <CardTitle>Site-Wide Announcement</CardTitle>
+        <CardDescription>
+          Manage the scrolling announcement banner that appears at the top of every page
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="active"
+            checked={isActive}
+            onCheckedChange={setIsActive}
+          />
+          <Label htmlFor="active" className="font-medium">
+            {isActive ? 'Active' : 'Inactive'}
+          </Label>
+        </div>
 
-        <TabsContent value="banner" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Site-Wide Announcement</CardTitle>
-              <CardDescription>
-                Manage the scrolling announcement banner that appears at the top of every page
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="active"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
-                />
-                <Label htmlFor="active" className="font-medium">
-                  {isActive ? 'Active' : 'Inactive'}
-                </Label>
+        <div className="space-y-2">
+          <Label htmlFor="message">Announcement Message</Label>
+          <Textarea
+            id="message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="e.g., 🎉 NEW: Complete daily tasks and earn points! Check out the Invite & Earn section now! 🎁"
+            rows={3}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>Link Action (Optional)</Label>
+          <RadioGroup value={linkType} onValueChange={(value: any) => setLinkType(value)} className="space-y-3">
+            <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
+              <RadioGroupItem value="none" id="none" />
+              <Label htmlFor="none" className="font-normal cursor-pointer flex-1">
+                No Link
+              </Label>
+            </div>
+            <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
+              <RadioGroupItem value="internal" id="internal" />
+              <Label htmlFor="internal" className="font-normal cursor-pointer flex items-center gap-1 flex-1">
+                <Home className="h-3 w-3" />
+                Internal Page
+              </Label>
+            </div>
+            <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
+              <RadioGroupItem value="custom" id="custom" />
+              <Label htmlFor="custom" className="font-normal cursor-pointer flex items-center gap-1 flex-1">
+                <ExternalLink className="h-3 w-3" />
+                Custom URL
+              </Label>
+            </div>
+          </RadioGroup>
+
+          {linkType === 'internal' && (
+            <div className="space-y-2 pl-6">
+              <Label htmlFor="internal-route">Select Page</Label>
+              <Select value={internalRoute} onValueChange={setInternalRoute}>
+                <SelectTrigger id="internal-route">
+                  <SelectValue placeholder="Choose a page..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {Object.entries(INTERNAL_ROUTES).map(([label, route]) => (
+                    <SelectItem key={route} value={route}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Users will navigate within the app
+              </p>
+            </div>
+          )}
+
+          {linkType === 'custom' && (
+            <div className="space-y-2 pl-6">
+              <Label htmlFor="custom-url">External URL</Label>
+              <Input
+                id="custom-url"
+                type="url"
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value)}
+                placeholder="https://example.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Must start with http:// or https://. Opens in new tab.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {isActive && message.trim() && (
+          <div className="space-y-2">
+            <Label>Preview</Label>
+            <div className="relative bg-primary/90 rounded-md overflow-hidden h-10 flex items-center">
+              <div className="whitespace-nowrap text-primary-foreground font-medium text-sm px-4">
+                {message.trim()}
               </div>
+            </div>
+          </div>
+        )}
 
-              <div className="space-y-2">
-                <Label htmlFor="message">Announcement Message</Label>
-                <Textarea
-                  id="message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="e.g., 🎉 NEW: Complete daily tasks and earn points! Check out the Invite & Earn section now! 🎁"
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label>Link Action (Optional)</Label>
-                <RadioGroup value={linkType} onValueChange={(value: any) => setLinkType(value)} className="space-y-3">
-                  <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
-                    <RadioGroupItem value="none" id="none" />
-                    <Label htmlFor="none" className="font-normal cursor-pointer flex-1">
-                      No Link
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
-                    <RadioGroupItem value="internal" id="internal" />
-                    <Label htmlFor="internal" className="font-normal cursor-pointer flex items-center gap-1 flex-1">
-                      <Home className="h-3 w-3" />
-                      Internal Page
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-2 -ml-2 rounded-md hover:bg-muted/50">
-                    <RadioGroupItem value="custom" id="custom" />
-                    <Label htmlFor="custom" className="font-normal cursor-pointer flex items-center gap-1 flex-1">
-                      <ExternalLink className="h-3 w-3" />
-                      Custom URL
-                    </Label>
-                  </div>
-                </RadioGroup>
-
-                {linkType === 'internal' && (
-                  <div className="space-y-2 pl-6">
-                    <Label htmlFor="internal-route">Select Page</Label>
-                    <Select value={internalRoute} onValueChange={setInternalRoute}>
-                      <SelectTrigger id="internal-route">
-                        <SelectValue placeholder="Choose a page..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {Object.entries(INTERNAL_ROUTES).map(([label, route]) => (
-                          <SelectItem key={route} value={route}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Users will navigate within the app
-                    </p>
-                  </div>
-                )}
-
-                {linkType === 'custom' && (
-                  <div className="space-y-2 pl-6">
-                    <Label htmlFor="custom-url">External URL</Label>
-                    <Input
-                      id="custom-url"
-                      type="url"
-                      value={customUrl}
-                      onChange={(e) => setCustomUrl(e.target.value)}
-                      placeholder="https://example.com"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Must start with http:// or https://. Opens in new tab.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {isActive && message.trim() && (
-                <div className="space-y-2">
-                  <Label>Preview</Label>
-                  <div className="relative bg-primary/90 rounded-md overflow-hidden h-10 flex items-center">
-                    <div className="whitespace-nowrap text-primary-foreground font-medium text-sm px-4">
-                      {message.trim()}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Button onClick={handleSave} disabled={isSaving} className="w-full">
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="email" className="mt-4">
-          <EmailBroadcasts />
-        </TabsContent>
-      </Tabs>
-    </div>
+        <Button onClick={handleSave} disabled={isSaving} className="w-full">
+          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Save Changes
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

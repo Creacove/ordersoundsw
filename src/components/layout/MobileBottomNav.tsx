@@ -1,10 +1,10 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  Home,
-  Users,
-  ShoppingCart,
+import { 
+  Home, 
+  Users, 
+  ShoppingCart, 
   MoreHorizontal,
   Music,
   LayoutDashboard,
@@ -22,12 +22,12 @@ interface MobileBottomNavProps {
   setActiveBottomTab: (tab: string) => void;
 }
 
-export function MobileBottomNav({
-  activeBottomTab,
-  user,
-  itemCount,
-  setIsOpen,
-  setActiveBottomTab
+export function MobileBottomNav({ 
+  activeBottomTab, 
+  user, 
+  itemCount, 
+  setIsOpen, 
+  setActiveBottomTab 
 }: MobileBottomNavProps) {
   const location = useLocation();
   let mobileMenuItems = [];
@@ -37,7 +37,7 @@ export function MobileBottomNav({
       { icon: <LayoutDashboard size={20} />, label: "Dashboard", to: "/producer/dashboard", id: "producer" },
       { icon: <Home size={20} />, label: "Explore", to: "/", id: "explore" },
       { icon: <Music size={20} />, label: "My Beats", to: "/producer/beats", id: "beats" },
-      { icon: <DollarSign size={20} />, label: "Earnings", to: "/producer/earnings", id: "earnings" },
+      { icon: <DollarSign size={20} />, label: "Royalties", to: "/producer/royalties", id: "royalties" },
       { icon: <MoreHorizontal size={20} />, label: "More", to: "#", id: "more", action: () => setIsOpen(true) },
     ];
   } else {
@@ -54,12 +54,12 @@ export function MobileBottomNav({
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#0e0e0e] border-t border-[#272727] py-1 safe-area-bottom">
       <div className="flex justify-around">
         {mobileMenuItems.map((item, idx) => {
-          const isActive = activeBottomTab === item.id ||
-            (item.id === "producers" && location.pathname === "/producers") ||
-            (item.id === "library" &&
-              (location.pathname === "/library" ||
-                location.pathname === "/purchased" ||
-                location.pathname === "/my-playlists"));
+          const isActive = activeBottomTab === item.id || 
+                          (item.id === "producers" && location.pathname === "/producers") || 
+                          (item.id === "library" && 
+                            (location.pathname === "/library" ||
+                            location.pathname === "/purchased" ||
+                            location.pathname === "/my-playlists"));
 
           if (item.action) {
             return (
@@ -109,8 +109,8 @@ export function MobileBottomNav({
               >
                 {item.icon}
                 {item.badge && (
-                  <Badge
-                    variant="destructive"
+                  <Badge 
+                    variant="destructive" 
                     className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]"
                   >
                     {item.badge > 9 ? "9+" : item.badge}

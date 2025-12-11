@@ -39,7 +39,7 @@ import SoundpackDetail from "./pages/buyer/SoundpackDetail";
 import ProducerDashboard from "./pages/producer/Dashboard";
 import UploadBeat from "./pages/producer/UploadBeat";
 import ProducerBeats from "./pages/producer/Beats";
-import Earnings from "./pages/producer/Earnings";
+import Royalties from "./pages/producer/Royalties";
 import ProtectedProducerRoute from "./components/auth/ProtectedProducerRoute";
 import ProtectedAdminRoute from "./components/auth/ProtectedAdminRoute";
 import Sandbox from "./pages/Sandbox";
@@ -50,7 +50,6 @@ import Animations from "./pages/Animations";
 // Lazy load admin dashboard to avoid affecting main app performance
 import { lazy, Suspense } from "react";
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-
 
 // Add custom wallet styles
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -118,7 +117,7 @@ const AppContent = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/producer-activation" element={<ProducerActivation />} />
-
+            
             {/* Referral Routes */}
             <Route path="/referrals" element={<InviteAndEarn />} />
             <Route path="/invite" element={<Navigate to="/referrals" replace />} />
@@ -136,12 +135,12 @@ const AppContent = () => (
             <Route path="/producer/dashboard" element={<ProtectedProducerRoute><ProducerDashboard /></ProtectedProducerRoute>} />
             <Route path="/producer/upload" element={<ProtectedProducerRoute><UploadBeat /></ProtectedProducerRoute>} />
             <Route path="/producer/beats" element={<ProtectedProducerRoute><ProducerBeats /></ProtectedProducerRoute>} />
-            <Route path="/producer/earnings" element={<ProtectedProducerRoute><Earnings /></ProtectedProducerRoute>} />
+            <Route path="/producer/royalties" element={<ProtectedProducerRoute><Royalties /></ProtectedProducerRoute>} />
             <Route path="/producer/settings" element={<ProtectedProducerRoute><ProducerSettings /></ProtectedProducerRoute>} />
 
             {/* Admin Routes - Lazy loaded and protected */}
-            <Route
-              path="/admin"
+            <Route 
+              path="/admin" 
               element={
                 <ProtectedAdminRoute>
                   <Suspense fallback={
@@ -152,7 +151,7 @@ const AppContent = () => (
                     <AdminDashboard />
                   </Suspense>
                 </ProtectedAdminRoute>
-              }
+              } 
             />
 
             {/* Hidden cinematic animation page */}
