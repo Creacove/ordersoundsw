@@ -17,7 +17,9 @@ interface UnifiedSidebarProps {
   getSidebarContent: () => any[];
   isCollapsed: boolean;
   toggleCollapsed: () => void;
+
   isMobile: boolean;
+  itemCount?: number;
 }
 
 export function UnifiedSidebar({
@@ -29,6 +31,7 @@ export function UnifiedSidebar({
   isCollapsed,
   toggleCollapsed,
   isMobile,
+  itemCount = 0,
 }: UnifiedSidebarProps) {
   const { prefetchProducers } = useProducers();
   const [prefetchedSections, setPrefetchedSections] = useState<Set<string>>(new Set());
@@ -133,7 +136,7 @@ export function UnifiedSidebar({
                       onMouseEnter={() => handleMenuHover(item.title)}
                       className={({ isActive }) =>
                         cn(
-                          "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-all duration-200",
+                          "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-all duration-200 relative",
                           "hover:bg-purple-500/20 hover:text-white",
                           isActive
                             ? "text-purple-500 border-r-4 border-purple-500 font-medium rounded-r-none"
@@ -144,8 +147,30 @@ export function UnifiedSidebar({
                     >
                       {({ isActive }) => (
                         <>
-                          <item.icon size={20} className={isActive ? "text-purple-500" : "text-[#b3b3b3]"} />
-                          {!isCollapsed && <span>{item.title}</span>}
+                          <div className="relative">
+                            <item.icon size={20} className={isActive ? "text-purple-500" : "text-[#b3b3b3]"} />
+                            {item.title === "Cart" && itemCount > 0 && isCollapsed && (
+                              <Badge
+                                className="absolute -top-2 -right-2 h-3.5 w-3.5 p-0 flex items-center justify-center text-[9px] border border-[#0e0e0e]"
+                                variant="destructive"
+                              >
+                                {itemCount}
+                              </Badge>
+                            )}
+                          </div>
+                          {!isCollapsed && (
+                            <div className="flex items-center justify-between flex-1">
+                              <span>{item.title}</span>
+                              {item.title === "Cart" && itemCount > 0 && (
+                                <Badge
+                                  className="h-5 min-w-5 px-1 flex items-center justify-center text-[10px]"
+                                  variant="destructive"
+                                >
+                                  {itemCount}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                         </>
                       )}
                     </NavLink>

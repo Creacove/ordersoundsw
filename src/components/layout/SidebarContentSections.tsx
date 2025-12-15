@@ -48,8 +48,8 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       ]
     });
   } else {
-    sections.push({ 
-      title: "Explore Beats", 
+    sections.push({
+      title: "Explore Beats",
       items: [
         { icon: Home, title: "Home", href: "/" },
         { icon: TrendingUp, title: "Trending", href: "/trending" },
@@ -57,13 +57,14 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
         { icon: Gamepad2, title: "Gaming & Soundtrack", href: "/gaming-soundtrack" },
         { icon: List, title: "Playlists", href: "/playlists" },
         { icon: Disc, title: "Genres", href: "/genres" },
+        { icon: ShoppingCart, title: "Cart", href: "/cart" },
         { icon: Users, title: "Producers", href: "/producers" },
         { icon: Search, title: "Search", href: "/search" },
       ]
     });
 
-    sections.push({ 
-      title: "Library", 
+    sections.push({
+      title: "Library",
       items: [
         { icon: Heart, title: "Favorites", href: "/favorites" },
         { icon: LayoutGrid, title: "My Playlists", href: "/my-playlists" },

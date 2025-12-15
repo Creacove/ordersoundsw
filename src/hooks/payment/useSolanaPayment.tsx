@@ -14,7 +14,7 @@ interface ProductData {
 const recordFallbackPayment = async (amount: number, signature: string, productData?: ProductData | { items: any[] }) => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       console.error("Could not get user for fallback payment recording:", userError);
       return;
@@ -73,10 +73,10 @@ export const useSolanaPayment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastTransactionSignature, setLastTransactionSignature] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(true);
-  
+
   // Dynamic network selection from environment
   const network = import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
-  
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -89,24 +89,24 @@ export const useSolanaPayment = () => {
     if (!wallet.connected || !wallet.publicKey) {
       throw new Error("WALLET_NOT_CONNECTED: Please connect your wallet first");
     }
-    
+
     // Validate amount
     if (!amount || amount <= 0) {
       throw new Error("INVALID_AMOUNT: Payment amount must be positive");
     }
-    
+
     // Validate producer wallet address
     if (!producerWalletAddress) {
       throw new Error("MISSING_ADDRESS: Producer wallet address is required");
     }
-    
+
     if (!isValidSolanaAddress(producerWalletAddress)) {
       throw new Error("INVALID_ADDRESS: Creator wallet address is invalid");
     }
-    
+
     return true;
   }, [wallet]);
-  
+
   const makePayment = async (
     amount: number,
     producerWalletAddress: string | null,
@@ -120,12 +120,12 @@ export const useSolanaPayment = () => {
     }
 
     setIsProcessing(true);
-    
+
     try {
       // Handle fallback payment when producer wallet is missing
       if (producerWalletAddress === null) {
         console.log(`💳 Processing platform fallback payment: $${amount} (producer wallet missing)`);
-        
+
         // Use platform-only payment function
         const { processPlatformOnlyPayment } = await import('@/utils/payment/usdcTransactions');
         const signature = await processPlatformOnlyPayment(
@@ -134,10 +134,10 @@ export const useSolanaPayment = () => {
           wallet,
           network
         );
-        
+
         // Record fallback payment details
         await recordFallbackPayment(amount, signature, productData);
-        
+
         if (isMounted) {
           setLastTransactionSignature(signature);
           toast.success("✅ Payment completed successfully!", {
@@ -162,43 +162,57 @@ export const useSolanaPayment = () => {
         network
       );
 
-      // Wait for confirmation with better error handling
-      let confirmationAttempts = 0;
-      const maxAttempts = 30; // 60 seconds with 2-second intervals
-      
-      while (confirmationAttempts < maxAttempts) {
+      // Wait for confirmation using HTTP polling (no WebSocket required)
+      console.log('⏳ Waiting for transaction confirmation via polling...');
+      const confirmationStart = Date.now();
+      const confirmationTimeout = 90000; // 90 seconds for mainnet
+      const pollInterval = 3000;
+
+      let confirmed = false;
+      let confirmationError = null;
+
+      while (Date.now() - confirmationStart < confirmationTimeout) {
         try {
-          const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-          if (confirmation.value) {
-            if (confirmation.value.err) {
-              throw new Error(`TRANSACTION_FAILED: ${confirmation.value.err.toString()}`);
+          const { value: statuses } = await connection.getSignatureStatuses([signature]);
+          const status = statuses?.[0];
+
+          if (status) {
+            console.log(`📊 Transaction status: ${status.confirmationStatus}`);
+
+            if (status.err) {
+              confirmationError = status.err;
+              break;
             }
-            break;
+
+            if (status.confirmationStatus === 'confirmed' || status.confirmationStatus === 'finalized') {
+              confirmed = true;
+              break;
+            }
           }
         } catch (error) {
-          console.warn(`Confirmation attempt ${confirmationAttempts + 1} failed:`, error);
+          console.warn('Status check failed, retrying...', error);
         }
-        
-        confirmationAttempts++;
-        if (confirmationAttempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
-      
-      if (confirmationAttempts >= maxAttempts) {
-        throw new Error("TRANSACTION_TIMEOUT: Transaction confirmation timed out");
+
+      if (confirmationError) {
+        throw new Error(`TRANSACTION_FAILED: ${JSON.stringify(confirmationError)}`);
+      }
+
+      if (!confirmed) {
+        throw new Error(`TRANSACTION_TIMEOUT: Check Solscan: https://solscan.io/tx/${signature}`);
       }
 
       if (isMounted) {
         setLastTransactionSignature(signature);
       }
-      
+
       // Handle product purchase record if applicable (non-blocking)
       if (productData && 'id' in productData) {
         try {
           // Get current user for buyer_id
           const { data: { user }, error: userError } = await supabase.auth.getUser();
-          
+
           if (userError || !user) {
             console.error("Could not get user for order recording:", userError);
             // Don't throw - payment was successful, just log the issue
@@ -260,7 +274,7 @@ export const useSolanaPayment = () => {
           // Payment was successful, don't fail the entire operation
         }
       }
-      
+
       // TODO: HOLIDAY PROMO - Revert to 80/20 message after January 31, 2025
       if (isMounted) {
         // Original: const platformFee = (amount * 0.2).toFixed(2);
@@ -273,10 +287,10 @@ export const useSolanaPayment = () => {
       return signature;
     } catch (error: any) {
       console.error("❌ USDC payment error:", error);
-      const message = error.message.includes(':') 
-        ? error.message.split(':').pop().trim() 
+      const message = error.message.includes(':')
+        ? error.message.split(':').pop().trim()
         : "Payment failed";
-      
+
       if (isMounted) {
         toast.error(`Payment failed: ${message}`);
       }
@@ -308,13 +322,13 @@ export const useSolanaPayment = () => {
     // Check for missing wallets and group fallback items
     const validItems = items.filter(item => item.producerWallet && isValidSolanaAddress(item.producerWallet));
     const fallbackItems = items.filter(item => !item.producerWallet);
-    
+
     if (fallbackItems.length > 0) {
       console.log(`${fallbackItems.length} items will use platform fallback payment`);
     }
 
     setIsProcessing(true);
-    
+
     try {
       if (!wallet.connected || !wallet.publicKey) {
         throw new Error("WALLET_NOT_CONNECTED: Please connect your wallet first");
@@ -334,7 +348,7 @@ export const useSolanaPayment = () => {
       if (fallbackItems.length > 0) {
         const fallbackAmount = fallbackItems.reduce((total, item) => total + item.price, 0);
         console.log(`Processing fallback payment of $${fallbackAmount} for ${fallbackItems.length} items`);
-        
+
         const { processPlatformOnlyPayment } = await import('@/utils/payment/usdcTransactions');
         const fallbackSignature = await processPlatformOnlyPayment(
           fallbackAmount,
@@ -342,9 +356,9 @@ export const useSolanaPayment = () => {
           wallet,
           network
         );
-        
+
         signatures.push(fallbackSignature);
-        
+
         // Record fallback payment
         await recordFallbackPayment(fallbackAmount, fallbackSignature, { items: fallbackItems });
       }
@@ -353,7 +367,7 @@ export const useSolanaPayment = () => {
       try {
         // Get current user for buyer_id  
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError || !user) {
           console.error("Could not get user for order recording:", userError);
         } else {
@@ -370,7 +384,7 @@ export const useSolanaPayment = () => {
             })
             .select()
             .single();
-            
+
           if (!orderError && orderData) {
             // Create order items
             const orderItems = items.map(item => ({
@@ -380,9 +394,9 @@ export const useSolanaPayment = () => {
               price: item.price,
               quantity: 1,
             }));
-            
+
             const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-            
+
             if (!itemsError) {
               // CRITICAL: Create user_purchased_beats records for library display
               const purchasedBeatsRecords = items.map(item => ({
@@ -392,12 +406,12 @@ export const useSolanaPayment = () => {
                 license_type: 'basic', // Default license type
                 currency_code: 'USDC'
               })).filter(record => record.beat_id); // Only insert valid beat IDs
-              
+
               if (purchasedBeatsRecords.length > 0) {
                 const { error: purchasedBeatsError } = await supabase
                   .from('user_purchased_beats')
                   .insert(purchasedBeatsRecords);
-                
+
                 if (purchasedBeatsError) {
                   console.error("Failed to create purchased beats records:", purchasedBeatsError);
                   // Critical for library display but don't fail the payment
@@ -422,10 +436,10 @@ export const useSolanaPayment = () => {
       return signatures;
     } catch (error: any) {
       console.error("❌ Multiple USDC payments error:", error);
-      const message = error.message.includes(':') 
-        ? error.message.split(':').pop().trim() 
+      const message = error.message.includes(':')
+        ? error.message.split(':').pop().trim()
         : "Payments failed";
-        
+
       if (isMounted) {
         toast.error(`Payments failed: ${message}`);
       }

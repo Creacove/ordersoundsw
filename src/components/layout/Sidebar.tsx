@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { usePlayer } from "@/context/PlayerContext";
-import { useCart } from "@/context/CartContext";
+import { useCartLightweight } from "@/hooks/useCartLightweight";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { getSidebarSections } from "./SidebarContentSections";
@@ -17,7 +17,7 @@ interface SidebarProps {
 
 function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
   const { user, logout } = useAuth();
-  const { itemCount } = useCart();
+  const { itemCount } = useCartLightweight();
   const location = useLocation();
   const navigate = useNavigate();
   const { isPlaying, currentBeat } = usePlayer();
@@ -28,8 +28,8 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
 
   // Dispatch sidebar change event when isOpen changes
   useEffect(() => {
-    const event = new CustomEvent('sidebarChange', { 
-      detail: { isOpen: isOpen } 
+    const event = new CustomEvent('sidebarChange', {
+      detail: { isOpen: isOpen }
     });
     window.dispatchEvent(event);
   }, [isOpen]);
@@ -68,7 +68,7 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
   const toggleCollapsed = () => {
     const newCollapsedState = !isCollapsed;
     setIsCollapsed(newCollapsedState);
-    
+
     // Notify parent component about the collapse state change
     if (onCollapsedChange) {
       onCollapsedChange(newCollapsedState);
@@ -82,7 +82,7 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
   return (
     <>
       {/* Show unified sidebar */}
-      <UnifiedSidebar 
+      <UnifiedSidebar
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         user={user}
@@ -91,11 +91,12 @@ function Sidebar({ activeTab, currentPath, onCollapsedChange }: SidebarProps) {
         isCollapsed={isCollapsed}
         toggleCollapsed={toggleCollapsed}
         isMobile={isMobile}
+        itemCount={itemCount}
       />
-      
+
       {/* Only show bottom nav on mobile */}
       {isMobile && (
-        <MobileBottomNav 
+        <MobileBottomNav
           activeBottomTab={activeBottomTab}
           user={user}
           itemCount={itemCount}
