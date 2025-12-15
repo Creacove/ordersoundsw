@@ -4,6 +4,7 @@ import { useCartLightweight } from './useCartLightweight';
 import { supabase } from '@/integrations/supabase/client';
 import { Beat } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 interface CartItemWithDetails {
   itemId: string;
@@ -27,17 +28,17 @@ const getCachedBeatData = (beatId: string): Beat | null => {
   try {
     const cache = sessionStorage.getItem(CACHE_KEY);
     if (!cache) return null;
-    
+
     const parsed = JSON.parse(cache);
     const cachedData: CachedBeatData = parsed[beatId];
-    
+
     if (!cachedData) return null;
-    
+
     // Check if cache is still valid
     if (Date.now() - cachedData.cachedAt > CACHE_DURATION) {
       return null;
     }
-    
+
     return cachedData.beat;
   } catch {
     return null;
@@ -49,12 +50,12 @@ const cacheBeatData = (beatId: string, beat: Beat) => {
   try {
     const cache = sessionStorage.getItem(CACHE_KEY);
     const parsed = cache ? JSON.parse(cache) : {};
-    
+
     parsed[beatId] = {
       beat,
       cachedAt: Date.now()
     };
-    
+
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
   } catch {
     // Silent fail
@@ -64,19 +65,22 @@ const cacheBeatData = (beatId: string, beat: Beat) => {
 export function useCartWithBeatDetailsOptimized() {
   const { cartItems: lightweightItems, itemCount, removeFromCart, clearCart, addToCart, refreshCartFromStorage } = useCartLightweight();
   const [cartItemsWithDetails, setCartItemsWithDetails] = useState<CartItemWithDetails[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Initialize loading state based on whether there are items to fetch
+  // This prevents the "flash of empty cart"
+  const [isLoading, setIsLoading] = useState(() => lightweightItems.length > 0);
+  const [error, setError] = useState<string | null>(null);
   const { currency } = useAuth();
-  
+
   console.log('useCartWithBeatDetailsOptimized - lightweightItems:', lightweightItems, 'itemCount:', itemCount, 'cartItemsWithDetails:', cartItemsWithDetails);
 
   // Calculate total amount using memoization with currency consideration
   const totalAmount = useMemo(() => {
     return cartItemsWithDetails.reduce((total, item) => {
       let price = 0;
-      
+
       if (item.itemType === 'beat' && item.beat) {
         const licenseType = item.licenseType;
-        
+
         if (currency === 'NGN') {
           if (licenseType === 'basic') price = item.beat.basic_license_price_local || 0;
           else if (licenseType === 'premium') price = item.beat.premium_license_price_local || 0;
@@ -90,7 +94,7 @@ export function useCartWithBeatDetailsOptimized() {
         }
       } else if (item.itemType === 'soundpack' && item.soundpack) {
         const licenseType = item.licenseType;
-        
+
         if (currency === 'NGN') {
           if (licenseType === 'basic') price = item.soundpack.basic_license_price_local || 0;
           else if (licenseType === 'premium') price = item.soundpack.premium_license_price_local || 0;
@@ -103,7 +107,7 @@ export function useCartWithBeatDetailsOptimized() {
           else if (licenseType === 'custom') price = item.soundpack.custom_license_price_diaspora || 0;
         }
       }
-      
+
       return total + price;
     }, 0);
   }, [cartItemsWithDetails, currency]);
@@ -112,16 +116,19 @@ export function useCartWithBeatDetailsOptimized() {
   useEffect(() => {
     const fetchBeatDetails = async () => {
       console.log('Fetching cart details for items:', lightweightItems);
-      
+      setIsLoading(true);
+      setError(null);
+
       if (lightweightItems.length === 0) {
         setCartItemsWithDetails([]);
+        setIsLoading(false);
         return;
       }
 
       // Separate beats and soundpacks
       const beatItems = lightweightItems.filter(item => item.itemType === 'beat');
       const soundpackItems = lightweightItems.filter(item => item.itemType === 'soundpack');
-      
+
       console.log('Separated items - beatItems:', beatItems, 'soundpackItems:', soundpackItems);
 
       // Check cache first for beats
@@ -150,9 +157,9 @@ export function useCartWithBeatDetailsOptimized() {
 
       // Fetch both beats and soundpacks
       const allItemsWithDetails: CartItemWithDetails[] = [...cachedItems];
-      
+      let hasFetchError = false;
+
       if (beatsToFetch.length > 0 || soundpackItems.length > 0) {
-        setIsLoading(true);
         try {
           // Fetch missing beats
           if (beatsToFetch.length > 0) {
@@ -180,17 +187,20 @@ export function useCartWithBeatDetailsOptimized() {
 
             if (error) {
               console.error('Error fetching beat details:', error);
+              hasFetchError = true;
+              setError('Failed to load some beats. Please check your connection.');
             } else if (beats) {
+              // Add fetched beats
               beatItems.forEach(lightweightItem => {
                 // Skip if already cached
                 if (cachedItems.find(c => c.itemId === lightweightItem.itemId)) return;
 
                 const beat = beats.find(b => b.id === lightweightItem.itemId);
-                if (!beat) return;
+                if (!beat) return; // Will handle missing beats later
 
                 const userData = beat.users;
                 const producerName = userData?.stage_name || userData?.full_name || 'Unknown Producer';
-                
+
                 const beatData: Beat = {
                   id: beat.id,
                   title: beat.title,
@@ -228,13 +238,25 @@ export function useCartWithBeatDetailsOptimized() {
                   beat: beatData
                 });
               });
+
+              // Ghost Item Cleanup for Beats
+              const foundBeatIds = beats.map(b => b.id);
+              const missingBeatIds = beatsToFetch.filter(id => !foundBeatIds.includes(id));
+
+              if (missingBeatIds.length > 0 && !hasFetchError) {
+                console.log('Creating cleanup for missing beats:', missingBeatIds);
+                missingBeatIds.forEach(id => {
+                  removeFromCart(id);
+                });
+                toast.error(`${missingBeatIds.length} item(s) are no longer available and were removed.`);
+              }
             }
           }
 
           // Fetch soundpacks
           if (soundpackItems.length > 0) {
             const soundpackIds = soundpackItems.map(item => item.itemId);
-            
+
             const { data: soundpacks, error } = await supabase
               .from('soundpacks')
               .select(`
@@ -258,8 +280,11 @@ export function useCartWithBeatDetailsOptimized() {
 
             if (error) {
               console.error('Error fetching soundpack details:', error);
+              hasFetchError = true;
+              setError('Failed to load some soundpacks. Please check your connection.');
             } else if (soundpacks) {
               console.log('Fetched soundpacks from DB:', soundpacks);
+
               soundpackItems.forEach(lightweightItem => {
                 const soundpack = soundpacks.find(s => s.id === lightweightItem.itemId);
                 console.log('Processing soundpack item:', lightweightItem.itemId, 'found:', soundpack);
@@ -279,6 +304,21 @@ export function useCartWithBeatDetailsOptimized() {
                   }
                 });
               });
+
+              // Ghost Item Cleanup for Soundpacks
+              const foundSoundpackIds = soundpacks.map(s => s.id);
+              const missingSoundpackIds = soundpackIds.filter(id => !foundSoundpackIds.includes(id));
+
+              if (missingSoundpackIds.length > 0 && !hasFetchError) {
+                console.log('Cleanup for missing soundpacks:', missingSoundpackIds);
+                missingSoundpackIds.forEach(id => {
+                  removeFromCart(id);
+                });
+                // Toast already shown if beats matched, but just in case
+                if (missingBeatIds.length === 0) { // Only show once if possible, or distinct message
+                  toast.error(`${missingSoundpackIds.length} soundpack(s) are no longer available.`);
+                }
+              }
             }
           }
 
@@ -286,6 +326,7 @@ export function useCartWithBeatDetailsOptimized() {
           setCartItemsWithDetails(allItemsWithDetails);
         } catch (error) {
           console.error('Error fetching cart item details:', error);
+          setError('An unexpected error occurred while loading your cart.');
         } finally {
           setIsLoading(false);
         }
@@ -293,6 +334,7 @@ export function useCartWithBeatDetailsOptimized() {
         // Only cached items, set them
         console.log('Using only cached items:', cachedItems);
         setCartItemsWithDetails(cachedItems);
+        setIsLoading(false);
       }
     };
 
@@ -304,6 +346,7 @@ export function useCartWithBeatDetailsOptimized() {
     itemCount,
     totalAmount,
     isLoading,
+    error,
     removeFromCart,
     clearCart,
     addToCart,

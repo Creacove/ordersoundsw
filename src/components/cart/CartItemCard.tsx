@@ -72,7 +72,7 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
   const getCorrectPrice = () => {
     const licenseType = item.licenseType;
     const beat = item.beat;
-    
+
     if (currency === 'NGN') {
       // Use local prices for NGN
       if (licenseType === 'basic') return beat.basic_license_price_local || 0;
@@ -84,7 +84,7 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
       if (licenseType === 'premium') return beat.premium_license_price_diaspora || 0;
       if (licenseType === 'exclusive') return beat.exclusive_license_price_diaspora || 0;
     }
-    
+
     return 0;
   };
 
@@ -115,13 +115,13 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
           </div>
         </div>
       </div>
-      
+
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-y-3 sm:gap-y-0">
+          <div className="flex-1 min-w-0 sm:mr-3">
             <h3 className="font-semibold truncate">{item.beat.title || 'Unknown Beat'}</h3>
             <p className="text-xs text-muted-foreground">{item.beat.producer_name || 'Unknown Producer'}</p>
-            
+
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {item.beat.genre && (
                 <Badge variant="outline" className="text-xs py-0 px-1.5">
@@ -129,23 +129,23 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
                   {item.beat.genre}
                 </Badge>
               )}
-              
+
               <Badge variant="secondary" className="text-xs py-0 px-1.5 capitalize">
                 {item.licenseType} License
               </Badge>
             </div>
           </div>
-          
-          <div className="flex flex-col items-end">
-            <span className="font-semibold text-sm">
+
+          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto flex-shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/50 sm:border-transparent mt-1 sm:mt-0">
+            <span className="font-semibold text-sm order-1 sm:order-none">
               {currency === 'NGN' ? '₦' : '$'}
               {Math.round(displayPrice).toLocaleString()}
             </span>
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 text-muted-foreground hover:text-destructive mt-1"
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive -ml-2 sm:ml-0 order-2 sm:order-none sm:mt-1"
               onClick={() => onRemove(item.itemId)}
             >
               <Trash2 size={16} />
