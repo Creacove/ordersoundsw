@@ -32,7 +32,7 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       items: [
         { icon: LayoutDashboard, title: "Dashboard", href: "/producer/dashboard" },
         { icon: Music, title: "My Beats", href: "/producer/beats" },
-        { icon: DollarSign, title: "Royalty Splits", href: "/producer/royalties" },
+        { icon: DollarSign, title: "Earnings", href: "/producer/earnings" },
       ]
     });
 

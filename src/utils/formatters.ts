@@ -6,13 +6,16 @@
  * @returns Formatted currency string
  */
 export function formatCurrency(amount: number, currency: string = 'NGN'): string {
+  // Normalize USDC to USD for display purposes (USDC is not a valid ISO 4217 currency code)
+  const normalizedCurrency = currency === 'USDC' ? 'USD' : currency;
+
   const formatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: currency,
-    minimumFractionDigits: currency === 'USD' ? 2 : 0,
-    maximumFractionDigits: currency === 'USD' ? 2 : 0,
+    currency: normalizedCurrency,
+    minimumFractionDigits: normalizedCurrency === 'USD' ? 2 : 0,
+    maximumFractionDigits: normalizedCurrency === 'USD' ? 2 : 0,
   });
-  
+
   return formatter.format(amount);
 }
 
@@ -23,7 +26,7 @@ export function formatCurrency(amount: number, currency: string = 'NGN'): string
  */
 export function getInitials(name: string): string {
   if (!name) return '';
-  
+
   return name
     .split(' ')
     .map(part => part[0])
@@ -41,7 +44,7 @@ export function getInitials(name: string): string {
 export function truncateText(text: string, maxLength: number): string {
   if (!text) return '';
   if (text.length <= maxLength) return text;
-  
+
   return text.slice(0, maxLength) + '...';
 }
 
@@ -67,7 +70,7 @@ export function formatDate(date: string | Date, includeTime = false): string {
     day: 'numeric',
     ...(includeTime && { hour: '2-digit', minute: '2-digit' })
   };
-  
+
   return new Date(date).toLocaleDateString('en-US', options);
 }
 
