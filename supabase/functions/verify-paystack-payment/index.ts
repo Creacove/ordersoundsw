@@ -19,7 +19,7 @@ serve(async (req) => {
     console.log('=== Payment Verification Function Started ===');
     console.log('Request method:', req.method);
     console.log('Request headers:', Object.fromEntries(req.headers.entries()));
-    
+
     // Get the Paystack LIVE secret key from environment - FIXED: Using live key
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE');
     if (!PAYSTACK_SECRET_KEY) {
@@ -37,7 +37,7 @@ serve(async (req) => {
       rawBody = await req.text();
       console.log('Raw request body length:', rawBody.length);
       console.log('Raw request body preview:', rawBody.substring(0, 200) + (rawBody.length > 200 ? '...' : ''));
-      
+
       if (!rawBody || rawBody.trim() === '') {
         console.error('Empty request body received');
         return new Response(
@@ -45,7 +45,7 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
-      
+
       body = JSON.parse(rawBody);
       console.log('Parsed request body:', JSON.stringify(body, null, 2));
     } catch (e) {
@@ -58,9 +58,9 @@ serve(async (req) => {
     }
 
     const { reference, orderId, orderItems } = body;
-    
+
     console.log('Extracted parameters:', { reference, orderId, orderItemsCount: orderItems?.length });
-    
+
     if (!reference) {
       console.error('Missing payment reference');
       return new Response(
@@ -79,11 +79,11 @@ serve(async (req) => {
 
     console.log(`Processing verification for reference: ${reference}, order: ${orderId}`);
     console.log('Order items received:', orderItems);
-    
+
     // Create a Supabase client with SERVICE ROLE KEY to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables');
       return new Response(
@@ -91,7 +91,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
-    
+
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log('Using service role key for database access');
@@ -102,7 +102,7 @@ serve(async (req) => {
       .select('status, buyer_id')
       .eq('id', orderId)
       .maybeSingle();
-      
+
     if (orderCheckError) {
       console.error('Failed to check order status:', orderCheckError);
       return new Response(
@@ -114,7 +114,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
-    
+
     if (!orderData) {
       console.error('Order not found:', orderId);
       return new Response(
@@ -126,9 +126,9 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       );
     }
-    
+
     console.log('Order found:', orderData);
-    
+
     // If order is already completed, return success
     if (orderData.status === 'completed') {
       console.log(`Order ${orderId} already completed, proceeding as success`);
@@ -174,144 +174,53 @@ serve(async (req) => {
       console.log('Paystack verification response:', JSON.stringify(verifyData));
 
       // Check if payment was successful
-      const isVerified = 
-        verifyData.status === true && 
+      const isVerified =
+        verifyData.status === true &&
         verifyData.data.status === 'success';
 
       console.log(`Payment verification result: ${isVerified ? 'VERIFIED' : 'FAILED'}`);
 
-      // If verified, update the database
+      // If verified, update the database and fulfill the order
       if (isVerified) {
-        console.log(`Updating order ${orderId} to completed status`);
-        
+        console.log(`Updating order ${orderId} with payment reference ${reference}`);
+
         try {
-          // Update order status
-          const { error: updateError } = await supabaseClient
+          // 1. First, store the payment reference in the order (security/audit check)
+          const { error: updateRefError } = await supabaseClient
             .from('orders')
             .update({
-              status: 'completed',
-              consent_timestamp: new Date().toISOString(),
               payment_reference: reference
             })
             .eq('id', orderId);
 
-          if (updateError) {
-            console.error('Failed to update order status:', updateError);
+          if (updateRefError) {
+            console.error('Failed to update order reference:', updateRefError);
+            // Non-blocking for fulfillment, but log it
+          }
+
+          // 2. Call the unified fulfillment RPC
+          console.log(`Calling fulfillment RPC for order ${orderId}...`);
+          const { data: fulfillmentResult, error: rpcError } = await supabaseClient
+            .rpc('finalize_order_fulfillment', {
+              p_order_id: orderId
+            });
+
+          if (rpcError) {
+            console.error('Fulfillment RPC failed:', rpcError);
             return new Response(
               JSON.stringify({
                 success: false,
                 verified: true,
-                message: 'Payment was verified but an error occurred updating order',
+                message: 'Payment was verified but an error occurred during fulfillment processing',
               }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
             );
           }
 
-          // Process purchased items
-          if (orderItems && Array.isArray(orderItems)) {
-            // Create a map of beat licenses from the order items
-            const beatLicenses: Record<string, string> = {};
-            
-            orderItems.forEach((item: any) => {
-              if (item.beat_id && item.license) {
-                beatLicenses[item.beat_id] = item.license;
-              }
-            });
-            
-            // Separate beats and soundpacks
-            const beatItems = orderItems.filter((item: any) => item.item_type === 'beat');
-            const soundpackItems = orderItems.filter((item: any) => item.item_type === 'soundpack');
-            
-            // Add purchased beats to user's collection
-            if (beatItems.length > 0) {
-              try {
-                const purchasedBeats = beatItems.map(item => ({
-                  user_id: orderData.buyer_id,
-                  beat_id: item.beat_id || item.item_id,
-                  license_type: beatLicenses[item.beat_id || item.item_id] || 'basic',
-                  currency_code: 'NGN',
-                  order_id: orderId,
-                }));
-                
-                console.log(`Adding ${purchasedBeats.length} purchased beats to user collection`);
-                const { error: purchaseError } = await supabaseClient
-                  .from('user_purchased_beats')
-                  .insert(purchasedBeats);
-                
-                if (purchaseError) {
-                  console.error('Failed to record beat purchases:', purchaseError);
-                } else {
-                  console.log(`Successfully recorded ${purchasedBeats.length} beat purchases`);
-                }
-                
-                // Update purchase counts for beats
-                for (const item of beatItems) {
-                  try {
-                    const { error: updateCountError } = await supabaseClient
-                      .rpc('increment_counter', {
-                        p_table_name: 'beats',
-                        p_column_name: 'purchase_count',
-                        p_id: item.beat_id || item.item_id
-                      });
-                      
-                    if (!updateCountError) {
-                      console.log(`Updated purchase count for beat ${item.beat_id || item.item_id}`);
-                    }
-                  } catch (err) {
-                    console.error(`Error updating purchase count for beat ${item.beat_id || item.item_id}:`, err);
-                  }
-                }
-              } catch (purchaseInsertError) {
-                console.error('Exception recording beat purchases:', purchaseInsertError);
-              }
-            }
-            
-            // Add purchased soundpacks to user's collection
-            if (soundpackItems.length > 0) {
-              try {
-                const purchasedSoundpacks = soundpackItems.map(item => ({
-                  user_id: orderData.buyer_id,
-                  pack_id: item.soundpack_id || item.item_id,
-                  order_id: orderId,
-                  license_type: item.license || 'basic',
-                  purchase_date: new Date().toISOString()
-                }));
-                
-                console.log(`Adding ${purchasedSoundpacks.length} purchased soundpacks to user collection`);
-                const { error: soundpackPurchaseError } = await supabaseClient
-                  .from('user_purchased_soundpacks')
-                  .insert(purchasedSoundpacks);
-                
-                if (soundpackPurchaseError) {
-                  console.error('Failed to record soundpack purchases:', soundpackPurchaseError);
-                } else {
-                  console.log(`Successfully recorded ${purchasedSoundpacks.length} soundpack purchases`);
-                }
-                
-                // Update purchase counts for soundpacks
-                for (const item of soundpackItems) {
-                  try {
-                    const { error: updateCountError } = await supabaseClient
-                      .rpc('increment_counter', {
-                        p_table_name: 'soundpacks',
-                        p_column_name: 'purchase_count',
-                        p_id: item.soundpack_id || item.item_id
-                      });
-                      
-                    if (!updateCountError) {
-                      console.log(`Updated purchase count for soundpack ${item.soundpack_id || item.item_id}`);
-                    }
-                  } catch (err) {
-                    console.error(`Error updating purchase count for soundpack ${item.soundpack_id || item.item_id}:`, err);
-                  }
-                }
-              } catch (purchaseInsertError) {
-                console.error('Exception recording soundpack purchases:', purchaseInsertError);
-              }
-            }
-          }
-        } catch (updateProcessError) {
-          console.error('Exception during order update process:', updateProcessError);
+          console.log('Fulfillment RPC result:', fulfillmentResult);
+
+        } catch (fulfillmentProcessError) {
+          console.error('Exception during fulfillment process:', fulfillmentProcessError);
           return new Response(
             JSON.stringify({
               success: false,
@@ -334,7 +243,7 @@ serve(async (req) => {
               orderId: orderId,
             },
           }),
-          { 
+          {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
           }
@@ -348,7 +257,7 @@ serve(async (req) => {
             verified: false,
             message: 'Payment verification failed',
           }),
-          { 
+          {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
           }
@@ -356,7 +265,7 @@ serve(async (req) => {
       }
     } catch (payStackApiError) {
       console.error('Error calling Paystack API:', payStackApiError);
-      
+
       return new Response(
         JSON.stringify({
           success: false,
@@ -368,7 +277,7 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error('Global error in edge function:', error);
-    
+
     // Return proper error status codes
     return new Response(
       JSON.stringify({
@@ -376,7 +285,7 @@ serve(async (req) => {
         verified: false,
         message: `Error processing request: ${error.message || 'Unknown error'}`,
       }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       }

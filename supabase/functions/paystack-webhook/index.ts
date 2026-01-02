@@ -16,7 +16,7 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
-  
+
   if (!paystackSecretKey) {
     console.error('Missing Paystack live secret key');
     return new Response(
@@ -65,24 +65,7 @@ serve(async (req) => {
       // Find the order associated with this transaction
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select(`
-          id,
-          buyer_id,
-          total_price,
-          line_items (
-            beat_id,
-            beats (
-              id,
-              title,
-              producer_id,
-              users (
-                id,
-                full_name,
-                stage_name
-              )
-            )
-          )
-        `)
+        .select('id')
         .eq('payment_reference', reference)
         .single();
 
@@ -94,64 +77,22 @@ serve(async (req) => {
         );
       }
 
-      // Update order status
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ status: 'completed' })
-        .eq('id', orderData.id);
+      console.log(`Fulfilling order ${orderData.id} via RPC...`);
 
-      if (updateError) {
-        console.error('Error updating order status:', updateError);
+      // Call the unified fulfillment procedure
+      const { data: result, error: rpcError } = await supabase.rpc('finalize_order_fulfillment', {
+        p_order_id: orderData.id
+      });
+
+      if (rpcError) {
+        console.error('Fulfillment RPC failed:', rpcError);
+        return new Response(
+          JSON.stringify({ error: 'Fulfillment failed' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      // Create payment record
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          order_id: orderData.id,
-          transaction_reference: reference,
-          amount: data.amount / 100, // Convert from kobo to naira
-          status: 'success',
-          payment_method: 'paystack',
-          payment_details: data,
-        });
-
-      if (paymentError) {
-        console.error('Error creating payment record:', paymentError);
-      }
-
-      // Send notifications to producers for each beat sold
-      if (orderData.line_items && orderData.line_items.length > 0) {
-        console.log(`Sending notifications to ${orderData.line_items.length} producers`);
-        
-        for (const lineItem of orderData.line_items) {
-          const beat = lineItem.beats;
-          const producer = beat?.users;
-          
-          if (producer) {
-            console.log(`Sending notification to producer: ${producer.id}`);
-            
-            const { error: notificationError } = await supabase
-              .from('notifications')
-              .insert({
-                recipient_id: producer.id,
-                title: 'Beat Sale - Payment Received',
-                body: `Your beat "${beat.title}" has been purchased! Payment of ₦${(data.amount / 100).toLocaleString()} has been processed.`,
-                notification_type: 'sale',
-                related_entity_type: 'beat',
-                related_entity_id: beat.id,
-              });
-
-            if (notificationError) {
-              console.error(`Error sending notification to producer ${producer.id}:`, notificationError);
-            } else {
-              console.log(`Notification sent successfully to producer: ${producer.stage_name || producer.full_name}`);
-            }
-          }
-        }
-      }
-
-      console.log(`Successfully processed charge.success for reference: ${reference}`);
+      console.log(`Order ${orderData.id} fulfilled successfully:`, result);
     }
 
     // Handle transfer.success event (successful payout to producer)
@@ -161,7 +102,7 @@ serve(async (req) => {
 
       const { error: payoutError } = await supabase
         .from('payouts')
-        .update({ 
+        .update({
           status: 'success',
           payout_date: new Date().toISOString(),
           transaction_details: data,
@@ -182,7 +123,7 @@ serve(async (req) => {
 
       const { error: payoutError } = await supabase
         .from('payouts')
-        .update({ 
+        .update({
           status: 'failed',
           failure_reason: data.reason || 'Unknown failure reason',
           transaction_details: data,

@@ -50,6 +50,7 @@ import Animations from "./pages/Animations";
 // Lazy load admin dashboard to avoid affecting main app performance
 import { lazy, Suspense } from "react";
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const ProposalMocksLayout = lazy(() => import("./pages/temp-proposal-mocks/ProposalMocksLayout")); // Temporary
 
 // Add custom wallet styles
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -156,6 +157,16 @@ const AppContent = () => (
 
             {/* Hidden cinematic animation page */}
             <Route path="/animations" element={<Animations />} />
+
+            {/* Temporary Nexus Proposal Mocks */}
+            <Route
+              path="/proposal-mocks"
+              element={
+                <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading Proposal Mocks...</div>}>
+                  <ProposalMocksLayout />
+                </Suspense>
+              }
+            />
 
             {/* Catch-all Route */}
             <Route path="*" element={<NotFound />} />

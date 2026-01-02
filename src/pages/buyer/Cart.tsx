@@ -46,6 +46,11 @@ export default function Cart() {
   // Check for purchase success on mount
   useEffect(() => {
     const checkPurchaseStatus = () => {
+      // Don't redirect if a payment is currently in progress
+      if (localStorage.getItem('paymentInProgress') === 'true') {
+        return false;
+      }
+
       const purchaseSuccess = localStorage.getItem('purchaseSuccess');
       if (purchaseSuccess === 'true') {
         const purchaseTime = localStorage.getItem('purchaseTime');
@@ -95,6 +100,12 @@ export default function Cart() {
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
+            // Don't redirect if a payment is currently in progress (prevents cutting off checkout)
+            if (localStorage.getItem('paymentInProgress') === 'true') {
+              console.log('Cart: Ignoring realtime update - payment in progress');
+              return;
+            }
+
             clearCart();
             localStorage.setItem('purchaseSuccess', 'true');
             localStorage.setItem('purchaseTime', Date.now().toString());
@@ -202,7 +213,9 @@ export default function Cart() {
     setIsPreparingCheckout(true);
 
     try {
-      const beatProducerIds = cartItems.map(item => item.beat?.producer_id).filter(Boolean);
+      const producerIds = cartItems.map(item =>
+        item.itemType === 'beat' ? item.beat?.producer_id : item.soundpack?.producer_id
+      ).filter(Boolean);
 
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout')), 10000)
@@ -211,7 +224,7 @@ export default function Cart() {
       const fetchPromise = supabase
         .from('users')
         .select('id, wallet_address, stage_name')
-        .in('id', beatProducerIds);
+        .in('id', producerIds);
 
       const response = await Promise.race([
         fetchPromise,
@@ -243,13 +256,28 @@ export default function Cart() {
         console.log(`Producers without wallets (will use platform fallback): ${producersWithoutWallets.join(', ')}`);
       }
 
-      const updatedCartItems = cartItems.map(item => ({
-        ...item,
-        beat: {
-          ...item.beat,
-          producer_wallet_address: producerWallets[item.beat?.producer_id || ''] || null
+      const updatedCartItems = cartItems.map(item => {
+        const producerId = item.itemType === 'beat' ? item.beat?.producer_id : item.soundpack?.producer_id;
+        const walletAddress = producerId ? producerWallets[producerId] : null;
+
+        if (item.itemType === 'beat') {
+          return {
+            ...item,
+            beat: {
+              ...item.beat,
+              producer_wallet_address: walletAddress || (item.beat as any)?.producer_wallet_address || null
+            }
+          };
+        } else {
+          return {
+            ...item,
+            soundpack: {
+              ...item.soundpack,
+              producer_wallet: walletAddress || item.soundpack?.producer_wallet || null
+            }
+          };
         }
-      }));
+      });
 
       setBeatsWithWalletAddresses(updatedCartItems);
       setIsSolanaDialogOpen(true);
@@ -288,16 +316,22 @@ export default function Cart() {
     const itemsToUse = beatsWithWalletAddresses.length > 0 ? beatsWithWalletAddresses : cartItems;
 
     return itemsToUse.map((item: any) => {
-      const beat = item.beat;
+      // Unified data extraction for beats and soundpacks
+      const isBeat = item.itemType === 'beat';
+      const data = isBeat ? item.beat : item.soundpack;
       const price = getItemPrice(item);
 
+      // Extremely defensive ID extraction
+      const product_id = data?.id || item.itemId || item.id || (isBeat ? 'unknown_beat_id' : 'unknown_pack_id');
+      const title = data?.title || item.title || (isBeat ? 'Unknown Beat' : 'Unknown Soundpack');
+
       return {
-        id: beat?.id || '',
-        title: beat?.title || '',
+        id: product_id,
+        title: title,
         price: price,
-        thumbnail_url: beat?.cover_image_url || '',
+        thumbnail_url: (isBeat ? data?.cover_image_url : data?.cover_art_url) || '',
         quantity: 1,
-        producer_wallet: beat?.producer_wallet_address || ''
+        producer_wallet: (isBeat ? data?.producer_wallet_address : data?.producer_wallet) || ''
       };
     });
   };

@@ -56,9 +56,9 @@ export const SolanaCheckoutDialog = ({
   const [validatedItems, setValidatedItems] = useState<CartItem[]>([]);
   const [validationComplete, setValidationComplete] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const { makePayment, isProcessing, isWalletConnected, network } = useSolanaPayment();
+  const { makePayment, makeMultiplePayments, isProcessing, isWalletConnected, network } = useSolanaPayment();
   const wallet = useWallet();
-  
+
   // Add debug logs for dialog state
   useEffect(() => {
     console.log("SolanaCheckoutDialog - open state changed:", open);
@@ -66,53 +66,53 @@ export const SolanaCheckoutDialog = ({
     console.log("SolanaCheckoutDialog - wallet connected:", wallet.connected);
     console.log("SolanaCheckoutDialog - network:", network);
   }, [open, cartItems, wallet.connected, network]);
-  
+
   // Re-validate wallet addresses when dialog opens
   useEffect(() => {
     const checkWalletAddresses = async () => {
       if (!open || cartItems.length === 0) return;
-      
+
       setValidationError('');
       setValidationComplete(false);
       console.log("Validating USDC wallet addresses for items:", cartItems);
 
       try {
         const productIds = cartItems.map(item => item.id);
-        
+
         const { data: beatsData, error: beatsError } = await supabase
           .from('beats')
           .select('id, producer_id')
           .in('id', productIds);
-          
+
         if (beatsError) {
           console.error("Error fetching beats data:", beatsError);
           throw beatsError;
         }
-        
+
         if (!beatsData || beatsData.length === 0) {
           console.error("No beats data returned");
           setValidationError("Could not verify beat information");
           return;
         }
-        
+
         const producerIds = beatsData.map(beat => beat.producer_id);
         console.log("Producer IDs to check:", producerIds);
-        
+
         const { data: producersData, error: producersError } = await supabase
           .from('users')
           .select('id, wallet_address, stage_name')
           .in('id', producerIds);
-          
+
         if (producersError) {
           console.error("Error fetching producer data:", producersError);
           throw producersError;
         }
-        
+
         console.log("Producer data from database:", producersData);
-        
+
         const producerWalletMap: Record<string, string | null> = {};
         const producersWithoutWallets: string[] = [];
-        
+
         producersData?.forEach(producer => {
           producerWalletMap[producer.id] = producer.wallet_address;
           if (!producer.wallet_address) {
@@ -120,38 +120,38 @@ export const SolanaCheckoutDialog = ({
           }
           console.log(`Producer ${producer.stage_name} wallet: ${producer.wallet_address || 'MISSING'}`);
         });
-        
+
         const beatProducerMap: Record<string, string> = {};
         beatsData.forEach(beat => {
           beatProducerMap[beat.id] = beat.producer_id;
         });
-        
+
         const updatedItems = cartItems.map(item => {
           const producerId = beatProducerMap[item.id];
           const verifiedWalletAddress = producerId ? producerWalletMap[producerId] : null;
-          
+
           console.log(`Item ${item.id} - producer ${producerId} - wallet: ${verifiedWalletAddress || 'MISSING'}`);
-          
+
           return {
             ...item,
             producer_wallet: verifiedWalletAddress || item.producer_wallet
           };
         });
-        
+
         console.log("Updated items with verified wallet addresses:", updatedItems);
-        
+
         const missingWallets = updatedItems.filter(item => {
           const hasWallet = !!item.producer_wallet;
           console.log(`Item ${item.id} has wallet: ${hasWallet} (${item.producer_wallet || 'null'})`);
           return !hasWallet;
         });
-        
+
         // Allow checkout even with missing producer wallets - log for platform tracking
         if (missingWallets.length > 0) {
           console.log("Items with missing wallet addresses will use platform fallback:", missingWallets);
           console.log("Producers without wallets:", producersWithoutWallets);
         }
-        
+
         // Set validation complete regardless of missing wallets
         setValidatedItems(updatedItems);
         setValidationComplete(true);
@@ -161,324 +161,96 @@ export const SolanaCheckoutDialog = ({
         setValidationError('Error validating producer payment information: ' + (error.message || 'Unknown error'));
       }
     };
-    
+
     if (open) {
       checkWalletAddresses();
     }
   }, [open, cartItems]);
-  
+
   const totalPrice = cartItems.reduce((total, item) => {
     return total + (item.price * item.quantity);
   }, 0);
-  
+
   const getItemsByProducer = () => {
     const itemsToUse = validatedItems.length > 0 ? validatedItems : cartItems;
     const groupedItems: Record<string, { items: CartItem[], total: number }> = {};
-    
+
     itemsToUse.forEach(item => {
       const producerWallet = item.producer_wallet || '';
-      
+
       // Use special key for items with missing producer wallets
       const walletKey = producerWallet || 'PLATFORM_FALLBACK';
-      
+
       if (!groupedItems[walletKey]) {
         groupedItems[walletKey] = { items: [], total: 0 };
       }
-      
+
       groupedItems[walletKey].items.push(item);
       groupedItems[walletKey].total += item.price * item.quantity;
     });
-    
+
     return Object.entries(groupedItems).map(([wallet, data]) => ({
       producerWallet: wallet,
       items: data.items,
       total: data.total
     }));
   };
-  
+
   const handleCheckout = async () => {
     if (!isWalletConnected) {
       toast.error("Please connect your wallet first");
       return;
     }
-    
+
     if (!validationComplete) {
       toast.error("Please wait for payment validation to complete");
       return;
     }
-    
+
     setIsCheckingOut(true);
-    const groupedItems = getItemsByProducer();
-    
+
+    // Clear any stale purchase flags from previous sessions to prevent redirect loops
+    localStorage.removeItem('purchaseSuccess');
+    localStorage.removeItem('purchaseTime');
+    localStorage.removeItem('pendingOrderId');
+    localStorage.removeItem('paystackReference');
+
+    // Set flag to indicate payment is in progress (prevents Cart from redirecting mid-checkout)
+    localStorage.setItem('paymentInProgress', 'true');
+
     try {
-      console.log(`Processing ${groupedItems.length} USDC payments on ${network} network`);
+      console.log(`Processing unified Solana checkout for ${cartItems.length} items...`);
 
-      // Process USDC payments and track results
-      const paymentResults: PaymentResult[] = [];
-      
-      for (let i = 0; i < groupedItems.length; i++) {
-        const group = groupedItems[i];
-        
-        // Handle fallback for missing producer wallets
-        const isFallbackPayment = group.producerWallet === 'PLATFORM_FALLBACK';
-        
-        if (!group.producerWallet && !isFallbackPayment) {
-          paymentResults.push({
-            success: false,
-            error: `Missing producer wallet address for ${group.items[0].title}`,
-            groupIndex: i,
-            producerWallet: group.producerWallet,
-            amount: group.total,
-            items: group.items
-          });
-          continue;
+      // 1. Prepare items for the hook
+      const itemsForPayment = validatedItems.map(item => ({
+        price: item.price,
+        producerWallet: item.producer_wallet || null, // null triggers fallback in the hook
+        id: item.id,
+        title: item.title
+      }));
+
+      const signatures = await makeMultiplePayments(
+        itemsForPayment,
+        () => {
+          onCheckoutSuccess();
+          onOpenChange(false);
+          toast.success("Checkout completed successfully!");
         }
-        
-        try {
-          let signature: string | null = null;
-          
-          if (isFallbackPayment) {
-            console.log(`Processing platform fallback payment of $${group.total} (producer wallet missing)`);
-            
-            signature = await makePayment(
-              group.total,
-              null, // Signal fallback payment
-              undefined,
-              undefined,
-              { items: group.items } // Pass items for database tracking
-            );
-          } else {
-            console.log(`Processing USDC payment of $${group.total} to wallet ${group.producerWallet}`);
-            
-            signature = await makePayment(
-              group.total,
-              group.producerWallet
-            );
-          }
-          
-          if (signature) {
-            paymentResults.push({
-              success: true,
-              signature,
-              groupIndex: i,
-              producerWallet: isFallbackPayment ? 'PLATFORM_FALLBACK' : group.producerWallet,
-              amount: group.total,
-              items: group.items
-            });
-            console.log(`Payment successful: ${signature}`);
-          } else {
-            paymentResults.push({
-              success: false,
-              error: 'Payment returned no signature',
-              groupIndex: i,
-              producerWallet: group.producerWallet,
-              amount: group.total,
-              items: group.items
-            });
-          }
-          
-        } catch (error: any) {
-          paymentResults.push({
-            success: false,
-            error: error.message || 'Unknown payment error',
-            groupIndex: i,
-            producerWallet: group.producerWallet,
-            amount: group.total,
-            items: group.items
-          });
-          console.error(`USDC payment error for ${group.producerWallet}:`, error);
-        }
+      );
+
+      if (!signatures) {
+        throw new Error("Checkout failed to produce transaction signatures");
       }
-      
-      // Count successful payments and collect signatures
-      const successfulPayments = paymentResults.filter(result => result.success);
-      const transactionSignatures = successfulPayments.map(result => result.signature!);
-      
-      // Only create order if we have successful payments (non-blocking)
-      if (successfulPayments.length > 0) {
-        try {
-          // Calculate accurate total from successful payments only
-          const actualOrderTotal = successfulPayments.reduce((sum, payment) => sum + payment.amount, 0);
-          
-          console.log(`Creating order with accurate total: $${actualOrderTotal} (from ${successfulPayments.length} successful payments)`);
-          
-          // Get current user for buyer_id
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          
-          if (userError || !user) {
-            console.error("Could not get user for order recording:", userError);
-            toast.warning("Payments completed but failed to record order");
-          } else {
-            const { data: order, error: orderError } = await supabase
-              .from('orders')
-              .insert({
-                buyer_id: user.id,
-                total_price: actualOrderTotal,
-                status: 'completed',
-                currency_used: 'USDC',
-                payment_method: 'solana_usdc',
-                transaction_signatures: transactionSignatures
-              })
-              .select()
-              .single();
-              
-            if (orderError) {
-              console.error("Order creation error:", orderError);
-              toast.error("Payments completed but failed to create order record");
-            } else {
-              console.log("Created order:", order);
-              
-              // Create order items for successful payments only
-              const successfulItems = successfulPayments.flatMap(result => result.items);
-                
-              const orderItems = successfulItems.map(item => ({
-                order_id: order.id,
-                product_id: item.id,
-                quantity: item.quantity,
-                price: item.price,
-                title: item.title
-              }));
-              
-              const { error: itemsError } = await supabase
-                .from('order_items')
-                .insert(orderItems);
-                
-              if (itemsError) {
-                console.error("Order items error:", itemsError);
-                toast.warning("Order created but some items may not be recorded properly");
-              } else {
-                // CRITICAL: Create user_purchased_beats records for library display
-                const purchasedBeatsRecords = successfulItems.map(item => ({
-                  user_id: user.id,
-                  beat_id: item.id,
-                  order_id: order.id,
-                  license_type: 'basic', // Default license type for cart purchases
-                  currency_code: 'USDC'
-                }));
-                
-                const { error: purchasedBeatsError } = await supabase
-                  .from('user_purchased_beats')
-                  .insert(purchasedBeatsRecords);
-                
-                if (purchasedBeatsError) {
-                  console.error("Failed to create purchased beats records:", purchasedBeatsError);
-                  toast.warning("Order created but beats may not appear in library immediately");
-                } else {
-                  console.log("Successfully created purchased beats records for library");
-                  
-                  // Create notifications for buyer and producers
-                  try {
-                    // Notification for buyer
-                    const { error: buyerNotificationError } = await supabase
-                      .from('notifications')
-                      .insert({
-                        recipient_id: user.id,
-                        title: 'Beat Purchase Complete',
-                        body: `Your purchase of ${successfulItems.length} beat${successfulItems.length > 1 ? 's' : ''} is complete. You can now download from your library.`,
-                        notification_type: 'purchase',
-                        is_read: false,
-                      });
 
-                    if (buyerNotificationError) {
-                      console.error('Error creating buyer notification:', buyerNotificationError);
-                    } else {
-                      console.log('Buyer notification created successfully');
-                    }
-
-                    // Create notifications for producers (grouped by producer)
-                    const producerNotifications = new Map<string, { producerId: string; beatTitles: string[]; totalAmount: number }>();
-                    
-                    // Group successful items by producer
-                    for (const result of successfulPayments) {
-                      for (const item of result.items) {
-                        // Get producer info for this beat
-                        const { data: beatData, error: beatError } = await supabase
-                          .from('beats')
-                          .select('producer_id, users(id, full_name, stage_name)')
-                          .eq('id', item.id)
-                          .single();
-                          
-                        if (!beatError && beatData) {
-                          const producerId = beatData.producer_id;
-                          if (!producerNotifications.has(producerId)) {
-                            producerNotifications.set(producerId, {
-                              producerId,
-                              beatTitles: [],
-                              totalAmount: 0
-                            });
-                          }
-                          
-                          const notification = producerNotifications.get(producerId)!;
-                          notification.beatTitles.push(item.title);
-                          notification.totalAmount += item.price;
-                        }
-                      }
-                    }
-
-                    // Send notifications to each producer
-                    for (const [_, notification] of producerNotifications) {
-                      const beatList = notification.beatTitles.length > 1 
-                        ? `${notification.beatTitles.slice(0, -1).join(', ')} and ${notification.beatTitles[notification.beatTitles.length - 1]}`
-                        : notification.beatTitles[0];
-                        
-                      const { error: producerNotificationError } = await supabase
-                        .from('notifications')
-                        .insert({
-                          recipient_id: notification.producerId,
-                          title: 'Beat Sale - USDC Payment Received',
-                          body: `Your beat${notification.beatTitles.length > 1 ? 's' : ''} "${beatList}" ha${notification.beatTitles.length > 1 ? 've' : 's'} been purchased! Payment of $${notification.totalAmount.toFixed(2)} USDC has been processed.`,
-                          notification_type: 'sale',
-                          related_entity_type: 'beat',
-                          is_read: false,
-                        });
-
-                      if (producerNotificationError) {
-                        console.error(`Error creating producer notification for ${notification.producerId}:`, producerNotificationError);
-                      } else {
-                        console.log(`Producer notification sent successfully to: ${notification.producerId}`);
-                      }
-                    }
-                  } catch (notificationError) {
-                    console.error('Error creating notifications:', notificationError);
-                    // Don't fail the entire checkout for notification errors
-                  }
-                }
-              }
-            }
-          }
-        } catch (dbError) {
-          console.error("Database error after successful payments:", dbError);
-          toast.warning("Payments completed but failed to update order records");
-        }
-      }
-      
-      // Provide user feedback based on results
-      const failedPayments = paymentResults.filter(result => !result.success);
-      
-      if (successfulPayments.length === groupedItems.length) {
-        toast.success("All USDC payments completed successfully!");
-        onCheckoutSuccess();
-      } else if (successfulPayments.length > 0) {
-        toast.warning(`${successfulPayments.length} of ${groupedItems.length} payments completed successfully`);
-        if (failedPayments.length > 0) {
-          toast.error(`Some payments failed: ${failedPayments[0].error}`);
-        }
-        onCheckoutSuccess();
-      } else {
-        const errorMessage = failedPayments.length > 0 ? failedPayments[0].error : "All payments failed";
-        toast.error(errorMessage || "Checkout failed");
-      }
-      
     } catch (error: any) {
       console.error("USDC checkout error:", error);
       const errorMessage = error.message || "An error occurred during checkout";
       toast.error(errorMessage);
     } finally {
       setIsCheckingOut(false);
-      onOpenChange(false);
     }
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-card border shadow-lg">
@@ -495,7 +267,7 @@ export const SolanaCheckoutDialog = ({
             </div>
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           {!wallet.connected && (
             <Card className="border-amber-200 dark:border-amber-800">
@@ -513,7 +285,7 @@ export const SolanaCheckoutDialog = ({
               </CardContent>
             </Card>
           )}
-          
+
           {wallet.connected && (
             <Card>
               <CardContent className="p-4">
@@ -526,7 +298,7 @@ export const SolanaCheckoutDialog = ({
               </CardContent>
             </Card>
           )}
-          
+
           {validationComplete ? (
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
@@ -548,19 +320,19 @@ export const SolanaCheckoutDialog = ({
               </CardContent>
             </Card>
           )}
-          
+
           <Card>
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">Order Summary</h3>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
                   <span>${totalPrice.toFixed(2)} USDC</span>
                 </div>
-                
+
                 {/* Payment breakdown - TODO: HOLIDAY PROMO - Revert to 80/20 after January 31, 2025 */}
                 <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-1">
                   <div className="flex justify-between">
@@ -572,33 +344,33 @@ export const SolanaCheckoutDialog = ({
                     <span>$0.00</span>
                   </div>
                 </div>
-                
+
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Info className="h-3 w-3" />
                   Secure payment powered by Solana
                 </p>
               </div>
-              
+
               <div className="text-sm text-muted-foreground">
                 <p>✨ Instant download access after payment completion</p>
               </div>
             </CardContent>
           </Card>
         </div>
-        
+
         <DialogFooter className="flex flex-col sm:flex-row gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)} 
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
             disabled={isCheckingOut}
             className="w-full sm:w-auto"
           >
             Cancel
           </Button>
-          <Button 
-            className="w-full sm:w-auto" 
+          <Button
+            className="w-full sm:w-auto"
             variant="premium"
-            onClick={handleCheckout} 
+            onClick={handleCheckout}
             disabled={isCheckingOut || !wallet.connected || !validationComplete}
           >
             {isCheckingOut ? (
