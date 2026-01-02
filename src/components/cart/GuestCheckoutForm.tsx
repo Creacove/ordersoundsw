@@ -103,7 +103,7 @@ export function GuestCheckoutForm({ onAccountCreated, totalAmount, currency }: G
 
             const { error: insertError } = await supabase
                 .from('users')
-                .insert(userRowData);
+                .insert([userRowData] as any);
 
             if (insertError) {
                 // Could be duplicate key if trigger exists, that's OK

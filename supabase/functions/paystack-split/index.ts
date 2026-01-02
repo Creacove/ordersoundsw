@@ -296,10 +296,11 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error('Error processing request:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Internal server error',
+        error: errorMessage,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -545,10 +546,11 @@ async function handleCreateSubaccount(requestData: any, supabase: any) {
     );
   } catch (error) {
     console.error('Error in subaccount creation process:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: `Failed to create subaccount: ${error.message}`,
+        error: `Failed to create subaccount: ${errorMessage}`,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -706,10 +708,11 @@ async function handleUpdateSubaccount(requestData: any, supabase: any) {
       );
     } catch (error) {
       console.error('Error creating new subaccount:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Failed to create subaccount: ${error.message}`,
+          error: `Failed to create subaccount: ${errorMessage}`,
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -758,10 +761,11 @@ async function handleUpdateSubaccount(requestData: any, supabase: any) {
     );
   } catch (error) {
     console.error('Error updating subaccount:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: `Failed to update subaccount: ${error.message}`,
+        error: `Failed to update subaccount: ${errorMessage}`,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

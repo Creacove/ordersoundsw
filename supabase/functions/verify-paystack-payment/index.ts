@@ -129,21 +129,10 @@ serve(async (req) => {
 
     console.log('Order found:', orderData);
 
-    // If order is already completed, return success
-    if (orderData.status === 'completed') {
-      console.log(`Order ${orderId} already completed, proceeding as success`);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          verified: true,
-          message: 'Order already completed',
-          data: {
-            reference: reference,
-            orderId: orderId,
-          },
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+    // Track if already completed (but still proceed to fulfillment to recover missing purchases)
+    const alreadyCompleted = orderData.status === 'completed';
+    if (alreadyCompleted) {
+      console.log(`Order ${orderId} already completed, but will still attempt fulfillment recovery`);
     }
 
     // Verify with Paystack API using LIVE secret key
@@ -173,14 +162,15 @@ serve(async (req) => {
       const verifyData = await verifyResponse.json();
       console.log('Paystack verification response:', JSON.stringify(verifyData));
 
-      // Check if payment was successful
-      const isVerified =
+      // Check if payment was successful (or already completed)
+      const isVerified = alreadyCompleted || (
         verifyData.status === true &&
-        verifyData.data.status === 'success';
+        verifyData.data.status === 'success'
+      );
 
-      console.log(`Payment verification result: ${isVerified ? 'VERIFIED' : 'FAILED'}`);
+      console.log(`Payment verification result: ${isVerified ? 'VERIFIED' : 'FAILED'}${alreadyCompleted ? ' (already completed)' : ''}`);
 
-      // If verified, update the database and fulfill the order
+      // If verified (or already completed), update the database and fulfill the order
       if (isVerified) {
         console.log(`Updating order ${orderId} with payment reference ${reference}`);
 
@@ -236,10 +226,12 @@ serve(async (req) => {
           JSON.stringify({
             success: true,
             verified: true,
-            message: 'Payment successfully verified',
+            message: alreadyCompleted ? 'Order already completed (recovery attempted)' : 'Payment successfully verified',
+            fulfillmentResult,
+            alreadyCompleted,
             data: {
               reference: reference,
-              amount: verifyData.data.amount / 100, // Convert from kobo back to naira
+              amount: alreadyCompleted ? null : verifyData.data.amount / 100, // Convert from kobo back to naira
               orderId: orderId,
             },
           }),
@@ -265,25 +257,25 @@ serve(async (req) => {
       }
     } catch (payStackApiError) {
       console.error('Error calling Paystack API:', payStackApiError);
-
+      const apiErrorMessage = payStackApiError instanceof Error ? payStackApiError.message : 'Unknown error';
       return new Response(
         JSON.stringify({
           success: false,
           verified: false,
-          message: `Error verifying with Paystack: ${payStackApiError.message || 'Unknown error'}`,
+          message: `Error verifying with Paystack: ${apiErrorMessage}`,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
   } catch (error) {
     console.error('Global error in edge function:', error);
-
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     // Return proper error status codes
     return new Response(
       JSON.stringify({
         success: false,
         verified: false,
-        message: `Error processing request: ${error.message || 'Unknown error'}`,
+        message: `Error processing request: ${errorMessage}`,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

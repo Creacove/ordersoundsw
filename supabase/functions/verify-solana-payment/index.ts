@@ -44,12 +44,8 @@ serve(async (req) => {
             );
         }
 
-        if (order.status === 'completed') {
-            return new Response(
-                JSON.stringify({ success: true, message: 'Order already completed', code: 'ALREADY_COMPLETED' }),
-                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-        }
+        // Even if completed, still try fulfillment to recover any missing purchases
+        const alreadyCompleted = order.status === 'completed';
 
         // 2. Setup RPC Connection ('confirmed' is faster and sufficient)
         const envRpc = Deno.env.get('SOLANA_RPC_URL');
@@ -80,41 +76,46 @@ serve(async (req) => {
                     if (tx) break;
                 }
             } catch (e) {
-                lastError = e.message;
+                lastError = e instanceof Error ? e.message : 'Unknown error';
             }
             await new Promise(r => setTimeout(r, 3000));
         }
 
-        if (!tx) {
-            return new Response(
-                JSON.stringify({
-                    error: 'Transaction still pending or node lag. Please refresh your library in a minute.',
-                    code: 'TX_NOT_FOUND',
-                    diagnostic: lastError
-                }),
-                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+        // For already completed orders, skip tx verification and go straight to fulfillment recovery
+        if (!alreadyCompleted) {
+            if (!tx) {
+                return new Response(
+                    JSON.stringify({
+                        error: 'Transaction still pending or node lag. Please refresh your library in a minute.',
+                        code: 'TX_NOT_FOUND',
+                        diagnostic: lastError
+                    }),
+                    { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+            }
+
+            if (tx.meta?.err) {
+                return new Response(
+                    JSON.stringify({ error: 'Transaction failed on-chain', code: 'TX_FAILED' }),
+                    { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+            }
         }
 
-        if (tx.meta?.err) {
-            return new Response(
-                JSON.stringify({ error: 'Transaction failed on-chain', code: 'TX_FAILED' }),
-                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+        // 4. Update order details in existing table (skip if already completed)
+        if (!alreadyCompleted) {
+            const { error: updateError } = await supabase
+                .from('orders')
+                .update({
+                    transaction_signatures: [signature],
+                    payment_method: 'solana_usdc',
+                    currency_used: 'USD',
+                    payment_reference: signature
+                })
+                .eq('id', orderId);
+
+            if (updateError) console.error('[VerifySolana] Meta update error:', updateError);
         }
-
-        // 4. Update order details in existing table
-        const { error: updateError } = await supabase
-            .from('orders')
-            .update({
-                transaction_signatures: [signature],
-                payment_method: 'solana_usdc',
-                currency_used: 'USD',
-                payment_reference: signature
-            })
-            .eq('id', orderId);
-
-        if (updateError) console.error('[VerifySolana] Meta update error:', updateError);
 
         // 5. Fulfillment RPC
         console.log(`[VerifySolana] Calling fulfillment RPC for Order=${orderId}`);
@@ -142,15 +143,17 @@ serve(async (req) => {
                 success: fulfillmentResult?.success || false,
                 verified: true,
                 fulfillmentResult,
-                orderId
+                orderId,
+                alreadyCompleted
             }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
     } catch (error) {
         console.error('[VerifySolana] Global error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return new Response(
-            JSON.stringify({ error: error.message, code: 'FATAL_ERROR' }),
+            JSON.stringify({ error: errorMessage, code: 'FATAL_ERROR' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
