@@ -1225,6 +1225,10 @@ export type Database = {
         Args: { beat_id_param: string }
         Returns: undefined
       }
+      finalize_order_fulfillment: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       follow_producer: {
         Args: { p_followee_id: string; p_follower_id: string }
         Returns: undefined
