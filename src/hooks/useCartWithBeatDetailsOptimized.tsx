@@ -162,6 +162,7 @@ export function useCartWithBeatDetailsOptimized() {
       if (beatsToFetch.length > 0 || soundpackItems.length > 0) {
         try {
           // Fetch missing beats
+          let missingBeatIds: string[] = [];
           if (beatsToFetch.length > 0) {
             const { data: beats, error } = await supabase
               .from('beats')

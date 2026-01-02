@@ -58,8 +58,9 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error('Error processing request:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
@@ -105,10 +106,11 @@ async function handleFetchBanks() {
     return await makePaystackRequest('/bank', 'GET')
   } catch (error) {
     console.error('Error fetching banks:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
         error: 'Failed to fetch banks', 
-        details: error.message,
+        details: errorMessage,
         // Provide fallback empty data structure
         data: []
       }),
@@ -136,11 +138,12 @@ async function handleResolveAccount(data: any) {
     )
   } catch (error) {
     console.error('Error resolving account:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
         status: false,
         message: 'Failed to resolve account', 
-        details: error.message,
+        details: errorMessage,
         data: null
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

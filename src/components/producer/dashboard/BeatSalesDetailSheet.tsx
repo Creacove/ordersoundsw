@@ -110,7 +110,7 @@ export function BeatSalesDetailSheet({
                 if (buyerIds.length > 0) {
                     const { data: buyersData, error: buyersError } = await supabase
                         .from('users')
-                        .select('id, full_name, username, email')
+                        .select('id, full_name, email')
                         .in('id', buyerIds);
 
                     if (!buyersError && buyersData) {

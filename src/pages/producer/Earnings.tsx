@@ -237,7 +237,7 @@ export default function Earnings() {
                                         {payouts.map((payout) => (
                                             <tr key={payout.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                                 <td className="p-4 align-middle">
-                                                    {payout.payment_date ? new Date(payout.payment_date).toLocaleDateString() :
+                                                    {payout.payout_date ? new Date(payout.payout_date).toLocaleDateString() :
                                                         payout.created_at ? new Date(payout.created_at).toLocaleDateString() : 'N/A'}
                                                 </td>
                                                 <td className="p-4 align-middle font-medium">

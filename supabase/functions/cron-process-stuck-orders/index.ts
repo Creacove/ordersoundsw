@@ -31,7 +31,7 @@ serve(async (req) => {
             .select('*')
             .eq('status', 'processing')
             .eq('payment_method', 'solana_usdc')
-            .lt('created_at', twoMinutesAgo)
+            .lt('order_date', twoMinutesAgo)
             .limit(20); // Process in batches of 20
 
         if (fetchError) throw fetchError;
@@ -81,7 +81,8 @@ serve(async (req) => {
 
             } catch (err) {
                 console.error(`[Cron] Error processing order ${order.id}:`, err);
-                results.push({ id: order.id, error: err.message });
+                const errMessage = err instanceof Error ? err.message : 'Unknown error';
+                results.push({ id: order.id, error: errMessage });
             }
         }
 
@@ -92,8 +93,9 @@ serve(async (req) => {
 
     } catch (error) {
         console.error('[Cron] Fatal error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: errorMessage }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
