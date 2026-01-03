@@ -162,18 +162,13 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
   try {
     console.log('Payment success, verifying with backend...', paymentReference, orderId);
 
-    const verificationToastId = `payment-verification-${paymentReference}`;
-    toast.loading('Verifying payment...', { id: verificationToastId });
-
-    // Remove test mode detection - now all payments are live
+    // NOTE: Toast is handled by usePaystackCheckout.ts - don't duplicate here
 
     // Get current session to ensure user is logged in before proceeding.
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError || !sessionData.session) {
       console.error('Session validation failed before edge function call:', sessionError);
-      toast.dismiss(verificationToastId);
-      toast.error('Authentication session expired. Please refresh and try again.');
       return { success: false, error: 'Authentication required' };
     }
 
@@ -183,24 +178,18 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
       reference: paymentReference,
       orderId,
       orderItems
-      // Removed isTestMode - all payments are now live
     };
 
     console.log('Request payload before sending:', requestPayload);
 
     if (!paymentReference || !orderId || !orderItems) {
       console.error('Missing required fields in request payload');
-      toast.dismiss(verificationToastId);
-      toast.error('Invalid payment data. Please try again.');
       return { success: false, error: 'Invalid payment data' };
     }
 
-    // The Supabase client will automatically handle JSON stringification and add the necessary headers
     const { data, error } = await supabase.functions.invoke('verify-paystack-payment', {
       body: requestPayload
     });
-
-    toast.dismiss(verificationToastId);
 
     if (error) {
       console.error('Verification error from edge function:', error);
@@ -213,7 +202,6 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
         // @ts-ignore
         code: error.code
       });
-      toast.error(`Payment could not be verified. ${error.message || 'Please try again later.'}`);
       return { success: false, error: error.message };
     }
 
@@ -225,13 +213,10 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
     } else {
       const errorMsg = data?.message || 'Payment verification failed';
       console.error('Payment verification failed:', errorMsg);
-      toast.error(`Payment could not be completed. Please try again or contact support with reference: ${paymentReference}`);
       return { success: false, error: errorMsg };
     }
   } catch (error: any) {
     console.error('Payment verification exception:', error);
-    toast.dismiss(`payment-verification-${paymentReference}`);
-    toast.error(`Transaction could not be completed. Please contact support with reference: ${paymentReference}`);
     return { success: false, error: error.message };
   }
 };

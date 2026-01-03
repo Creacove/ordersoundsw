@@ -58,7 +58,7 @@ export default function Cart() {
 
         if (purchaseTime && (now - parseInt(purchaseTime)) < 5 * 60 * 1000) {
           setPurchaseComplete(true);
-          toast.success('Payment successful! Redirecting to your library...');
+          // NOTE: Toast is already shown by payment hooks - just redirect silently
 
           setTimeout(() => {
             localStorage.removeItem('purchaseSuccess');
@@ -153,7 +153,7 @@ export default function Cart() {
     localStorage.setItem('purchaseSuccess', 'true');
     localStorage.setItem('purchaseTime', Date.now().toString());
 
-    toast.success('Payment successful! Redirecting to your library...');
+    // NOTE: Toast is already shown by payment hooks - just redirect silently
     setPurchaseComplete(true);
 
     setTimeout(() => {
