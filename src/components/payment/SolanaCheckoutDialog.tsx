@@ -232,9 +232,9 @@ export const SolanaCheckoutDialog = ({
       const signatures = await makeMultiplePayments(
         itemsForPayment,
         () => {
+          // NOTE: Success toast is handled by useSolanaPayment.tsx - don't duplicate
           onCheckoutSuccess();
           onOpenChange(false);
-          toast.success("Checkout completed successfully!");
         }
       );
 

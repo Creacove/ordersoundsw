@@ -209,9 +209,8 @@ export const useSolanaPayment = () => {
         // Safety Net (Cron) will pick it up in 15 minutes anyway.
         if (code === 'TX_NOT_FOUND' || code === 'RPC_ERROR' || message.includes('Edge Function returned a non-2xx status code')) {
           console.log("⚠️ Verification delayed but payment is on-chain. Fulfilling via Safety Net.");
-          toast.success("Payment Received! 🎊", {
-            description: "Your order is being processed. Items will appear in your library shortly."
-          });
+          // NOTE: Single consolidated success toast for edge cases
+          toast.success("Payment received! Your items will appear in your library shortly.");
           onSuccess?.(signature);
           return signature;
         } else {
@@ -238,10 +237,9 @@ export const useSolanaPayment = () => {
         throw new Error(`FULFILLMENT_FAILED: ${errorMsg}`);
       }
 
+      // NOTE: Single consolidated success toast - don't show multiple toasts
       if (isMounted) {
-        toast.success("✅ Payment completed successfully!", {
-          description: `Items will appear in your library shortly.`
-        });
+        toast.success("Payment successful! Your beats will appear in your library shortly.");
       }
 
       onSuccess?.(signature);
@@ -408,9 +406,8 @@ export const useSolanaPayment = () => {
         // RESILIENCE FIX: Same as single payment - don't treat lag as a total failure
         if (code === 'TX_NOT_FOUND' || code === 'RPC_ERROR' || message.includes('Edge Function returned a non-2xx status code')) {
           console.log("⚠️ Multi-verification delayed. Safety Net will handle fulfillment.");
-          toast.success("Payments Confirmed! 🎊", {
-            description: `${items.length} items are being added to your library now.`
-          });
+          // NOTE: Single consolidated success toast for edge cases
+          toast.success("Payment received! Your items will appear in your library shortly.");
           onSuccess?.(signatures);
           return signatures;
         } else {
@@ -437,10 +434,9 @@ export const useSolanaPayment = () => {
         throw new Error(`FULFILLMENT_FAILED: ${errorMsg}`);
       }
 
+      // NOTE: Single consolidated success toast - don't show multiple toasts
       if (isMounted) {
-        toast.success(`✅ ${items.length} items purchased successfully!`, {
-          description: "Your library will be updated shortly."
-        });
+        toast.success("Payment successful! Your beats will appear in your library shortly.");
       }
 
       onSuccess?.(signatures);
