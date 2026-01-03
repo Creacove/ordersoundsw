@@ -174,6 +174,9 @@ serve(async (req) => {
       if (isVerified) {
         console.log(`Updating order ${orderId} with payment reference ${reference}`);
 
+        // Declare fulfillmentResult at this scope level so it's accessible for the response
+        let fulfillmentResult: unknown = null;
+
         try {
           // 1. First, store the payment reference in the order (security/audit check)
           const { error: updateRefError } = await supabaseClient
@@ -190,7 +193,7 @@ serve(async (req) => {
 
           // 2. Call the unified fulfillment RPC
           console.log(`Calling fulfillment RPC for order ${orderId}...`);
-          const { data: fulfillmentResult, error: rpcError } = await supabaseClient
+          const { data: rpcResult, error: rpcError } = await supabaseClient
             .rpc('finalize_order_fulfillment', {
               p_order_id: orderId
             });
@@ -207,6 +210,7 @@ serve(async (req) => {
             );
           }
 
+          fulfillmentResult = rpcResult;
           console.log('Fulfillment RPC result:', fulfillmentResult);
 
         } catch (fulfillmentProcessError) {
