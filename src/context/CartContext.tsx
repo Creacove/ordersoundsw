@@ -116,10 +116,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initComplete, setInitComplete] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Load cart from localStorage - only once on component mount or user change
+  // Track user ID to prevent cart reload on user object reference changes
+  const previousUserIdRef = React.useRef<string | undefined>(undefined);
+
+  // Load cart from localStorage - only when user ID changes, not on every user object update
   useEffect(() => {
+    const currentUserId = user?.id;
+    
+    // Skip if user ID hasn't changed (prevents reload on wallet sync, etc.)
+    if (previousUserIdRef.current === currentUserId && initComplete) {
+      return;
+    }
+    
+    previousUserIdRef.current = currentUserId;
+    
     const loadCart = () => {
-      if (!user) {
+      if (!currentUserId) {
         setCartItems([]);
         setItemCount(0);
         setInitComplete(true);
@@ -128,7 +140,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         setLoadingCart(true);
-        const savedCart = safeLocalStorageGet(`cart_${user.id}`);
+        const savedCart = safeLocalStorageGet(`cart_${currentUserId}`);
 
         if (savedCart && Array.isArray(savedCart)) {
           // Filter out any malformed cart items
@@ -152,7 +164,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     loadCart();
-  }, [user]);
+  }, [user?.id, initComplete]);
 
   // Calculate total amount when cart or currency changes
   useEffect(() => {
