@@ -1299,6 +1299,14 @@ export type Database = {
         }[]
       }
       get_user_role: { Args: { user_id: string }; Returns: string }
+      get_weighted_random_beats: {
+        Args: { beat_count?: number; category?: string }
+        Returns: {
+          id: string
+          producer_id: string
+          title: string
+        }[]
+      }
       increment_counter: {
         Args: { p_column_name: string; p_id: string; p_table_name: string }
         Returns: undefined

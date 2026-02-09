@@ -11,6 +11,8 @@ interface AdminOperationRequest {
   operation: string;
   count?: number;
   producerId?: string;
+  beatIds?: string[];
+  beatId?: string;
 }
 
 serve(async (req) => {
@@ -26,7 +28,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { operation, count = 5, producerId }: AdminOperationRequest = await req.json()
+    const { operation, count = 5, producerId, beatIds, beatId }: AdminOperationRequest = await req.json()
     
     if (operation === 'set_producer_of_week') {
       if (!producerId) {
@@ -84,6 +86,100 @@ serve(async (req) => {
         }
       )
     }
+
+    // Manual selection of trending beats
+    if (operation === 'set_trending_beats') {
+      if (!beatIds || !Array.isArray(beatIds) || beatIds.length === 0) {
+        throw new Error('Beat IDs array is required for this operation')
+      }
+      
+      if (beatIds.length > 5) {
+        throw new Error('Maximum 5 trending beats allowed')
+      }
+      
+      console.log(`Admin manually setting trending beats:`, beatIds)
+      
+      // Reset all trending beats
+      const { error: resetError } = await supabase
+        .from('beats')
+        .update({ is_trending: false })
+        .eq('status', 'published')
+      
+      if (resetError) {
+        console.error('Error resetting trending beats:', resetError)
+        throw new Error('Failed to reset trending beats')
+      }
+
+      // Set selected beats as trending
+      const { error: updateError } = await supabase
+        .from('beats')
+        .update({ is_trending: true })
+        .in('id', beatIds)
+      
+      if (updateError) {
+        console.error('Error updating trending beats:', updateError)
+        throw new Error('Failed to update trending beats')
+      }
+
+      console.log(`Successfully set ${beatIds.length} beats as trending`)
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          updated_count: beatIds.length,
+          beat_ids: beatIds 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      )
+    }
+
+    // Manual selection of featured beat
+    if (operation === 'set_featured_beat') {
+      if (!beatId) {
+        throw new Error('Beat ID is required for this operation')
+      }
+      
+      console.log(`Admin manually setting featured beat:`, beatId)
+      
+      // Reset all featured beats
+      const { error: resetError } = await supabase
+        .from('beats')
+        .update({ is_featured: false })
+        .eq('status', 'published')
+      
+      if (resetError) {
+        console.error('Error resetting featured beats:', resetError)
+        throw new Error('Failed to reset featured beats')
+      }
+
+      // Set selected beat as featured
+      const { error: updateError } = await supabase
+        .from('beats')
+        .update({ is_featured: true })
+        .eq('id', beatId)
+      
+      if (updateError) {
+        console.error('Error updating featured beat:', updateError)
+        throw new Error('Failed to update featured beat')
+      }
+
+      console.log(`Successfully set beat ${beatId} as featured`)
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          updated_count: 1,
+          beat_ids: [beatId] 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      )
+    }
     
     if (operation === 'refresh_trending_beats') {
       console.log(`Admin requested trending beats refresh with count: ${count}`)
@@ -99,9 +195,9 @@ serve(async (req) => {
         throw new Error('Failed to reset trending beats')
       }
 
-      // Get random published beats to set as trending
+      // Get weighted random published beats to set as trending
       const { data: randomBeats, error: selectError } = await supabase
-        .rpc('get_random_published_beats', { beat_count: count })
+        .rpc('get_weighted_random_beats', { beat_count: count, category: 'trending' })
       
       if (selectError) {
         console.error('Error selecting random beats:', selectError)
@@ -113,11 +209,11 @@ serve(async (req) => {
       }
 
       // Set selected beats as trending
-      const beatIds = randomBeats.map((beat: any) => beat.id)
+      const beatIdsList = randomBeats.map((beat: any) => beat.id)
       const { error: updateError } = await supabase
         .from('beats')
         .update({ is_trending: true })
-        .in('id', beatIds)
+        .in('id', beatIdsList)
       
       if (updateError) {
         console.error('Error updating trending beats:', updateError)
@@ -125,13 +221,13 @@ serve(async (req) => {
       }
 
       // Log the operation for audit purposes
-      console.log(`Successfully updated ${beatIds.length} beats as trending:`, beatIds)
+      console.log(`Successfully updated ${beatIdsList.length} beats as trending:`, beatIdsList)
       
       return new Response(
         JSON.stringify({ 
           success: true, 
-          updated_count: beatIds.length,
-          beat_ids: beatIds 
+          updated_count: beatIdsList.length,
+          beat_ids: beatIdsList 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -155,9 +251,9 @@ serve(async (req) => {
         throw new Error('Failed to reset featured beats')
       }
 
-      // Step 2: Get random published beats to set as featured
+      // Step 2: Get weighted random published beats to set as featured
       const { data: randomBeats, error: selectError } = await supabase
-        .rpc('get_random_published_beats', { beat_count: featuredCount })
+        .rpc('get_weighted_random_beats', { beat_count: featuredCount, category: 'featured' })
       
       if (selectError) {
         console.error('Error selecting random beats for featured:', selectError)
@@ -169,24 +265,24 @@ serve(async (req) => {
       }
 
       // Step 3: Set selected beats as featured
-      const beatIds = randomBeats.map((beat: any) => beat.id)
+      const beatIdsList = randomBeats.map((beat: any) => beat.id)
       const { error: updateError } = await supabase
         .from('beats')
         .update({ is_featured: true })
-        .in('id', beatIds)
+        .in('id', beatIdsList)
       
       if (updateError) {
         console.error('Error updating featured beats:', updateError)
         throw new Error('Failed to update featured beats')
       }
 
-      console.log(`Successfully updated ${beatIds.length} beats as featured:`, beatIds)
+      console.log(`Successfully updated ${beatIdsList.length} beats as featured:`, beatIdsList)
       
       return new Response(
         JSON.stringify({ 
           success: true, 
-          updated_count: beatIds.length,
-          beat_ids: beatIds 
+          updated_count: beatIdsList.length,
+          beat_ids: beatIdsList 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -210,9 +306,9 @@ serve(async (req) => {
         throw new Error('Failed to reset weekly picks')
       }
 
-      // Step 2: Get random published beats to set as weekly picks
+      // Step 2: Get weighted random published beats to set as weekly picks
       const { data: randomBeats, error: selectError } = await supabase
-        .rpc('get_random_published_beats', { beat_count: weeklyCount })
+        .rpc('get_weighted_random_beats', { beat_count: weeklyCount, category: 'weekly_pick' })
       
       if (selectError) {
         console.error('Error selecting random beats for weekly picks:', selectError)
@@ -224,24 +320,24 @@ serve(async (req) => {
       }
 
       // Step 3: Set selected beats as weekly picks
-      const beatIds = randomBeats.map((beat: any) => beat.id)
+      const beatIdsList = randomBeats.map((beat: any) => beat.id)
       const { error: updateError } = await supabase
         .from('beats')
         .update({ is_weekly_pick: true })
-        .in('id', beatIds)
+        .in('id', beatIdsList)
       
       if (updateError) {
         console.error('Error updating weekly picks:', updateError)
         throw new Error('Failed to update weekly picks')
       }
 
-      console.log(`Successfully updated ${beatIds.length} beats as weekly picks:`, beatIds)
+      console.log(`Successfully updated ${beatIdsList.length} beats as weekly picks:`, beatIdsList)
       
       return new Response(
         JSON.stringify({ 
           success: true, 
-          updated_count: beatIds.length,
-          beat_ids: beatIds 
+          updated_count: beatIdsList.length,
+          beat_ids: beatIdsList 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
