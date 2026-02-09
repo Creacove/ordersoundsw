@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, RefreshCw, TrendingUp, Star, Calendar, User, Crown } from 'lucide-react';
+import { Loader2, RefreshCw, TrendingUp, Star, Calendar, User, Crown, Music } from 'lucide-react';
 import { useAdminOperations } from '@/hooks/admin/useAdminOperations';
 import { ProducerSelector } from '@/components/admin/ProducerSelector';
+import { BeatSelector } from '@/components/admin/BeatSelector';
 
 export function BeatsManagement() {
   const { 
@@ -16,7 +17,9 @@ export function BeatsManagement() {
     refreshTrendingBeats, 
     refreshFeaturedBeats, 
     refreshWeeklyPicks,
-    setProducerOfWeek
+    setProducerOfWeek,
+    setTrendingBeats,
+    setFeaturedBeat
   } = useAdminOperations();
 
   useEffect(() => {
@@ -24,32 +27,33 @@ export function BeatsManagement() {
   }, []);
 
   const handleRefreshTrending = async () => {
-    const success = await refreshTrendingBeats();
-    if (success) {
-      // Stats will be automatically refreshed in the hook
-    }
+    await refreshTrendingBeats();
   };
 
   const handleRefreshFeatured = async () => {
-    const success = await refreshFeaturedBeats();
-    if (success) {
-      // Stats will be automatically refreshed in the hook
-    }
+    await refreshFeaturedBeats();
   };
 
   const handleRefreshWeeklyPicks = async () => {
-    const success = await refreshWeeklyPicks();
-    if (success) {
-      // Stats will be automatically refreshed in the hook
-    }
+    await refreshWeeklyPicks();
   };
 
   const handleSetProducerOfWeek = async (producerId: string, producerName: string) => {
-    const success = await setProducerOfWeek(producerId);
-    if (success) {
-      // Stats will be automatically refreshed in the hook
+    await setProducerOfWeek(producerId);
+  };
+
+  const handleManualTrendingSelection = async (beatIds: string[]) => {
+    await setTrendingBeats(beatIds);
+  };
+
+  const handleManualFeaturedSelection = async (beatIds: string[]) => {
+    if (beatIds.length > 0) {
+      await setFeaturedBeat(beatIds[0]);
     }
   };
+
+  const currentTrendingIds = stats?.currentTrendingBeats?.map(b => b.id) || [];
+  const currentFeaturedId = stats?.currentFeaturedBeat?.id;
 
   return (
     <Card>
@@ -136,9 +140,9 @@ export function BeatsManagement() {
               </Badge>
             </div>
           ) : (
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4 text-center">
-              <User className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-              <p className="text-gray-600">No producer of the week selected</p>
+            <div className="p-4 bg-muted/50 border rounded-lg mb-4 text-center">
+              <User className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">No producer of the week selected</p>
             </div>
           )}
           
@@ -157,18 +161,33 @@ export function BeatsManagement() {
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Trending Beats Refresh
+                Trending Beats
               </h3>
               <p className="text-sm text-muted-foreground">
-                Randomly select 5 new beats to mark as trending
+                Randomly select or manually pick 5 beats to mark as trending
               </p>
             </div>
             <Badge variant="outline" className="self-start sm:self-auto">
               Target: 5 beats
             </Badge>
           </div>
+
+          {/* Current Trending Display */}
+          {stats?.currentTrendingBeats && stats.currentTrendingBeats.length > 0 && (
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm font-medium text-orange-900 mb-2">Currently Trending:</p>
+              <div className="flex flex-wrap gap-2">
+                {stats.currentTrendingBeats.map(beat => (
+                  <Badge key={beat.id} variant="secondary" className="bg-orange-100 text-orange-800">
+                    <Music className="h-3 w-3 mr-1" />
+                    {beat.title}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <Button 
               onClick={handleRefreshTrending}
               disabled={isLoading}
@@ -179,8 +198,18 @@ export function BeatsManagement() {
               ) : (
                 <RefreshCw className="h-4 w-4" />
               )}
-              Refresh Trending Beats
+              Random Refresh
             </Button>
+            
+            <BeatSelector
+              mode="multi"
+              maxSelections={5}
+              onConfirm={handleManualTrendingSelection}
+              isLoading={isLoading}
+              triggerLabel="Select Manually"
+              dialogTitle="Select Trending Beats (up to 5)"
+              currentBeatIds={currentTrendingIds}
+            />
           </div>
         </div>
 
@@ -190,18 +219,32 @@ export function BeatsManagement() {
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Star className="h-5 w-5" />
-                Featured Beats Refresh
+                Featured Beat
               </h3>
               <p className="text-sm text-muted-foreground">
-                Select 1 new beat to mark as featured (premium spotlight)
+                Select 1 beat to mark as featured (premium spotlight)
               </p>
             </div>
             <Badge variant="outline" className="self-start sm:self-auto">
               Target: 1 beat
             </Badge>
           </div>
+
+          {/* Current Featured Display */}
+          {stats?.currentFeaturedBeat && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm font-medium text-yellow-900 mb-2">Currently Featured:</p>
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                <Star className="h-3 w-3 mr-1" />
+                {stats.currentFeaturedBeat.title}
+                {stats.currentFeaturedBeat.producer_name && (
+                  <span className="ml-1 opacity-75">by {stats.currentFeaturedBeat.producer_name}</span>
+                )}
+              </Badge>
+            </div>
+          )}
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <Button 
               onClick={handleRefreshFeatured}
               disabled={isLoading}
@@ -213,8 +256,17 @@ export function BeatsManagement() {
               ) : (
                 <RefreshCw className="h-4 w-4" />
               )}
-              Refresh Featured Beat
+              Random Refresh
             </Button>
+            
+            <BeatSelector
+              mode="single"
+              onConfirm={handleManualFeaturedSelection}
+              isLoading={isLoading}
+              triggerLabel="Select Manually"
+              dialogTitle="Select Featured Beat"
+              currentBeatIds={currentFeaturedId ? [currentFeaturedId] : []}
+            />
           </div>
         </div>
 
@@ -270,9 +322,9 @@ export function BeatsManagement() {
           <h4 className="font-medium text-blue-900 mb-2">Management Operations:</h4>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• <strong>Producer of Week:</strong> Search and select any producer to feature</li>
-            <li>• <strong>Trending:</strong> Resets all trending status, selects 5 random beats</li>
-            <li>• <strong>Featured:</strong> Resets featured status, selects 1 premium spotlight beat</li>
-            <li>• <strong>Weekly Picks:</strong> Resets weekly picks, selects 6 curated beats</li>
+            <li>• <strong>Trending:</strong> Random refresh uses weighted selection favoring newer beats (3x weight for &lt;30 days, 2x for 30-90 days)</li>
+            <li>• <strong>Manual Selection:</strong> Pick specific beats for Trending or Featured slots</li>
+            <li>• <strong>Weekly Picks:</strong> Resets weekly picks, selects 6 curated beats with weighted randomization</li>
             <li>• All operations are atomic and logged for audit purposes</li>
           </ul>
         </div>
