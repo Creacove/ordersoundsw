@@ -92,7 +92,7 @@ const selectUserProfile = async (userId: string): Promise<UserProfileRow | null>
     throw error;
   }
 
-  return data;
+  return data as UserProfileRow | null;
 };
 
 export const buildUserProfileInsert = (
