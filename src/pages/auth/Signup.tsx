@@ -214,7 +214,7 @@ export default function Signup() {
                 </div>
               </form>
             </CardContent>
-            <div className="bg-white/[0.02] border-t border-white/5 p-6 text-center">
+            <div className="bg-white/[0.02] border-t border-white/5 p-4 text-center">
               <p className="text-white/40 italic text-sm">
                 Already part of the studio?{" "}
                 <Link to="/login" className="text-white font-black uppercase tracking-tight hover:text-primary transition-colors ml-1 inline-flex items-center gap-1 group">

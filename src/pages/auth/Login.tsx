@@ -158,7 +158,7 @@ export default function Login() {
                 </button>
               )}
             </CardHeader>
-            <CardContent className="p-8 pt-4">
+            <CardContent className="p-6 pt-3">
               {recoveryMode && (
                 <Alert className="mb-6 bg-amber-500/10 border-amber-500/50 text-amber-500 rounded-2xl">
                   <AlertTitle className="font-black italic uppercase tracking-wider text-xs">Security Protocol</AlertTitle>
