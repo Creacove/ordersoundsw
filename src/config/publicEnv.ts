@@ -98,14 +98,17 @@ function parsePublicEnv() {
   const result = publicEnvSchema.safeParse(import.meta.env);
 
   if (result.success) {
-    return result.data;
+    return { success: true, data: result.data } as const;
   }
 
-  const issues = result.error.issues.map((issue) => `- ${issue.message}`).join("\n");
-  throw new Error(`Invalid browser environment configuration:\n${issues}`);
+  const issues = result.error.issues.map((issue) => `- ${issue.message}`);
+  return { success: false, issues } as const;
 }
 
-const parsedPublicEnv = parsePublicEnv();
+const envResult = parsePublicEnv();
+
+export const configError = !envResult.success ? envResult.issues : null;
+const parsedPublicEnv = envResult.success ? envResult.data : {} as any;
 
 export const publicEnv = {
   isDev: import.meta.env.DEV,
