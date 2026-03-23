@@ -128,7 +128,7 @@ export default function Signup() {
                         : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
                     )}
                   >
-                    <Music className={cn("h-6 w-6 transition-transform group-hover:scale-110", role === "producer" ? "text-primary" : "text-white/20")} />
+                    <Music className={cn("h-5 w-5 transition-transform group-hover:scale-110", role === "producer" ? "text-primary" : "text-white/20")} />
                     <span className="text-[10px] font-black uppercase tracking-widest italic">Producer</span>
                   </button>
                 </div>
