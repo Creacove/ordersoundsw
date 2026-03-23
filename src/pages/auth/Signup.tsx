@@ -204,7 +204,7 @@ export default function Signup() {
                     {isLoading ? "Creating Account..." : "Join Studio"}
                   </Button>
 
-                  <div className="relative flex items-center gap-4 py-2">
+                  <div className="relative flex items-center gap-4 py-1">
                     <div className="h-px bg-white/5 flex-grow" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-white/20 italic">Or Continue With</span>
                     <div className="h-px bg-white/5 flex-grow" />
