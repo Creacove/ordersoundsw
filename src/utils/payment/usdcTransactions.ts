@@ -777,7 +777,7 @@ export const processMultipleUSDCPayments = async (
 
   } catch (error) {
     const activeNetwork = normalizeSolanaNetwork(network);
-    const networkLabel = activeNetwork === 'mainnet' || activeNetwork === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
+    const networkLabel = activeNetwork === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
     console.error(`❌ Error processing multiple ${networkLabel} USDC payments:`, error);
     throw new Error(getErrorMessage(error, `Failed to process ${networkLabel} USDC payments`));
   }

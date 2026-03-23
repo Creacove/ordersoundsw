@@ -22,7 +22,8 @@ import {
   Search,
   Calendar,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Music
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Beat } from "@/types";

@@ -39,6 +39,7 @@ interface SoundpackCardProps {
   featured?: boolean;
   isProducerOwned?: boolean;
   onDelete?: () => void;
+  className?: string;
 }
 
 export function SoundpackCard({ 

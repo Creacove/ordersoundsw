@@ -93,8 +93,8 @@ export function buildCheckoutLineItems(
       "Unknown Producer";
     const producerWallet =
       item.itemType === "soundpack"
-        ? source.producer_wallet ?? null
-        : source.producer_wallet_address ?? null;
+        ? (source as any).producer_wallet ?? null
+        : (source as any).producer_wallet_address ?? null;
 
     return [
       {
@@ -107,8 +107,8 @@ export function buildCheckoutLineItems(
         quantity: 1,
         thumbnailUrl:
           item.itemType === "soundpack"
-            ? source.cover_art_url || ""
-            : source.cover_image_url || "",
+            ? (source as any).cover_art_url || ""
+            : (source as any).cover_image_url || "",
         title: source.title || "Untitled Product",
         type: item.itemType,
       },

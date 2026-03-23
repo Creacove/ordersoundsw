@@ -161,7 +161,7 @@ export const updateUserProfileRecord = async (
     throw error;
   }
 
-  return data;
+  return data as UserProfileRow;
 };
 
 const mapJsonArray = <T>(value: unknown): T[] | undefined => {
