@@ -253,6 +253,7 @@ export default function Playlists() {
     const isOwner = user && user.id === selectedPlaylist.owner_id;
     
     return (
+      <>
       <div className="container py-8">
         <div className="mb-6">
           <Button 
@@ -529,6 +530,7 @@ export default function Playlists() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>
     );
   }
 

@@ -482,6 +482,98 @@ export type Database = {
           },
         ]
       }
+      payment_allocations: {
+        Row: {
+          created_at: string
+          currency_code: string
+          gross_amount: number
+          id: string
+          license_type: string
+          metadata: Json
+          order_id: string
+          payment_id: string | null
+          payout_id: string | null
+          platform_share: number
+          producer_id: string | null
+          producer_share: number
+          product_id: string
+          product_type: string
+          quantity: number
+          settlement_status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_code: string
+          gross_amount: number
+          id?: string
+          license_type?: string
+          metadata?: Json
+          order_id: string
+          payment_id?: string | null
+          payout_id?: string | null
+          platform_share: number
+          producer_id?: string | null
+          producer_share: number
+          product_id: string
+          product_type: string
+          quantity?: number
+          settlement_status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_code?: string
+          gross_amount?: number
+          id?: string
+          license_type?: string
+          metadata?: Json
+          order_id?: string
+          payment_id?: string | null
+          payout_id?: string | null
+          platform_share?: number
+          producer_id?: string | null
+          producer_share?: number
+          product_id?: string
+          product_type?: string
+          quantity?: number
+          settlement_status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -523,7 +615,7 @@ export type Database = {
           {
             foreignKeyName: "payments_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -536,8 +628,15 @@ export type Database = {
           created_at: string | null
           failure_reason: string | null
           id: string
+          last_attempt_at: string | null
+          next_retry_at: string | null
+          order_id: string | null
           payment_id: string | null
+          payout_attempt_count: number
           payout_date: string | null
+          paystack_transfer_code: string | null
+          paystack_transfer_recipient_code: string | null
+          processing_started_at: string | null
           producer_id: string
           status: string
           transaction_details: Json | null
@@ -549,8 +648,15 @@ export type Database = {
           created_at?: string | null
           failure_reason?: string | null
           id?: string
+          last_attempt_at?: string | null
+          next_retry_at?: string | null
+          order_id?: string | null
           payment_id?: string | null
+          payout_attempt_count?: number
           payout_date?: string | null
+          paystack_transfer_code?: string | null
+          paystack_transfer_recipient_code?: string | null
+          processing_started_at?: string | null
           producer_id: string
           status?: string
           transaction_details?: Json | null
@@ -562,8 +668,15 @@ export type Database = {
           created_at?: string | null
           failure_reason?: string | null
           id?: string
+          last_attempt_at?: string | null
+          next_retry_at?: string | null
+          order_id?: string | null
           payment_id?: string | null
+          payout_attempt_count?: number
           payout_date?: string | null
+          paystack_transfer_code?: string | null
+          paystack_transfer_recipient_code?: string | null
+          processing_started_at?: string | null
           producer_id?: string
           status?: string
           transaction_details?: Json | null
@@ -575,6 +688,13 @@ export type Database = {
             columns: ["beat_id"]
             isOneToOne: false
             referencedRelation: "beats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -1068,6 +1188,7 @@ export type Database = {
           paystack_id: string | null
           paystack_split_code: string | null
           paystack_subaccount_code: string | null
+          paystack_transfer_recipient_code: string | null
           profile_picture: string | null
           referral_code: string | null
           referral_points: number | null
@@ -1100,6 +1221,7 @@ export type Database = {
           paystack_id?: string | null
           paystack_split_code?: string | null
           paystack_subaccount_code?: string | null
+          paystack_transfer_recipient_code?: string | null
           profile_picture?: string | null
           referral_code?: string | null
           referral_points?: number | null
@@ -1132,6 +1254,7 @@ export type Database = {
           paystack_id?: string | null
           paystack_split_code?: string | null
           paystack_subaccount_code?: string | null
+          paystack_transfer_recipient_code?: string | null
           profile_picture?: string | null
           referral_code?: string | null
           referral_points?: number | null
@@ -1174,6 +1297,20 @@ export type Database = {
         Returns: boolean
       }
       check_table_exists: { Args: { table_name: string }; Returns: boolean }
+      claim_paystack_payouts: {
+        Args: { p_limit?: number }
+        Returns: {
+          amount: number
+          id: string
+          order_id: string
+          payment_id: string
+          payout_attempt_count: number
+          producer_id: string
+          status: string
+          transaction_details: Json
+          transaction_reference: string
+        }[]
+      }
       delete_beat_favorites: {
         Args: { beat_id_param: string }
         Returns: undefined
@@ -1209,6 +1346,7 @@ export type Database = {
           paystack_id: string | null
           paystack_split_code: string | null
           paystack_subaccount_code: string | null
+          paystack_transfer_recipient_code: string | null
           profile_picture: string | null
           referral_code: string | null
           referral_points: number | null
