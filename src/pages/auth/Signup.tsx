@@ -101,15 +101,15 @@ export default function Signup() {
           </div>
 
           <Card className="bg-white/[0.03] border-white/10 backdrop-blur-2xl shadow-2xl rounded-[2.5rem] overflow-hidden">
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <CardContent className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Role Selection */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setRole("buyer")}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-3 p-4 rounded-3xl border-2 transition-all group",
+                      "flex flex-col items-center justify-center gap-2 p-3 rounded-3xl border-2 transition-all group",
                       role === "buyer" 
                         ? "bg-primary/20 border-primary text-white" 
                         : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
