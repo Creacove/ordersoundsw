@@ -196,9 +196,9 @@ export default function Signup() {
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-2">
+                <div className="space-y-3 pt-1">
                   <Button 
-                    className="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-tighter text-lg rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary/20"
+                    className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-tighter text-lg rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary/20"
                     disabled={isLoading}
                   >
                     {isLoading ? "Creating Account..." : "Join Studio"}
