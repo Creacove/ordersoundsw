@@ -131,7 +131,7 @@ export const ensureUserProfile = async (
     .single();
 
   if (!error) {
-    return data;
+    return data as UserProfileRow;
   }
 
   if (error.code === '23505' || error.message.toLowerCase().includes('duplicate key')) {
