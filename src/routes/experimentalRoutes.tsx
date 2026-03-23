@@ -10,7 +10,7 @@ export function getExperimentalRoutes() {
     <>
       <Route
         path="/sandbox"
-        element={renderLazyRoute(Sandbox, { message: "Loading Sandbox...", variant: "inline" })}
+        element={renderLazyRoute(Sandbox)}
       />
       <Route
         path="/proposal-mocks"
