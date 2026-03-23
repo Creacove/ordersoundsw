@@ -133,15 +133,15 @@ export default function Signup() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
+                <div className="space-y-3">
+                  <div className="space-y-1">
                     <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Full Name</Label>
                     <div className="relative group">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
                       <Input
                         id="name"
                         placeholder="John Doe"
-                        className="h-14 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                        className="h-12 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
