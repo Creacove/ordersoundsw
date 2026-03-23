@@ -122,7 +122,7 @@ export default function Signup() {
                     type="button"
                     onClick={() => setRole("producer")}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-3 p-4 rounded-3xl border-2 transition-all group",
+                      "flex flex-col items-center justify-center gap-2 p-3 rounded-3xl border-2 transition-all group",
                       role === "producer" 
                         ? "bg-primary/20 border-primary text-white" 
                         : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
