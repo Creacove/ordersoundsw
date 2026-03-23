@@ -9,9 +9,9 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { toast } from "sonner";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ChevronRight, Music, ShoppingBag } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 
 export default function Signup() {
   const location = useLocation();
@@ -32,7 +32,6 @@ export default function Signup() {
   });
   const { signup, isLoading } = useAuth();
 
-  // Extract referral code from URL on mount
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const ref = searchParams.get('ref');
@@ -43,34 +42,20 @@ export default function Signup() {
 
   const validateForm = () => {
     let valid = true;
-    const newErrors = {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: ""
-    };
+    const newErrors = { name: "", email: "", password: "", confirmPassword: "" };
 
     if (!name.trim()) {
       newErrors.name = "Name is required";
       valid = false;
     }
-
-    if (!email.trim()) {
-      newErrors.email = "Email is required";
-      valid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Email is invalid";
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Valid email is required";
       valid = false;
     }
-
-    if (!password) {
-      newErrors.password = "Password is required";
-      valid = false;
-    } else if (password.length < 6) {
+    if (!password || password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
       valid = false;
     }
-
     if (password !== confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
       valid = false;
@@ -82,7 +67,6 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (validateForm()) {
       try {
         await signup(email, password, name, role, referralCode);
@@ -92,208 +76,149 @@ export default function Signup() {
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
-
   return (
-    <MainLayout hideSidebar currentPath={location.pathname}>
-      <div className="container relative h-screen flex flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r overflow-hidden">
-          <div className="absolute inset-0 bg-zinc-900">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-purple-800/80 to-zinc-900/90" />
-            <img
-              src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop"
-              alt="Authentication"
-              className="object-cover w-full h-full opacity-50 mix-blend-overlay"
-            />
-          </div>
-          <div className="relative z-20 mt-auto">
-            <div className="mb-4">
-              <div className="w-12 h-1 bg-primary mb-3 rounded-full"></div>
-              <Logo size="desktop" showText className="mb-2" />
-              <p className="text-white/70">Your ultimate sound experience</p>
+    <MainLayout hideSidebar>
+      <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-[#030407]">
+        {/* Background Aesthetics */}
+        <div className="absolute top-0 right-0 w-[50vw] h-[50vh] bg-primary/10 blur-[150px] translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <div className="absolute bottom-0 left-0 w-[40vw] h-[40vh] bg-indigo-600/5 blur-[120px] -translate-x-1/4 translate-y-1/4 rounded-full" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
+
+        <div className="w-full max-w-[480px] relative z-10 space-y-8 animate-in fade-in zoom-in-95 duration-500 my-8">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <Logo size="desktop" />
             </div>
-            <blockquote className="space-y-2">
-              <p className="text-lg">
-                "Join our creative community and explore a world of professional audio that will bring your projects to life. Elevate your craft with premium sound quality."
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
+                Join the <span className="text-primary">Studio</span>
+              </h1>
+              <p className="text-white/40 italic text-lg tracking-tight">
+                Create your account to start your journey
               </p>
-              <footer className="text-sm text-white/70">Head of Design</footer>
-            </blockquote>
+            </div>
           </div>
-        </div>
-        <div className="lg:p-8 flex items-center justify-center w-full h-full overflow-y-auto">
-          <div className="absolute inset-0 bg-gradient-to-tr from-purple-800/30 via-indigo-600/20 to-zinc-900/10 lg:hidden" />
-          <Card className="mx-auto flex w-full flex-col justify-center sm:w-[350px] bg-background/95 backdrop-blur-sm border border-border/20 shadow-xl animate-fade-in relative z-10 my-4">
-            <CardHeader className="space-y-1 pb-4">
-              <div className="flex justify-center mb-2">
-                <Logo size="mobile" />
-              </div>
-              <CardTitle className="text-xl font-bold tracking-tight text-center">Create an account</CardTitle>
-              <CardDescription className="text-center text-sm">
-                Sign up to access premium sound content
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3 pt-2">
-              <form onSubmit={handleSubmit}>
-                <div className="grid gap-3">
-                  {/* Name and Email Row - Stacked vertically */}
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="grid gap-1">
-                      <Label htmlFor="name" className="text-sm">Full Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="name"
-                          placeholder="John Doe"
-                          type="text"
-                          className="pl-10 h-10"
-                          autoCapitalize="none"
-                          autoCorrect="off"
-                          disabled={isLoading}
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          required
-                        />
-                      </div>
-                      {errors.name && (
-                        <p className="text-xs text-red-500">{errors.name}</p>
-                      )}
-                    </div>
-                    <div className="grid gap-1">
-                      <Label htmlFor="email" className="text-sm">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="email"
-                          placeholder="name@example.com"
-                          type="email"
-                          className="pl-10 h-10"
-                          autoCapitalize="none"
-                          autoComplete="email"
-                          autoCorrect="off"
-                          disabled={isLoading}
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                      {errors.email && (
-                        <p className="text-xs text-red-500">{errors.email}</p>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Password Fields - Compact stacked */}
-                  <div className="grid gap-1">
-                    <Label htmlFor="password" className="text-sm">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        className="pl-10 pr-10 h-10"
-                        autoCapitalize="none"
-                        autoComplete="new-password"
-                        disabled={isLoading}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={togglePasswordVisibility}
-                        className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-xs text-red-500">{errors.password}</p>
+          <Card className="bg-white/[0.03] border-white/10 backdrop-blur-2xl shadow-2xl rounded-[2.5rem] overflow-hidden">
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Role Selection */}
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setRole("buyer")}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-3 p-4 rounded-3xl border-2 transition-all group",
+                      role === "buyer" 
+                        ? "bg-primary/20 border-primary text-white" 
+                        : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
                     )}
-                  </div>
-
-                  <div className="grid gap-1">
-                    <Label htmlFor="confirmPassword" className="text-sm">Confirm Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="confirmPassword"
-                        type={showConfirmPassword ? "text" : "password"}
-                        className="pl-10 pr-10 h-10"
-                        autoCapitalize="none"
-                        autoComplete="new-password"
-                        disabled={isLoading}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={toggleConfirmPasswordVisibility}
-                        className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    {errors.confirmPassword && (
-                      <p className="text-xs text-red-500">{errors.confirmPassword}</p>
-                    )}
-                  </div>
-
-                  {/* Role Selection Toggle */}
-                  <div className="grid gap-2">
-                    <Label className="text-sm">I am a:</Label>
-                    <ToggleGroup type="single" value={role} onValueChange={(value) => value && setRole(value as "buyer" | "producer")}>
-                      <ToggleGroupItem value="buyer">Buyer</ToggleGroupItem>
-                      <ToggleGroupItem value="producer">Producer</ToggleGroupItem>
-                    </ToggleGroup>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="mt-1 h-11 w-full transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.3)]"
                   >
-                    {isLoading ? (
-                      <>
-                        <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-current rounded-full" />
-                        Creating account...
-                      </>
-                    ) : (
-                      "Create account"
+                    <ShoppingBag className={cn("h-6 w-6 transition-transform group-hover:scale-110", role === "buyer" ? "text-primary" : "text-white/20")} />
+                    <span className="text-[10px] font-black uppercase tracking-widest italic">Buyer / Fan</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("producer")}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-3 p-4 rounded-3xl border-2 transition-all group",
+                      role === "producer" 
+                        ? "bg-primary/20 border-primary text-white" 
+                        : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
                     )}
+                  >
+                    <Music className={cn("h-6 w-6 transition-transform group-hover:scale-110", role === "producer" ? "text-primary" : "text-white/20")} />
+                    <span className="text-[10px] font-black uppercase tracking-widest italic">Producer</span>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Full Name</Label>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                      <Input
+                        id="name"
+                        placeholder="John Doe"
+                        className="h-14 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Email Address</Label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                      <Input
+                        id="email"
+                        placeholder="producer@studio.com"
+                        className="h-14 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Password</Label>
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          className="h-14 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Confirm</Label>
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          className="h-14 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <Button 
+                    className="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black uppercase italic tracking-tighter text-lg rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary/20"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Creating Account..." : "Join Studio"}
                   </Button>
+
+                  <div className="relative flex items-center gap-4 py-2">
+                    <div className="h-px bg-white/5 flex-grow" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/20 italic">Or Continue With</span>
+                    <div className="h-px bg-white/5 flex-grow" />
+                  </div>
+
+                  <GoogleAuthButton mode="signup" />
                 </div>
               </form>
-              
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or
-                  </span>
-                </div>
-              </div>
-              
-              <GoogleAuthButton mode="signup" />
             </CardContent>
-            <div className="p-4 pt-0 text-center">
-              <p className="text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  className="underline underline-offset-4 hover:text-primary transition-colors"
-                >
-                  Sign in
+            <div className="bg-white/[0.02] border-t border-white/5 p-6 text-center">
+              <p className="text-white/40 italic text-sm">
+                Already part of the studio?{" "}
+                <Link to="/login" className="text-white font-black uppercase tracking-tight hover:text-primary transition-colors ml-1 inline-flex items-center gap-1 group">
+                  Sign In <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
               </p>
             </div>

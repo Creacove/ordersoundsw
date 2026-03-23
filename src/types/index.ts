@@ -93,6 +93,7 @@ export interface Beat {
   producer_wallet_address?: string;
   soundpack_id?: string | null;
   type?: 'beat' | 'soundpack_item';
+  producer_profile_picture?: string;
 }
 
 export interface Soundpack {

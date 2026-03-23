@@ -7,7 +7,6 @@ interface PaystackProps {
   onClose: () => void;
   isOpen: boolean;
   totalAmount: number;
-  splitCode?: string | null;
   producerId?: string;
   beatId?: string;
 }
@@ -17,7 +16,6 @@ export function PaystackCheckout({
   onClose, 
   isOpen, 
   totalAmount,
-  splitCode,
   producerId,
   beatId
 }: PaystackProps) {
@@ -34,7 +32,6 @@ export function PaystackCheckout({
     onSuccess,
     onClose,
     totalAmount,
-    splitCode,
     producerId,
     beatId
     // Removed testMode: true to switch to live mode

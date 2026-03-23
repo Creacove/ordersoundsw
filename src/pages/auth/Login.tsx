@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useSearchParams, useLocation } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +8,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Label } from "@/components/ui/label";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { uniqueToast } from "@/lib/toast";
@@ -17,7 +17,7 @@ import { Logo } from "@/components/ui/Logo";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const location = useLocation();
+  const navigate = useNavigate();
   const recoveryMode = searchParams.get('recovery') === 'true';
   const recoveryEmail = searchParams.get('email') || "";
   
@@ -29,46 +29,35 @@ export default function Login() {
     email: "",
     password: ""
   });
-  const { login, refreshSession } = useAuth();
+  const { login } = useAuth();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetEmailSent, setResetEmailSent] = useState(false);
 
   useEffect(() => {
-    // If in recovery mode, attempt to clean any problematic auth state
     if (recoveryMode) {
       const attemptCleanup = async () => {
         try {
-          // Sign out locally first to clear any problematic tokens
           await supabase.auth.signOut({ scope: 'local' });
-          
-          // Clear auth storage
           try {
             localStorage.removeItem('supabase.auth.token');
             sessionStorage.removeItem('supabase.auth.token');
           } catch (e) {
             console.warn('Could not access storage:', e);
           }
-          
-          // Log the recovery attempt
           await logAuthEvent('recovery', 'cleanup_complete', { email: recoveryEmail || undefined });
-          
           uniqueToast.info('Your session has been reset. Please sign in again.');
         } catch (error) {
           console.error('Error during auth recovery:', error);
         }
       };
-      
       attemptCleanup();
     }
   }, [recoveryMode, recoveryEmail]);
 
   const validateForm = () => {
     let valid = true;
-    const newErrors = {
-      email: "",
-      password: ""
-    };
+    const newErrors = { email: "", password: "" };
 
     if (!email.trim()) {
       newErrors.email = "Email is required";
@@ -92,11 +81,9 @@ export default function Login() {
     if (validateForm()) {
       try {
         setIsSubmitting(true);
-        
         if (recoveryMode) {
           await logAuthEvent('recovery', 'login_attempt', { email });
         }
-        
         await login(email, password);
       } catch (error) {
         console.error("Login error:", error);
@@ -104,10 +91,6 @@ export default function Login() {
         setIsSubmitting(false);
       }
     }
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -138,224 +121,148 @@ export default function Login() {
     }
   };
 
-  const renderLoginForm = () => (
-    <form onSubmit={handleSubmit}>
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="email"
-              placeholder="name@example.com"
-              type="email"
-              className="pl-10"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect="off"
-              disabled={isSubmitting}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-xs text-red-500">{errors.email}</p>
-          )}
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              className="pl-10 pr-10"
-              autoCapitalize="none"
-              autoComplete="current-password"
-              disabled={isSubmitting}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button
-              type="button"
-              onClick={togglePasswordVisibility}
-              className="absolute right-3 top-3 h-4 w-4 text-muted-foreground"
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-          {errors.password && (
-            <p className="text-xs text-red-500">{errors.password}</p>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setShowForgotPassword(true);
-              setResetEmail(email);
-            }}
-            className="text-sm text-muted-foreground hover:text-primary transition-colors text-left underline underline-offset-4"
-          >
-            Forgot password?
-          </button>
-        </div>
-        <Button 
-          type="submit" 
-          disabled={isSubmitting} 
-          className="mt-2 w-full transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.3)]"
-        >
-          {isSubmitting ? (
-            <>
-              <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-current rounded-full" />
-              Signing in...
-            </>
-          ) : (
-            "Sign In"
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-
-  const renderForgotPasswordForm = () => (
-    <form onSubmit={handleForgotPassword}>
-      <div className="grid gap-4">
-        {resetEmailSent ? (
-          <Alert className="mb-4">
-            <AlertDescription>
-              Password reset email sent! Please check your inbox and spam/junk folders for instructions.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            <div className="grid gap-2">
-              <Label htmlFor="reset-email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="reset-email"
-                  placeholder="name@example.com"
-                  type="email"
-                  className="pl-10"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect="off"
-                  disabled={isSubmitting}
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="mt-2 w-full transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.3)]"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-current rounded-full" />
-                  Sending reset email...
-                </>
-              ) : (
-                "Send Reset Link"
-              )}
-            </Button>
-          </>
-        )}
-        <Button 
-          type="button" 
-          variant="ghost" 
-          onClick={() => {
-            setShowForgotPassword(false);
-            setResetEmailSent(false);
-          }}
-          className="mt-2"
-        >
-          Back to Login
-        </Button>
-      </div>
-    </form>
-  );
-
   return (
-    <MainLayout hideSidebar currentPath={location.pathname}>
-      <div className="container relative h-screen flex flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r overflow-hidden">
-          <div className="absolute inset-0 bg-zinc-900">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-purple-800/80 to-zinc-900/90" />
-            <img
-              src="https://images.unsplash.com/photo-1549213783-8284d0336c4f?q=80&w=1470&auto=format&fit=crop"
-              alt="Authentication"
-              className="object-cover w-full h-full opacity-50 mix-blend-overlay"
-            />
-          </div>
-          <div className="relative z-20 mt-auto">
-            <div className="mb-4">
-              <div className="w-12 h-1 bg-primary mb-3 rounded-full"></div>
-              <Logo size="desktop" showText className="mb-2" />
-              <p className="text-white/70">Your ultimate sound experience</p>
+    <MainLayout hideSidebar>
+      <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-[#030407]">
+        {/* Background Aesthetics */}
+        <div className="absolute top-0 left-0 w-[50vw] h-[50vh] bg-primary/10 blur-[150px] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <div className="absolute bottom-0 right-0 w-[40vw] h-[40vh] bg-purple-600/5 blur-[120px] translate-x-1/4 translate-y-1/4 rounded-full" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
+
+        <div className="w-full max-w-[440px] relative z-10 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <Logo size="desktop" />
             </div>
-            <blockquote className="space-y-2">
-              <p className="text-lg">
-                "Discover premium audio that transforms your creative projects. Join our community of passionate creators and elevate your sound experience."
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
+                {showForgotPassword ? "Reset" : "Welcome"} <span className="text-primary">Back</span>
+              </h1>
+              <p className="text-white/40 italic text-lg tracking-tight">
+                {showForgotPassword 
+                  ? "Enter your email for the magic link" 
+                  : "Access your studio and sounds"}
               </p>
-              <footer className="text-sm text-white/70">Creative Director</footer>
-            </blockquote>
+            </div>
           </div>
-        </div>
-        <div className="lg:p-8 flex items-center justify-center w-full h-full overflow-y-auto">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-purple-800/20 to-zinc-900/10 lg:hidden" />
-          <Card className="mx-auto flex w-full flex-col justify-center sm:w-[350px] bg-background/95 backdrop-blur-sm border border-border/20 shadow-xl animate-fade-in relative z-10">
-            <CardHeader className="space-y-1">
-              <div className="flex justify-center mb-4">
-                <Logo size="mobile" />
-              </div>
-              <CardTitle className="text-2xl font-bold tracking-tight text-center">
-                {showForgotPassword ? "Reset Password" : recoveryMode ? "Session Recovery" : "Welcome back"}
-              </CardTitle>
-              <CardDescription className="text-center">
-                {showForgotPassword
-                  ? "Enter your email to receive a password reset link"
-                  : recoveryMode
-                    ? "Please sign in again to restore your session"
-                    : "Enter your credentials to sign in to your account"}
-              </CardDescription>
+
+          <Card className="bg-white/[0.03] border-white/10 backdrop-blur-2xl shadow-2xl rounded-[2.5rem] overflow-hidden">
+            <CardHeader className="pb-2">
+              {showForgotPassword && (
+                <button 
+                  onClick={() => setShowForgotPassword(false)}
+                  className="flex items-center gap-2 text-white/40 hover:text-white transition-colors text-xs font-black uppercase italic tracking-widest mb-4"
+                >
+                  <ArrowLeft size={14} /> Back to Sign In
+                </button>
+              )}
             </CardHeader>
-            <CardContent className="grid gap-6">
+            <CardContent className="p-8 pt-4">
               {recoveryMode && (
-                <Alert className="bg-amber-500/10 border-amber-500/50 text-amber-600">
-                  <AlertTitle>Session recovery mode</AlertTitle>
-                  <AlertDescription>
-                    Your previous session encountered an error. Sign in again to fix the issue.
+                <Alert className="mb-6 bg-amber-500/10 border-amber-500/50 text-amber-500 rounded-2xl">
+                  <AlertTitle className="font-black italic uppercase tracking-wider text-xs">Security Protocol</AlertTitle>
+                  <AlertDescription className="text-sm italic">
+                    Session reset required. Please sign in again.
                   </AlertDescription>
                 </Alert>
               )}
-            
-              {showForgotPassword ? renderForgotPasswordForm() : renderLoginForm()}
-              {!showForgotPassword && (
-                <>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        Or
-                      </span>
+
+              {showForgotPassword ? (
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Email Connection</Label>
+                      <div className="relative group">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                        <Input
+                          id="reset-email"
+                          placeholder="producer@studio.com"
+                          className="h-14 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <GoogleAuthButton mode="login" />
-                </>
+                  <Button 
+                    className="w-full h-14 bg-white hover:bg-white/90 text-black font-black uppercase italic tracking-tighter text-lg rounded-2xl transition-all hover:scale-[1.02] active:scale-95"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Transmitting..." : "Send Reset Link"}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Email</Label>
+                      <div className="relative group">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                        <Input
+                          id="email"
+                          placeholder="name@example.com"
+                          className="h-14 bg-white/5 border-white/5 pl-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center ml-1">
+                        <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-white/40">Password</Label>
+                        <button 
+                          type="button"
+                          onClick={() => setShowForgotPassword(true)}
+                          className="text-[10px] font-black uppercase tracking-widest text-primary italic hover:underline"
+                        >
+                          Recover?
+                        </button>
+                      </div>
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-primary transition-colors" />
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          className="h-14 bg-white/5 border-white/5 pl-12 pr-12 rounded-2xl focus:ring-primary focus:border-primary transition-all italic font-medium"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Button 
+                      className="w-full h-14 bg-white hover:bg-white/90 text-black font-black uppercase italic tracking-tighter text-lg rounded-2xl transition-all hover:scale-[1.02] active:scale-95"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Checking..." : "Sign In"}
+                    </Button>
+
+                    <div className="relative flex items-center gap-4 py-2">
+                      <div className="h-px bg-white/5 flex-grow" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white/20 italic">Social Sign In</span>
+                      <div className="h-px bg-white/5 flex-grow" />
+                    </div>
+
+                    <GoogleAuthButton mode="login" />
+                  </div>
+                </form>
               )}
             </CardContent>
-            <div className="p-4 pt-0 text-center">
-              <p className="text-sm text-muted-foreground">
-                {showForgotPassword ? "" : "Don't have an account? "}
-                <Link
-                  to="/signup"
-                  className="underline underline-offset-4 hover:text-primary transition-colors"
-                >
-                  {showForgotPassword ? "" : "Sign up"}
+            <div className="bg-white/[0.02] border-t border-white/5 p-6 text-center">
+              <p className="text-white/40 italic text-sm">
+                Don't have an account?{" "}
+                <Link to="/signup" className="text-white font-black uppercase tracking-tight hover:text-primary transition-colors ml-1 inline-flex items-center gap-1 group">
+                  Create Account <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
               </p>
             </div>

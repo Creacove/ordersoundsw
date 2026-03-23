@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CreditCard, Clock, Activity } from "lucide-react";
+import { CreditCard, Clock, Activity, ArrowRight, CheckCircle2, AlertCircle, ShoppingCart } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -146,119 +146,145 @@ export function PaymentStatsSection({ userId, hasVerifiedAccount, verifiedAccoun
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl md:text-2xl">Payment Stats</CardTitle>
-        <CardDescription className="text-sm md:text-base">
-          Overview of your earnings and payment history
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loadingAnalytics ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            <p className="text-muted-foreground">Loading payment stats...</p>
-          </div>
-        ) : paymentAnalytics ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-muted rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <CreditCard className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-muted-foreground">Total Earnings</span>
+    <div className="space-y-8 mt-12">
+      <div className="flex items-center gap-3">
+        <CreditCard size={20} className="text-[#9A3BDC]" />
+        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 italic">Revenue Statistics</h3>
+      </div>
+
+      {loadingAnalytics ? (
+        <div className="flex items-center justify-center py-20 bg-white/[0.02] border border-white/5 rounded-[2.5rem]">
+          <Loader2 className="h-8 w-8 animate-spin text-[#9A3BDC] mr-4" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/20 italic">Synchronizing Financials...</p>
+        </div>
+      ) : paymentAnalytics ? (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 hover:bg-white/[0.04] transition-all group overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#9A3BDC]/5 blur-3xl -mr-12 -mt-12 rounded-full" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                  <CreditCard size={14} />
                 </div>
-                <p className="text-xl font-bold">{formatCurrency(paymentAnalytics.total_earnings)}</p>
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest italic">Lifetime Earnings</span>
               </div>
-              
-              <div className="bg-muted rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium text-muted-foreground">Pending Balance</span>
-                </div>
-                <p className="text-xl font-bold">{formatCurrency(paymentAnalytics.pending_balance)}</p>
-              </div>
-              
-              <div className="bg-muted rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Activity className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-medium text-muted-foreground">Completed Payouts</span>
-                </div>
-                <p className="text-xl font-bold">{paymentAnalytics.successful_payments}</p>
-              </div>
+              <p className="text-3xl font-black text-white italic tracking-tighter uppercase tabular-nums">
+                {formatCurrency(paymentAnalytics.total_earnings)}
+              </p>
             </div>
             
-            {paymentAnalytics.recent_transactions && paymentAnalytics.recent_transactions.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold">Recent Transactions</h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="min-w-full">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="py-2 px-4 text-left text-xs font-medium text-muted-foreground">Date</th>
-                        <th className="py-2 px-4 text-left text-xs font-medium text-muted-foreground">Beat</th>
-                        <th className="py-2 px-4 text-left text-xs font-medium text-muted-foreground">Amount</th>
-                        <th className="py-2 px-4 text-left text-xs font-medium text-muted-foreground">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {paymentAnalytics.recent_transactions
-                        .filter(transaction => transaction.status === 'completed')
-                        .map((transaction) => (
-                          <tr key={transaction.id}>
-                            <td className="py-2 px-4 text-sm">{transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'}</td>
-                            <td className="py-2 px-4 text-sm">{transaction.beat_title}</td>
-                            <td className="py-2 px-4 text-sm">{formatCurrency(transaction.amount * 0.9, transaction.currency)}</td>
-                            <td className="py-2 px-4 text-sm">
-                              <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                {transaction.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+            <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 hover:bg-white/[0.04] transition-all group overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl -mr-12 -mt-12 rounded-full" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                  <Clock size={14} />
                 </div>
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest italic">Pending Balance</span>
+              </div>
+              <p className="text-3xl font-black text-white italic tracking-tighter uppercase tabular-nums">
+                {formatCurrency(paymentAnalytics.pending_balance)}
+              </p>
+            </div>
+            
+            <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 hover:bg-white/[0.04] transition-all group overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#9A3BDC]/5 blur-3xl -mr-12 -mt-12 rounded-full" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-[#9A3BDC]/10 flex items-center justify-center text-[#9A3BDC]">
+                  <Activity size={14} />
+                </div>
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest italic">Total Payouts</span>
+              </div>
+              <p className="text-3xl font-black text-white italic tracking-tighter uppercase tabular-nums">
+                {paymentAnalytics.successful_payments}
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-12">
+            <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40">
+                  <ShoppingCart size={20} />
+                </div>
+                <div>
+                   <h3 className="text-xl font-black text-white italic tracking-tighter uppercase">Recent Transactions</h3>
+                   <p className="text-[10px] font-black uppercase tracking-widest text-white/20 italic">Latest completed beat sales</p>
+                </div>
+              </div>
+            </div>
+
+            {paymentAnalytics.recent_transactions && paymentAnalytics.recent_transactions.length > 0 ? (
+               <div className="space-y-1">
+                 {paymentAnalytics.recent_transactions
+                    .filter(transaction => transaction.status === 'completed')
+                    .slice(0, 5)
+                    .map((transaction) => (
+                      <div key={transaction.id} className="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-2xl hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0 group">
+                         <div className="flex items-center gap-4 mb-4 md:mb-0">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/20 group-hover:bg-[#9A3BDC]/10 group-hover:text-[#9A3BDC] transition-colors">
+                               <Activity size={18} />
+                            </div>
+                            <div>
+                               <p className="text-sm font-black text-white italic tracking-tight uppercase">{transaction.beat_title}</p>
+                               <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic">
+                                 {transaction.date ? new Date(transaction.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                               </p>
+                            </div>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-lg font-black text-white italic tracking-tighter uppercase">
+                               {formatCurrency(transaction.amount * 0.9, transaction.currency)}
+                            </p>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500/50 italic">{transaction.status}</span>
+                         </div>
+                      </div>
+                    ))}
+               </div>
+            ) : (
+              <div className="text-center py-10 opacity-20">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] italic">No transaction history found</p>
               </div>
             )}
-            
-            <div className={cn(
-              "border rounded-lg p-4",
-              hasVerifiedAccount ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200"
-            )}>
-              <h3 className={cn(
-                "text-base font-semibold mb-2",
-                hasVerifiedAccount ? "text-blue-800" : "text-amber-800"
-              )}>
-                Payment Account Status
-              </h3>
-              <p className={cn(
-                "text-sm mb-2",
-                hasVerifiedAccount ? "text-blue-700" : "text-amber-700"
-              )}>
-                {hasVerifiedAccount 
-                  ? `Your account is set up for automatic payments to ${verifiedAccountName}`
-                  : "Please set up your bank details above to receive automatic payments"}
-              </p>
-              <p className={cn(
-                "text-xs",
-                hasVerifiedAccount ? "text-blue-600" : "text-amber-600"
-              )}>
-                {hasVerifiedAccount
-                  ? "Payments for beat sales are automatically split with 90% going to your account"
-                  : "Once set up, payments for beat sales will automatically be split with 90% going to your account"}
-              </p>
+          </div>
+          
+          <div className={cn(
+            "rounded-[2rem] p-10 flex flex-col md:flex-row items-center justify-between gap-8 border transition-all",
+            hasVerifiedAccount 
+              ? "bg-[#9A3BDC]/5 border-[#9A3BDC]/20" 
+              : "bg-amber-500/5 border-amber-500/20"
+          )}>
+            <div className="flex items-center gap-6">
+               <div className={cn(
+                 "w-16 h-16 rounded-[1.5rem] flex items-center justify-center shrink-0",
+                 hasVerifiedAccount ? "bg-[#9A3BDC]/10 text-[#9A3BDC]" : "bg-amber-500/10 text-amber-500"
+               )}>
+                  {hasVerifiedAccount ? <CheckCircle2 size={32} /> : <AlertCircle size={32} />}
+               </div>
+               <div>
+                  <h3 className={cn(
+                    "text-xl font-black italic tracking-tighter uppercase mb-2",
+                    hasVerifiedAccount ? "text-white" : "text-amber-500"
+                  )}>
+                    {hasVerifiedAccount ? "Payout Network Operational" : "Payout Configuration Required"}
+                  </h3>
+                  <p className="text-white/40 text-sm italic font-medium max-w-xl">
+                    {hasVerifiedAccount 
+                      ? `Your account is successfully integrated with ${verifiedAccountName}. Earnings are automatically distributed via smart split logic (90/10 split).`
+                      : "We need your settlement details to route earnings to your node. Please configure your bank or wallet information above."}
+                  </p>
+               </div>
             </div>
           </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              {hasVerifiedAccount 
-                ? "No payment data available yet. Start selling beats to see your earnings!"
-                : "Please set up your bank details above to start receiving payments"}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      ) : (
+        <div className="text-center py-20 bg-white/[0.02] border border-white/5 rounded-[2.5rem]">
+          <p className="text-white/20 font-black uppercase italic tracking-[0.2em]">
+            {hasVerifiedAccount 
+              ? "No financial telemetry available. Establish sales to generate records."
+              : "Financial routing inactive. Payout configuration required."}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }

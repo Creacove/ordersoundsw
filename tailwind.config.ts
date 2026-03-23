@@ -66,19 +66,31 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
+				brand: {
+					violet: '#9A3BDC',
+					blue: '#9A3BDC', // Completely removed blue in favor of violet
+					ink: '#090A16',
+					fog: '#AAB2D6',
+				},
+				surface: {
+					canvas: '#080811',
+					soft: '#121423',
+					strong: '#17192B',
+					elevated: '#1E2033',
+				},
 				marketplace: {
-					purple: '#7C3AED',
-					dark: '#0f0f10',
-					card: '#1A1A1D',
-					hover: '#23232b',
-					text: '#D1D5DB',
-					muted: '#9CA3AF',
+					purple: '#9A3BDC',
+					dark: '#090A16',
+					card: '#161827',
+					hover: '#202338',
+					text: '#E2E7FF',
+					muted: '#AAB2D6',
 				},
 				notification: {
-					unread: 'rgb(124 58 237 / 0.12)',
-					hover: 'rgb(124 58 237 / 0.18)',
+					unread: 'rgb(154 59 220 / 0.18)',
+					hover: 'rgb(154 59 220 / 0.24)',
 					read: 'transparent',
-					'read-hover': 'rgb(124 58 237 / 0.05)',
+					'read-hover': 'rgb(154 59 220 / 0.08)',
 				}
 			},
 			borderRadius: {
@@ -110,6 +122,10 @@ export default {
 				'fade-out': {
 					'0%': { opacity: '1' },
 					'100%': { opacity: '0' }
+				},
+				'float-up': {
+					'0%, 100%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-10px)' }
 				},
 				'slide-up': {
 					'0%': { transform: 'translateY(10px)', opacity: '0' },
@@ -149,6 +165,7 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.3s ease-out',
 				'fade-out': 'fade-out 0.2s ease-out',
+				'float-up': 'float-up 8s ease-in-out infinite',
 				'slide-up': 'slide-up 0.4s ease-out',
 				'slide-down': 'slide-down 0.4s ease-out',
 				'pulse-gentle': 'pulse-gentle 2s ease-in-out infinite',
@@ -159,21 +176,22 @@ export default {
 				'scroll-announcement': 'scroll-announcement 25s linear infinite'
 			},
 			fontFamily: {
-				sans: ['Inter', 'sans-serif'],
-				heading: ['Poppins', 'sans-serif'],
+				sans: ['Plus Jakarta Sans', 'sans-serif'],
+				heading: ['Syne', 'sans-serif'],
 			},
 			backdropFilter: {
 				'none': 'none',
 				'blur': 'blur(20px)',
 			},
 			boxShadow: {
-				'glow': '0 0 20px rgba(124, 58, 237, 0.5)',
-				'card': '0 8px 24px rgba(0, 0, 0, 0.2)',
-				'notification': '0 4px 12px rgba(0, 0, 0, 0.08)',
+				'glow': '0 24px 70px rgba(154, 59, 220, 0.45)',
+				'card': '0 16px 40px rgba(4, 6, 20, 0.28)',
+				'notification': '0 12px 36px rgba(4, 6, 20, 0.18)',
 			},
 			backgroundImage: {
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
 				'shimmer': 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
+				'brand-sheen': 'linear-gradient(135deg, rgba(154, 59, 220, 0.95) 0%, rgba(154, 59, 220, 0.95) 100%)',
 			}
 		}
 	},

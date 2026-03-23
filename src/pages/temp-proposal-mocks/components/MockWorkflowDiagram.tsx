@@ -117,19 +117,19 @@ const MockWorkflowDiagram = () => {
                 {/* Target: Nexus */}
                 <div className="z-10 w-full md:w-1/3 flex flex-col items-center gap-8">
                     <div className="group relative">
-                        <div className="absolute -inset-8 bg-blue-500/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute -inset-8 -purple-/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="p-10 rounded-[2rem] bg-white flex items-center justify-center shadow-2xl relative border-2 border-white/10">
                             <img src="/nexus-logo.png" alt="Nexus" className="w-56 object-contain" />
                         </div>
                     </div>
                     <div className="text-center space-y-2">
-                        <Badge variant="outline" className="border-blue-500/50 text-blue-500 text-xs px-3 py-1 bg-blue-500/5 font-black tracking-widest">GOVERNANCE LAYER</Badge>
+                        <Badge variant="outline" className="-purple-/50 -purple- text-xs px-3 py-1 -purple-/5 font-black tracking-widest">GOVERNANCE LAYER</Badge>
                     </div>
 
                     <Card className="w-full bg-black/40 border-white/10 backdrop-blur-sm shadow-[0_0_30px_rgba(0,0,0,0.5)] rounded-3xl">
                         <CardContent className="p-8 space-y-6">
                             <div className="flex items-start gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0 border border-blue-500/20 text-blue-500">
+                                <div className="w-10 h-10 rounded-xl -purple-/20 flex items-center justify-center shrink-0 border -purple-/20 -purple-">
                                     <ShieldCheck className="w-5 h-5" />
                                 </div>
                                 <div>
@@ -138,7 +138,7 @@ const MockWorkflowDiagram = () => {
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0 border border-blue-500/20 text-blue-500">
+                                <div className="w-10 h-10 rounded-xl -purple-/20 flex items-center justify-center shrink-0 border -purple-/20 -purple-">
                                     <Database className="w-5 h-5" />
                                 </div>
                                 <div>

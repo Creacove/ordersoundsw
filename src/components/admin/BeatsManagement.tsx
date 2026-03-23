@@ -91,7 +91,7 @@ export function BeatsManagement() {
           </div>
           
           <div className="bg-muted/50 p-4 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold -purple-">
               {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.weeklyPicksCount || 0}
             </div>
             <div className="text-sm text-muted-foreground">Weekly Picks</div>
@@ -117,7 +117,7 @@ export function BeatsManagement() {
 
           {/* Current Producer Display */}
           {stats?.currentProducerOfWeek ? (
-            <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+            <div className="flex items-center gap-4 p-4 -purple- border -purple- rounded-lg mb-4">
               <Avatar className="h-12 w-12">
                 <AvatarImage 
                   src={stats.currentProducerOfWeek.profilePicture || `https://api.dicebear.com/7.x/initials/svg?seed=${stats.currentProducerOfWeek.name}`}
@@ -128,14 +128,14 @@ export function BeatsManagement() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h4 className="font-semibold text-blue-900">
+                <h4 className="font-semibold -purple-">
                   {stats.currentProducerOfWeek.stageName || stats.currentProducerOfWeek.name}
                 </h4>
-                <p className="text-sm text-blue-700">
+                <p className="text-sm -purple-">
                   {stats.currentProducerOfWeek.followerCount.toLocaleString()} followers
                 </p>
               </div>
-              <Badge className="bg-blue-100 text-blue-800">
+              <Badge className="-purple- -purple-">
                 Current Featured
               </Badge>
             </div>
@@ -318,9 +318,9 @@ export function BeatsManagement() {
         </div>
 
         {/* Operation Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-900 mb-2">Management Operations:</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
+        <div className="-purple- border -purple- rounded-lg p-4">
+          <h4 className="font-medium -purple- mb-2">Management Operations:</h4>
+          <ul className="text-sm -purple- space-y-1">
             <li>• <strong>Producer of Week:</strong> Search and select any producer to feature</li>
             <li>• <strong>Trending:</strong> Random refresh uses weighted selection favoring newer beats (3x weight for &lt;30 days, 2x for 30-90 days)</li>
             <li>• <strong>Manual Selection:</strong> Pick specific beats for Trending or Featured slots</li>

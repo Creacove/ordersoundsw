@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { authenticateRequest, createServiceRoleClient } from "../_shared/auth.ts";
+import { syncPaymentSettlement } from "../_shared/paymentSettlement.ts";
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -80,26 +81,20 @@ serve(async (req) => {
     console.log(`Processing verification for reference: ${reference}, order: ${orderId}`);
     console.log('Order items received:', orderItems);
 
-    // Create a Supabase client with SERVICE ROLE KEY to bypass RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase environment variables');
-      return new Response(
-        JSON.stringify({ success: false, verified: false, message: 'Missing Supabase configuration' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    const supabaseClient = createServiceRoleClient();
+    const authResult = await authenticateRequest(req, supabaseClient);
+    if ("response" in authResult) {
+      return authResult.response;
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    const actor = authResult.actor;
 
     console.log('Using service role key for database access');
 
     // First check if order exists and get its details
     const { data: orderData, error: orderCheckError } = await supabaseClient
       .from('orders')
-      .select('status, buyer_id')
+      .select('status, buyer_id, total_price, payment_reference')
       .eq('id', orderId)
       .maybeSingle();
 
@@ -128,6 +123,31 @@ serve(async (req) => {
     }
 
     console.log('Order found:', orderData);
+
+    const canAccessOrder = actor.appUser.role === 'admin' || orderData.buyer_id === actor.authUser.id;
+    if (!canAccessOrder) {
+      console.error(`User ${actor.authUser.id} attempted to verify another user's Paystack order ${orderId}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          verified: false,
+          message: 'Forbidden',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+    if (orderData.payment_reference && orderData.payment_reference !== reference && orderData.status !== 'completed') {
+      console.error(`Order ${orderId} already has a different payment reference recorded`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          verified: false,
+          message: 'Order already contains a different payment reference',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+      );
+    }
 
     // Track if already completed (but still proceed to fulfillment to recover missing purchases)
     const alreadyCompleted = orderData.status === 'completed';
@@ -162,6 +182,37 @@ serve(async (req) => {
       const verifyData = await verifyResponse.json();
       console.log('Paystack verification response:', JSON.stringify(verifyData));
 
+      const metadata = verifyData?.data?.metadata ?? {};
+      const customFields = Array.isArray(metadata.custom_fields) ? metadata.custom_fields : [];
+      const metadataOrderId =
+        metadata.order_id ||
+        customFields.find((field: Record<string, unknown>) => field?.variable_name === 'order_id')?.value;
+      if (metadataOrderId && metadataOrderId !== orderId) {
+        console.error(`Paystack metadata order mismatch for ${reference}: expected ${orderId}, received ${metadataOrderId}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            verified: false,
+            message: 'Payment metadata does not match the requested order',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      const expectedAmount = Math.round(Number(orderData.total_price ?? 0) * 100);
+      const receivedAmount = Number(verifyData?.data?.amount ?? 0);
+      if (expectedAmount > 0 && receivedAmount !== expectedAmount) {
+        console.error(`Paystack amount mismatch for ${reference}: expected ${expectedAmount}, received ${receivedAmount}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            verified: false,
+            message: 'Payment amount does not match the order total',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
       // Check if payment was successful (or already completed)
       const isVerified = alreadyCompleted || (
         verifyData.status === true &&
@@ -174,8 +225,10 @@ serve(async (req) => {
       if (isVerified) {
         console.log(`Updating order ${orderId} with payment reference ${reference}`);
 
-        // Declare fulfillmentResult at this scope level so it's accessible for the response
+        // Declare downstream result containers so they are visible in the response.
         let fulfillmentResult: unknown = null;
+        let settlementResult: unknown = null;
+        let settlementWarning: string | null = null;
 
         try {
           // 1. First, store the payment reference in the order (security/audit check)
@@ -213,6 +266,20 @@ serve(async (req) => {
           fulfillmentResult = rpcResult;
           console.log('Fulfillment RPC result:', fulfillmentResult);
 
+          try {
+            settlementResult = await syncPaymentSettlement(supabaseClient, {
+              orderId,
+              paymentDetails: verifyData?.data ?? {},
+              paymentMethod: 'Paystack',
+              paymentReference: reference,
+            });
+          } catch (settlementError) {
+            settlementWarning = settlementError instanceof Error
+              ? settlementError.message
+              : 'Settlement sync failed';
+            console.error('Settlement sync failed after payment verification:', settlementError);
+          }
+
         } catch (fulfillmentProcessError) {
           console.error('Exception during fulfillment process:', fulfillmentProcessError);
           return new Response(
@@ -233,6 +300,8 @@ serve(async (req) => {
             message: alreadyCompleted ? 'Order already completed (recovery attempted)' : 'Payment successfully verified',
             fulfillmentResult,
             alreadyCompleted,
+            settlementResult,
+            settlementWarning,
             data: {
               reference: reference,
               amount: alreadyCompleted ? null : verifyData.data.amount / 100, // Convert from kobo back to naira

@@ -1,9 +1,15 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { User as AuthUser } from "@supabase/supabase-js";
 import { User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { mapSupabaseUser } from "@/lib/supabase";
 import { uniqueToast } from "@/lib/toast";
+import { loadAppUser } from "@/features/auth/profileService";
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
 
 // Current app version - used for version-aware migrations
 const CURRENT_APP_VERSION = '1.0.2'; // Incremented for auth recovery feature
@@ -44,11 +50,11 @@ export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currency, setCurrency] = useState<"NGN" | "USD">("NGN");
   const [isLoading, setIsLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
-  const [hasShownError, setHasShownError] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [consecutiveErrors, setConsecutiveErrors] = useState(0);
   const maxRetries = 3;
+  const retryCountRef = useRef(0);
+  const hasShownErrorRef = useRef(false);
 
   // Track app version for migration purposes
   const previousVersion = getPreviousAppVersion();
@@ -93,61 +99,39 @@ export const useAuthState = () => {
     }
   };
 
-  // Function to fetch user data with retry logic
-  const fetchUserData = async (userId: string, onSuccess: (userData: any) => void) => {
-    try {
-      // Get additional user data from the users table, including wallet_address
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("role, status, full_name, country, wallet_address")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (userError) {
-        console.error("Error fetching user data:", userError);
-        
-        // Implement retry logic for temporary network issues
-        if (retryCount < maxRetries) {
-          setRetryCount(prev => prev + 1);
-          console.log(`Retrying user data fetch (${retryCount + 1}/${maxRetries})...`);
-          setTimeout(() => fetchUserData(userId, onSuccess), 2000 * (retryCount + 1)); // Increasing backoff
-          return;
-        }
-        
-        // Only show the error toast once per session
-        if (!hasShownError) {
-          uniqueToast.error("Unable to load user data. Please refresh the page.");
-          setHasShownError(true);
-        }
-        
-        setAuthError(`Error fetching user data: ${userError.message}`);
-        throw userError;
-      }
-      
-      // Reset retry count and error flag on success
-      setRetryCount(0);
-      setHasShownError(false);
-      setAuthError(null);
-      
-      // Call success handler if data was retrieved
-      if (userData) {
-        onSuccess(userData);
-      }
-    } catch (error: any) {
-      console.error("Error in fetchUserData:", error);
-      
-      // Only show the error toast once per session
-      if (retryCount >= maxRetries && !hasShownError) {
-        uniqueToast.error("Unable to load user data. Please refresh the page.");
-        setHasShownError(true);
-      }
-      
-      setAuthError(`[silent] Error fetching user data: ${error.message}`);
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
+
+    const fetchUserData = async (authUser: AuthUser, onSuccess: (userData: User) => void) => {
+      try {
+        const appUser = await loadAppUser(authUser);
+
+        retryCountRef.current = 0;
+        hasShownErrorRef.current = false;
+        setAuthError(null);
+        onSuccess(appUser);
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, 'Unable to load user data');
+        console.error("Error in fetchUserData:", error);
+
+        if (retryCountRef.current < maxRetries) {
+          retryCountRef.current += 1;
+          console.log(`Retrying user data fetch (${retryCountRef.current}/${maxRetries})...`);
+          setTimeout(() => {
+            void fetchUserData(authUser, onSuccess);
+          }, 2000 * retryCountRef.current);
+          return;
+        }
+
+        if (!hasShownErrorRef.current) {
+          uniqueToast.error("Unable to load user data. Please refresh the page.");
+          hasShownErrorRef.current = true;
+        }
+
+        setAuthError(`[silent] Error fetching user data: ${message}`);
+        setIsLoading(false);
+      }
+    };
     
     // IMPORTANT: First check for existing session to avoid flicker
     const checkSession = async () => {
@@ -177,32 +161,10 @@ export const useAuthState = () => {
           setTimeout(async () => {
             if (!mounted) return;
             
-            fetchUserData(data.session.user.id, (userData) => {
+            fetchUserData(data.session.user, (appUser) => {
               if (!mounted) return;
-              
-              // Ensure role is a valid type
-              const validRole: 'buyer' | 'producer' | 'admin' = 
-                (userData?.role === 'buyer' || userData?.role === 'producer' || userData?.role === 'admin') 
-                  ? userData.role 
-                  : 'buyer';
-              
-              // Ensure status is a valid type
-              const validStatus: 'active' | 'inactive' =
-                userData?.status === 'active' || userData?.status === 'inactive'
-                  ? userData.status
-                  : 'inactive';
 
-              // Merge the user data with the auth data, including wallet_address
-              const enrichedUser: User = {
-                ...mappedUser,
-                role: validRole,
-                status: validStatus,
-                full_name: userData?.full_name || '',
-                country: userData?.country || '',
-                wallet_address: userData?.wallet_address || '',
-              };
-
-              setUser(enrichedUser);
+              setUser(appUser);
 
               const currency = getCurrencyFromLocalStorage();
               setCurrency(currency);
@@ -218,11 +180,12 @@ export const useAuthState = () => {
             setCurrency(currency);
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, 'Session check failed');
         console.error("Session check error:", error);
         if (mounted) {
           setIsLoading(false);
-          setAuthError(`[silent] Session check error: ${error.message}`);
+          setAuthError(`[silent] Session check error: ${message}`);
         }
       }
     };
@@ -240,45 +203,17 @@ export const useAuthState = () => {
         
         // Set the basic user immediately to avoid UI flicker
         setUser(mappedUser);
-        setHasShownError(false); // Reset error flag on new auth state
+        hasShownErrorRef.current = false;
+        retryCountRef.current = 0;
         
         // Then fetch additional data after a slight delay to avoid race conditions
         setTimeout(async () => {
           if (!mounted) return;
           
-          fetchUserData(session.user.id, (userData) => {
+          fetchUserData(session.user, (appUser) => {
             if (!mounted) return;
-            
-            // Handle potentially missing data
-            if (!userData) {
-              console.log("No user data found for ID:", session.user.id);
-              setIsLoading(false);
-              return;
-            }
-            
-            // Ensure role is a valid type
-            const validRole: 'buyer' | 'producer' | 'admin' = 
-              (userData.role === 'buyer' || userData.role === 'producer' || userData.role === 'admin') 
-                ? userData.role 
-                : 'buyer';
-            
-            // Ensure status is a valid type
-            const validStatus: 'active' | 'inactive' =
-              userData.status === 'active' || userData.status === 'inactive'
-                ? userData.status
-                : 'inactive';
 
-            // Merge the user data with the auth data, including wallet_address
-            const enrichedUser: User = {
-              ...mappedUser,
-              role: validRole,
-              status: validStatus,
-              full_name: userData.full_name || '',
-              country: userData.country || '',
-              wallet_address: userData.wallet_address || '',
-            };
-
-            setUser(enrichedUser);
+            setUser(appUser);
             setAuthError(null);
             
             const currency = getCurrencyFromLocalStorage();
@@ -290,7 +225,8 @@ export const useAuthState = () => {
         setUser(null);
         setAuthError(null);
         setIsLoading(false);
-        setHasShownError(false); // Reset error flag on sign out
+        hasShownErrorRef.current = false;
+        retryCountRef.current = 0;
         
         // Reset currency based on location for logged out users or saved preference
         const currency = getCurrencyFromLocalStorage();
@@ -305,7 +241,7 @@ export const useAuthState = () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [retryCount, hasShownError]);
+  }, []);
 
   return {
     user,

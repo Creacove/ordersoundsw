@@ -8,6 +8,7 @@ export interface SupabaseBeat {
   users?: {
     full_name?: string | null;
     stage_name?: string | null;
+    profile_picture?: string | null;
   } | null;
   cover_image?: string | null;
   audio_preview?: string | null;

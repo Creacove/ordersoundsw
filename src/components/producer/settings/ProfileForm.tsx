@@ -68,62 +68,63 @@ export function ProfileForm({ initialProducerName, initialBio, initialLocation }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="stageName" size="lg">Stage Name</Label>
+    <div className="space-y-10">
+      <div className="space-y-4">
+        <Label htmlFor="stageName" className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Current Alias / Stage Name</Label>
         <Input 
           id="stageName" 
-          placeholder="Your stage name" 
+          placeholder="Enter your professional moniker" 
           value={producerName}
           onChange={(e) => setProducerName(e.target.value)}
+          className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6"
         />
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="bio" size="lg">Bio</Label>
+      <div className="space-y-4">
+        <Label htmlFor="bio" className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Producer Manifesto / Bio</Label>
         <textarea 
           id="bio" 
-          className="w-full min-h-32 p-2 rounded-md border border-input bg-background"
-          placeholder="Tell buyers about yourself"
+          className="w-full min-h-40 p-6 rounded-[2rem] border border-white/5 bg-white/[0.02] text-white placeholder:text-white/10 italic font-medium focus:ring-1 focus:ring-[#9A3BDC]/50 transition-all outline-none resize-none"
+          placeholder="Broadcast your creative philosophy to potential collaborators..."
           value={bio}
           onChange={(e) => setBio(e.target.value)}
         />
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="location" size="lg">Location</Label>
+      <div className="space-y-4">
+        <Label htmlFor="location" className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Geographic Coordinates / Location</Label>
         <Input 
           id="location" 
-          placeholder="Your location" 
+          placeholder="e.g. Lagos, Nigeria / London, UK" 
           value={location}
           onChange={(e) => setLocation(e.target.value)}
+          className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6"
         />
       </div>
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-6 pt-4">
         <Button 
-          className="w-full md:w-auto"
+          className="h-14 rounded-2xl bg-white text-black font-black uppercase italic tracking-tighter px-10 hover:bg-white/90 disabled:opacity-50 transition-all shadow-xl"
           onClick={handleSaveProfile}
           disabled={isLoading}
-          variant={saveSuccess ? "outline" : "default"}
         >
           {isLoading ? (
             <div className="flex items-center justify-center w-full">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Saving...</span>
+              <span>Syncing...</span>
             </div>
           ) : saveSuccess ? (
             <div className="flex items-center justify-center w-full">
               <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-              <span>Saved</span>
+              <span>Synced</span>
             </div>
           ) : (
-            <span>Save Changes</span>
+            <span>Update Profile</span>
           )}
         </Button>
         
         {saveSuccess && (
-          <span className="text-sm text-muted-foreground">Changes saved successfully</span>
+          <span className="text-[10px] font-black text-green-500 uppercase tracking-widest italic animate-pulse">Changes committed to registry</span>
         )}
       </div>
     </div>

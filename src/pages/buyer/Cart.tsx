@@ -1,83 +1,138 @@
 
-import React, { useEffect, useState } from 'react';
-import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
-import { useCartWithBeatDetailsOptimized } from "@/hooks/useCartWithBeatDetailsOptimized";
+import { useEffect, useMemo, useState } from "react";
+import {
+  useCartWithBeatDetailsOptimized,
+  type CartItemWithDetails,
+} from "@/hooks/useCartWithBeatDetailsOptimized";
 import { useAuth } from "@/context/AuthContext";
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { ShoppingCart } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  ShoppingCart,
+  ArrowRight,
+  ShieldCheck,
+  Wallet,
+  LoaderCircle,
+  CircleCheckBig,
+  AlertTriangle,
+  Lock,
+  Zap,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import { useOnboardingTracker } from "@/hooks/useOnboardingTracker";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { PaymentHandler } from '@/components/payment/PaymentHandler';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaymentHandler } from "@/components/payment/PaymentHandler";
 import { SolanaCheckoutDialog } from "@/components/payment/SolanaCheckoutDialog";
 import WalletButton from "@/components/wallet/WalletButton";
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletSync } from '@/hooks/useWalletSync';
-import CartItemCard from '@/components/cart/CartItemCard';
-import SoundpackCartItemCard from '@/components/cart/SoundpackCartItemCard';
+import { useWalletSync } from "@/hooks/useWalletSync";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  clearPaymentSession,
+  clearPurchaseSuccess,
+  hasRecentPurchaseSuccess,
+  isPaymentInProgress,
+  markPurchaseSuccess,
+} from "@/lib/paymentFlowStorage";
+import {
+  buildCheckoutLineItems,
+  buildSolanaCheckoutItems,
+  getCartItemUnitPrice,
+  getCheckoutItemsMissingProducerWallet,
+} from "@/features/checkout/cartCheckout";
+import CartItemCard from "@/components/cart/CartItemCard";
+import SoundpackCartItemCard from "@/components/cart/SoundpackCartItemCard";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+
+type BeatCartItem = CartItemWithDetails & {
+  beat: NonNullable<CartItemWithDetails["beat"]>;
+  itemType: "beat";
+};
+
+type SoundpackCartItem = CartItemWithDetails & {
+  itemType: "soundpack";
+  soundpack: NonNullable<CartItemWithDetails["soundpack"]>;
+};
+
+function isBeatCartItem(item: CartItemWithDetails): item is BeatCartItem {
+  return item.itemType === "beat" && Boolean(item.beat);
+}
+
+function isSoundpackCartItem(item: CartItemWithDetails): item is SoundpackCartItem {
+  return item.itemType === "soundpack" && Boolean(item.soundpack);
+}
+
+function formatMoney(totalAmount: number, currency: "NGN" | "USD") {
+  return currency === "NGN"
+    ? `₦${Math.round(totalAmount).toLocaleString()}`
+    : `$${Math.round(totalAmount).toLocaleString()}`;
+}
+
+function getInitials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase();
+}
+
+function CartStatePanel({
+  title,
+  body,
+  icon,
+  action,
+}: {
+  title: string;
+  body: string;
+  icon: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mx-auto flex min-h-[400px] max-w-xl flex-col items-center justify-center p-12 text-center rounded-[2.5rem] bg-white/[0.02] border border-white/5">
+      <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mb-8">
+        {icon}
+      </div>
+      <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase mb-4">{title}</h2>
+      <p className="text-white/50 italic mb-8 max-w-sm">{body}</p>
+      {action && <div>{action}</div>}
+    </div>
+  );
+}
 
 export default function Cart() {
-  const { cartItems, removeFromCart, clearCart, totalAmount, itemCount, isLoading, error, refreshCartFromStorage } = useCartWithBeatDetailsOptimized();
+  const { cartItems, removeFromCart, clearCart, totalAmount, itemCount, isLoading, error, refreshCartFromStorage } =
+    useCartWithBeatDetailsOptimized();
   const { user, currency } = useAuth();
   const { checkAndCompleteOnboarding } = useOnboardingTracker();
-
-  console.log('Cart Page - itemCount:', itemCount, 'cartItems:', cartItems, 'isLoading:', isLoading);
   const navigate = useNavigate();
-  const wallet = useWallet();
-  const {
-    isWalletSynced,
-    needsAuth,
-    isConnected,
-    walletMismatch,
-    storedWalletAddress,
-    syncStatus
-  } = useWalletSync();
+  const { isWalletSynced, needsAuth, isConnected, walletMismatch, storedWalletAddress, syncStatus } = useWalletSync();
 
-  // UI state management
   const [isSolanaDialogOpen, setIsSolanaDialogOpen] = useState(false);
-  const [beatsWithWalletAddresses, setBeatsWithWalletAddresses] = useState([]);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
-  const [isPreparingCheckout, setIsPreparingCheckout] = useState(false);
 
-  // Check for purchase success on mount
+  const checkoutLineItems = useMemo(() => buildCheckoutLineItems(cartItems, currency), [cartItems, currency]);
+  const solanaCheckoutItems = useMemo(() => buildSolanaCheckoutItems(cartItems, currency), [cartItems, currency]);
+  const itemsMissingProducerWallet = useMemo(
+    () => getCheckoutItemsMissingProducerWallet(checkoutLineItems),
+    [checkoutLineItems]
+  );
+
   useEffect(() => {
     const checkPurchaseStatus = () => {
-      // Don't redirect if a payment is currently in progress
-      if (localStorage.getItem('paymentInProgress') === 'true') {
+      if (isPaymentInProgress()) {
         return false;
       }
 
-      const purchaseSuccess = localStorage.getItem('purchaseSuccess');
-      if (purchaseSuccess === 'true') {
-        const purchaseTime = localStorage.getItem('purchaseTime');
-        const now = Date.now();
+      if (hasRecentPurchaseSuccess()) {
+        setPurchaseComplete(true);
 
-        if (purchaseTime && (now - parseInt(purchaseTime)) < 5 * 60 * 1000) {
-          setPurchaseComplete(true);
-          // NOTE: Toast is already shown by payment hooks - just redirect silently
-
-          setTimeout(() => {
-            localStorage.removeItem('purchaseSuccess');
-            localStorage.removeItem('purchaseTime');
-            localStorage.removeItem('pendingOrderId');
-            localStorage.removeItem('paystackReference');
-            localStorage.removeItem('paymentInProgress');
-
-            window.location.href = '/library';
-          }, 1500);
-          return true;
-        } else {
-          localStorage.removeItem('purchaseSuccess');
-          localStorage.removeItem('purchaseTime');
-          localStorage.removeItem('pendingOrderId');
-          localStorage.removeItem('paystackReference');
-          localStorage.removeItem('paymentInProgress');
-        }
+        setTimeout(() => {
+          clearPurchaseSuccess();
+          clearPaymentSession();
+          window.location.href = "/library";
+        }, 1500);
+        return true;
       }
+
+      clearPurchaseSuccess();
+      clearPaymentSession();
+
       return false;
     };
 
@@ -85,32 +140,28 @@ export default function Cart() {
       return;
     }
 
-    // Setup purchase listener
     const setupPurchaseListener = () => {
-      if (!user) return { unsubscribe: () => { } };
+      if (!user) return { unsubscribe: () => {} };
 
       return supabase
-        .channel('purchased-beats-changes')
+        .channel("purchased-beats-changes")
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'user_purchased_beats',
-            filter: `user_id=eq.${user.id}`
+            event: "INSERT",
+            schema: "public",
+            table: "user_purchased_beats",
+            filter: `user_id=eq.${user.id}`,
           },
-          (payload) => {
-            // Don't redirect if a payment is currently in progress (prevents cutting off checkout)
-            if (localStorage.getItem('paymentInProgress') === 'true') {
-              console.log('Cart: Ignoring realtime update - payment in progress');
+          () => {
+            if (isPaymentInProgress()) {
               return;
             }
 
             clearCart();
-            localStorage.setItem('purchaseSuccess', 'true');
-            localStorage.setItem('purchaseTime', Date.now().toString());
+            markPurchaseSuccess();
 
-            window.location.href = '/library';
+            window.location.href = "/library";
           }
         )
         .subscribe();
@@ -123,70 +174,59 @@ export default function Cart() {
     };
   }, [user, clearCart]);
 
-  // Handle remove item
-  const handleRemoveItem = async (beatId: string) => {
+  const handleRemoveItem = (itemId: string) => {
     try {
-      removeFromCart(beatId);
+      removeFromCart(itemId);
       toast.success("Item removed from cart");
-    } catch (error) {
+    } catch {
       toast.error("Failed to remove item");
     }
   };
 
-  // Handle complete cart clearing
   const handleClearCart = () => {
     try {
       clearCart();
       toast.success("Cart cleared successfully");
-    } catch (error) {
+    } catch {
       toast.error("Failed to clear cart");
     }
   };
 
-  // Handle successful payment
   const handlePaymentSuccess = () => {
     clearCart();
-
-    // Check onboarding completion after successful purchase
     checkAndCompleteOnboarding();
-
-    localStorage.setItem('purchaseSuccess', 'true');
-    localStorage.setItem('purchaseTime', Date.now().toString());
-
-    // NOTE: Toast is already shown by payment hooks - just redirect silently
+    markPurchaseSuccess();
     setPurchaseComplete(true);
 
     setTimeout(() => {
-      window.location.href = '/library';
+      window.location.href = "/library";
     }, 1500);
   };
 
-  // Navigation functions
   const handleContinueShopping = () => {
-    navigate('/');
+    navigate("/");
   };
 
-  // Enhanced Solana checkout
   const handleOpenSolanaCheckout = async () => {
     if (!cartItems || cartItems.length === 0) {
-      toast.error('Your cart is empty');
+      toast.error("Your cart is empty");
       return;
     }
 
     if (!user) {
-      toast.error('Please log in to make a purchase');
-      navigate('/login');
+      toast.error("Please log in to make a purchase");
+      navigate("/login");
       return;
     }
 
     if (!isConnected) {
-      toast.error('Please connect your Solana wallet first');
+      toast.error("Please connect your Solana wallet first");
       return;
     }
 
     if (needsAuth) {
-      toast.error('Please log in to sync your wallet');
-      navigate('/login');
+      toast.error("Please log in to sync your wallet");
+      navigate("/login");
       return;
     }
 
@@ -195,12 +235,12 @@ export default function Cart() {
       return;
     }
 
-    if (syncStatus === 'syncing') {
-      toast.error('Please wait for wallet to sync with your account');
+    if (syncStatus === "syncing") {
+      toast.error("Please wait for wallet to sync with your account");
       return;
     }
 
-    if (syncStatus === 'error') {
+    if (syncStatus === "error") {
       toast.error('Wallet sync failed. Please try "Force Sync" or reconnect your wallet');
       return;
     }
@@ -210,392 +250,240 @@ export default function Cart() {
       return;
     }
 
-    setIsPreparingCheckout(true);
-
-    try {
-      const producerIds = cartItems.map(item =>
-        item.itemType === 'beat' ? item.beat?.producer_id : item.soundpack?.producer_id
-      ).filter(Boolean);
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
-      );
-
-      const fetchPromise = supabase
-        .from('users')
-        .select('id, wallet_address, stage_name')
-        .in('id', producerIds);
-
-      const response = await Promise.race([
-        fetchPromise,
-        timeoutPromise
-      ]) as { data: any[] | null; error: any };
-
-      const producersData = response?.data;
-      const error = response?.error;
-
-      if (error) {
-        throw new Error('Error validating producer payment information');
-      }
-
-      const producerWallets: Record<string, string> = {};
-      const producersWithoutWallets: string[] = [];
-
-      if (producersData && Array.isArray(producersData)) {
-        producersData.forEach(producer => {
-          if (producer.wallet_address) {
-            producerWallets[producer.id] = producer.wallet_address;
-          } else {
-            producersWithoutWallets.push(producer.stage_name || 'Unknown Producer');
-          }
-        });
-      }
-
-      // Log producers without wallets for platform tracking (but don't block checkout)
-      if (producersWithoutWallets.length > 0) {
-        console.log(`Producers without wallets (will use platform fallback): ${producersWithoutWallets.join(', ')}`);
-      }
-
-      const updatedCartItems = cartItems.map(item => {
-        const producerId = item.itemType === 'beat' ? item.beat?.producer_id : item.soundpack?.producer_id;
-        const walletAddress = producerId ? producerWallets[producerId] : null;
-
-        if (item.itemType === 'beat') {
-          return {
-            ...item,
-            beat: {
-              ...item.beat,
-              producer_wallet_address: walletAddress || (item.beat as any)?.producer_wallet_address || null
-            }
-          };
-        } else {
-          return {
-            ...item,
-            soundpack: {
-              ...item.soundpack,
-              producer_wallet: walletAddress || item.soundpack?.producer_wallet || null
-            }
-          };
-        }
-      });
-
-      setBeatsWithWalletAddresses(updatedCartItems);
-      setIsSolanaDialogOpen(true);
-    } catch (err: any) {
-      toast.error(err.message || 'Error preparing checkout information');
-    } finally {
-      setIsPreparingCheckout(false);
-    }
-  };
-
-  // Calculate individual item price for display
-  const getItemPrice = (item: any) => {
-    const licenseType = item.licenseType;
-    const data = item.itemType === 'soundpack' ? item.soundpack : item.beat;
-
-    if (!data) {
-      console.error('No data found for item:', item);
-      return 0;
+    if (checkoutLineItems.length !== cartItems.length) {
+      toast.error("Some cart items could not be prepared for checkout. Please refresh your cart.");
+      return;
     }
 
-    if (currency === 'NGN') {
-      if (licenseType === 'basic') return data.basic_license_price_local || 0;
-      if (licenseType === 'premium') return data.premium_license_price_local || 0;
-      if (licenseType === 'exclusive') return data.exclusive_license_price_local || 0;
-    } else {
-      if (licenseType === 'basic') return data.basic_license_price_diaspora || 0;
-      if (licenseType === 'premium') return data.premium_license_price_diaspora || 0;
-      if (licenseType === 'exclusive') return data.exclusive_license_price_diaspora || 0;
+    const invalidPricedItems = checkoutLineItems.filter((item) => item.price <= 0);
+    if (invalidPricedItems.length > 0) {
+      toast.error("Some cart items have invalid pricing. Please review your cart before checkout.");
+      return;
     }
 
-    return 0;
+    setIsSolanaDialogOpen(true);
   };
 
-  // Prepare items for Solana checkout
-  const prepareSolanaCartItems = () => {
-    const itemsToUse = beatsWithWalletAddresses.length > 0 ? beatsWithWalletAddresses : cartItems;
-
-    return itemsToUse.map((item: any) => {
-      // Unified data extraction for beats and soundpacks
-      const isBeat = item.itemType === 'beat';
-      const data = isBeat ? item.beat : item.soundpack;
-      const price = getItemPrice(item);
-
-      // Extremely defensive ID extraction
-      const product_id = data?.id || item.itemId || item.id || (isBeat ? 'unknown_beat_id' : 'unknown_pack_id');
-      const title = data?.title || item.title || (isBeat ? 'Unknown Beat' : 'Unknown Soundpack');
-
-      return {
-        id: product_id,
-        title: title,
-        price: price,
-        thumbnail_url: (isBeat ? data?.cover_image_url : data?.cover_art_url) || '',
-        quantity: 1,
-        producer_wallet: (isBeat ? data?.producer_wallet_address : data?.producer_wallet) || ''
-      };
-    });
-  };
-
-  // Error view
   if (error) {
     return (
-      <MainLayoutWithPlayer>
-        <div className="container py-8 pb-32 md:pb-8 flex justify-center items-center min-h-[60vh]">
-          <div className="text-center max-w-md mx-auto p-6 bg-destructive/10 rounded-lg border border-destructive/20">
-            <div className="w-12 h-12 bg-destructive/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Unable to load cart</h2>
-            <p className="text-muted-foreground mb-6">
-              {error}
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Button onClick={() => window.location.reload()} variant="outline">
+      <div className="container py-20 px-4 md:px-6">
+        <CartStatePanel
+          title="Archive Error"
+          body={error}
+          icon={<AlertTriangle className="h-10 w-10 text-red-500" />}
+          action={
+            <div className="flex gap-4">
+              <Button onClick={() => window.location.reload()} variant="outline" className="h-12 px-6 rounded-xl border-white/10 font-bold">
                 Reload Page
               </Button>
-              <Button onClick={() => refreshCartFromStorage()}>
-                Try Again
+              <Button onClick={() => refreshCartFromStorage()} className="h-12 px-6 rounded-xl bg-white text-black font-bold">
+                Retry
               </Button>
             </div>
-          </div>
-        </div>
-      </MainLayoutWithPlayer>
+          }
+        />
+      </div>
     );
   }
 
-  // Simple loading view
   if (isLoading) {
     return (
-      <MainLayoutWithPlayer>
-        <div className="container py-8 pb-32 md:pb-8 flex justify-center items-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Loading your cart...</p>
-          </div>
-        </div>
-      </MainLayoutWithPlayer>
+      <div className="container py-20 px-4 md:px-6">
+        <CartStatePanel
+          title="Loading Cart"
+          body="Fetching your cart items and sound details..."
+          icon={<LoaderCircle className="h-10 w-10 animate-spin text-[#9A3BDC]" />}
+        />
+      </div>
     );
   }
 
-  // Purchase complete view
   if (purchaseComplete) {
     return (
-      <MainLayoutWithPlayer>
-        <div className="container py-8 pb-32 md:pb-8 flex justify-center items-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Payment Successful!</h2>
-            <p className="text-muted-foreground mb-6">
-              Redirecting to your library...
-            </p>
-          </div>
-        </div>
-      </MainLayoutWithPlayer>
+      <div className="container py-20 px-4 md:px-6">
+        <CartStatePanel
+          title="Payment Successful"
+          body="Thank you! Your items are now available in your personal library."
+          icon={<CircleCheckBig className="h-10 w-10 text-emerald-500" />}
+        />
+      </div>
     );
   }
 
-  // Main cart view
   return (
-    <MainLayoutWithPlayer>
-      <div className="container py-8 pb-32 md:pb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <ShoppingCart className="mr-2 h-6 w-6" />
-            <h1 className="text-2xl font-bold">Your Cart ({itemCount} items)</h1>
-          </div>
-        </div>
-
-        {(!cartItems || cartItems.length === 0) ? (
-          <div className="text-center py-12">
-            <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
-            <p className="text-muted-foreground mb-6">
-              Browse our marketplace to find beats you'd like to purchase.
-            </p>
-            <Button onClick={handleContinueShopping}>
-              Continue Shopping
+    <div className="container py-8 md:py-12 px-4 md:px-6 max-w-7xl">
+      {(!cartItems || cartItems.length === 0) ? (
+        <CartStatePanel
+          title="Cart Empty"
+          body="Your cart is currently empty. Explore the marketplace to find your next sound."
+          icon={<ShoppingCart className="h-10 w-10 text-white/20" />}
+          action={
+            <Button onClick={handleContinueShopping} className="h-12 px-8 rounded-xl font-black uppercase italic tracking-tighter bg-white text-black hover:bg-white/90">
+              Go to Marketplace <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              <div className="space-y-3">
-                {cartItems.map((item) => {
-                  if (item.itemType === 'soundpack') {
-                    return (
-                      <SoundpackCartItemCard
-                        key={`${item.itemId}-${item.addedAt}`}
-                        item={item as any}
-                        price={getItemPrice(item)}
-                        onRemove={handleRemoveItem}
-                      />
-                    );
-                  }
-                  if (!item.beat) return null;
+          }
+        />
+      ) : (
+        <div className="grid gap-12 xl:grid-cols-[1fr_400px]">
+          <div className="space-y-10">
+            <header className="space-y-4">
+              <SectionTitle 
+                title="Order Summary" 
+                icon={<ShoppingCart className="h-6 w-6" />}
+              />
+              <p className="text-white/40 italic text-lg">
+                Review your items and complete your purchase.
+              </p>
+              
+              <div className="flex flex-wrap gap-3">
+                <span className="bg-white/5 border border-white/10 rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest text-white/60 italic">{itemCount} ITEMS</span>
+                <span className="bg-[#9A3BDC]/10 border border-[#9A3BDC]/20 rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest text-[#9A3BDC] italic">TOTAL: {formatMoney(totalAmount, currency)}</span>
+                <button onClick={handleClearCart} className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors italic">Clear Cart</button>
+              </div>
+            </header>
+
+            <div className="space-y-6">
+              {cartItems.map((item) => {
+                if (isSoundpackCartItem(item)) {
                   return (
-                    <CartItemCard
+                    <SoundpackCartItemCard
                       key={`${item.itemId}-${item.addedAt}`}
-                      item={item as any}
-                      price={getItemPrice(item)}
+                      item={item}
+                      price={getCartItemUnitPrice(item, currency)}
                       onRemove={handleRemoveItem}
                     />
                   );
-                })}
-              </div>
-
-              <div className="mt-6">
-                <Button
-                  variant="outline"
-                  className="text-muted-foreground"
-                  onClick={handleClearCart}
-                >
-                  Clear Cart
-                </Button>
-              </div>
+                }
+                if (!isBeatCartItem(item)) return null;
+                return (
+                  <CartItemCard
+                    key={`${item.itemId}-${item.addedAt}`}
+                    item={item}
+                    price={getCartItemUnitPrice(item, currency)}
+                    onRemove={handleRemoveItem}
+                  />
+                );
+              })}
             </div>
 
-            <div className="lg:col-span-1">
-              <Card className="sticky top-24 overflow-hidden border-primary/10 shadow-md hover:shadow-lg transition-shadow duration-300">
-                <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-primary/10">
-                  <CardTitle className="text-xl">Order Summary</CardTitle>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center">
+                   <ShieldCheck className="h-5 w-5 text-[#9A3BDC]" />
+                </div>
+                <div>
+                   <h4 className="text-xs font-black uppercase tracking-widest text-white mb-2 italic">Secured Rights</h4>
+                   <p className="text-white/30 text-xs italic leading-relaxed">Full legal usage rights granted upon completion.</p>
+                </div>
+              </div>
+              <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center">
+                   <Lock className="h-5 w-5 text-[#9A3BDC]" />
+                </div>
+                <div>
+                   <h4 className="text-xs font-black uppercase tracking-widest text-white mb-2 italic">Secure Checkout</h4>
+                   <p className="text-white/30 text-xs italic leading-relaxed">All payments are protected by industry-standard encryption.</p>
+                </div>
+              </div>
+              <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center">
+                   <Zap className="h-5 w-5 text-[#9A3BDC]" />
+                </div>
+                <div>
+                   <h4 className="text-xs font-black uppercase tracking-widest text-white mb-2 italic">Instant Access</h4>
+                   <p className="text-white/30 text-xs italic leading-relaxed">Items available in your library immediately after purchase.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside className="space-y-6 xl:sticky xl:top-24 self-start">
+            <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent">
+              <Card className="bg-[#030407] border-none rounded-[2.4rem] overflow-hidden">
+                <CardHeader className="p-8 pb-4">
+                  <CardTitle className="text-sm font-black uppercase tracking-widest text-white/40 italic">Order Total</CardTitle>
                 </CardHeader>
-                <CardContent className="p-5 space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal ({itemCount} items)</span>
-                      <span className="font-medium">
-                        {currency === 'NGN' ? (
-                          <span>₦{Math.round(totalAmount).toLocaleString()}</span>
-                        ) : (
-                          <span>${Math.round(totalAmount).toLocaleString()}</span>
-                        )}
-                      </span>
-                    </div>
+                <CardContent className="p-8 pt-0 space-y-6">
+                  <div className="flex items-end justify-between">
+                     <span className="text-white/40 text-sm font-bold uppercase italic">{itemCount} Items</span>
+                     <span className="text-3xl font-black text-white italic tracking-tighter uppercase">{formatMoney(totalAmount, currency)}</span>
                   </div>
 
-                  <Separator className="my-3" />
+                  <Separator className="bg-white/10" />
 
-                  <div className="flex justify-between font-semibold text-lg">
-                    <span>Total</span>
-                    <span className="text-primary">
-                      {currency === 'NGN' ? (
-                        <span>₦{Math.round(totalAmount).toLocaleString()}</span>
-                      ) : (
-                        <span>${Math.round(totalAmount).toLocaleString()}</span>
-                      )}
-                    </span>
-                  </div>
+                  <p className="text-white/40 text-xs italic leading-relaxed">
+                    By completing this order, you authorize the transfer of funds and confirm acceptance of the licensing agreements.
+                  </p>
 
-                  {currency === 'USD' && (
-                    <div className="mt-4 py-3 px-4 bg-secondary/30 rounded-md flex flex-col gap-3">
-                      <div className="text-sm font-medium">Pay with USDC on Solana</div>
-                      <div className="w-full">
-                        <WalletButton buttonClass="w-full justify-center" />
+                  {currency === "USD" && (
+                    <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/5 space-y-4">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white italic">
+                        <Wallet className="h-4 w-4 text-[#9A3BDC]" />
+                        Pay with USDC (Solana)
                       </div>
+                      <WalletButton buttonClass="w-full h-12 rounded-xl justify-center font-bold bg-white/5 border-white/10 hover:bg-white/10" />
 
-                      {!user && (
-                        <div className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                          ⚠️ Login required to sync wallet
-                        </div>
-                      )}
-                      {user && !isConnected && (
-                        <div className="text-xs text-gray-600 dark:text-gray-400 text-center">
-                          Connect your wallet to continue
-                        </div>
-                      )}
-                      {user && isConnected && needsAuth && (
-                        <div className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                          ⚠️ Please log in to sync wallet
-                        </div>
-                      )}
-                      {user && isConnected && walletMismatch && (
-                        <div className="text-xs text-red-600 dark:text-red-400 text-center">
-                          ⚠️ Wallet mismatch - use "Force Sync" or connect saved wallet ({storedWalletAddress?.slice(0, 8)}...)
-                        </div>
-                      )}
-                      {user && isConnected && !needsAuth && !walletMismatch && syncStatus === 'syncing' && (
-                        <div className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                          ⏳ Syncing wallet... Please wait
-                        </div>
-                      )}
-                      {user && isConnected && !needsAuth && !walletMismatch && syncStatus === 'error' && (
-                        <div className="text-xs text-red-600 dark:text-red-400 text-center">
-                          ❌ Sync failed - try "Force Sync"
-                        </div>
-                      )}
-                      {user && isWalletSynced && syncStatus === 'success' && (
-                        <div className="text-xs text-green-600 dark:text-green-400 text-center">
-                          ✓ Wallet connected and synced
-                        </div>
-                      )}
+                      <div className="space-y-2 text-[10px] italic">
+                        {!user && <div className="text-amber-500 font-bold uppercase tracking-widest">VERIFICATION REQUIRED.</div>}
+                        {user && !isConnected && <div className="text-white/40 uppercase tracking-widest">Awaiting Wallet Link...</div>}
+                        {user && isConnected && needsAuth && <div className="text-amber-500 font-bold uppercase tracking-widest">Re-authorization needed.</div>}
+                        {user && isWalletSynced && (
+                          <div className="text-emerald-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                             <CircleCheckBig size={10} /> Wallet Connected.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="flex flex-col space-y-3 p-5 bg-gradient-to-r from-primary/5 to-secondary/5 border-t border-primary/10">
-                  {currency === 'NGN' ? (
-                    <PaymentHandler
-                      totalAmount={totalAmount}
-                      onSuccess={handlePaymentSuccess}
-                    />
+                <CardFooter className="p-8 pt-4 flex flex-col gap-4">
+                  {currency === "NGN" ? (
+                    <div className="w-full">
+                      <PaymentHandler totalAmount={totalAmount} onSuccess={handlePaymentSuccess} />
+                    </div>
                   ) : (
                     <Button
                       onClick={handleOpenSolanaCheckout}
-                      className="w-full py-6 text-base shadow-md hover:shadow-lg transition-all duration-300"
-                      variant="premium"
-                      size="lg"
-                      disabled={!cartItems || cartItems.length === 0 || isPreparingCheckout || !user || !isConnected || needsAuth || walletMismatch || syncStatus === 'syncing' || syncStatus === 'error' || !isWalletSynced}
+                      className="w-full h-14 rounded-2xl font-black uppercase italic tracking-tighter text-lg bg-[#9A3BDC] text-white hover:bg-[#9A3BDC]/90 shadow-[0_0_20px_rgba(154,59,220,0.3)]"
+                      disabled={
+                        !cartItems ||
+                        cartItems.length === 0 ||
+                        !user ||
+                        !isConnected ||
+                        needsAuth ||
+                        walletMismatch ||
+                        syncStatus === "syncing" ||
+                        syncStatus === "error" ||
+                        !isWalletSynced
+                      }
                     >
-                      {isPreparingCheckout ? (
-                        <>
-                          <span className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2" />
-                          Preparing...
-                        </>
-                      ) : !user ? (
-                        <>Login Required</>
-                      ) : !isConnected ? (
-                        <>Connect Wallet First</>
-                      ) : needsAuth ? (
-                        <>Login to Sync Wallet</>
-                      ) : walletMismatch ? (
-                        <>Wrong Wallet Connected</>
-                      ) : syncStatus === 'syncing' ? (
-                        <>Syncing Wallet...</>
-                      ) : syncStatus === 'error' ? (
-                        <>Sync Failed - Try Force Sync</>
-                      ) : !isWalletSynced ? (
-                        <>Wallet Not Synced</>
-                      ) : (
-                        <>Pay with USDC (${Math.round(totalAmount)})</>
-                      )}
+                      {!user ? "VERIFY IDENTITY" :
+                        !isConnected ? "LINK WALLET" :
+                          needsAuth ? "RE-AUTHORIZE" :
+                            walletMismatch ? "INVALID COORDS" :
+                              syncStatus === "syncing" ? "SYNCING..." :
+                                syncStatus === "error" ? "SYNC FAILURE" :
+                                  !isWalletSynced ? "NOT SYNCED" :
+                                    `PAY ${formatMoney(totalAmount, "USD")}`}
                     </Button>
                   )}
 
-                  <Button
-                    variant="outline"
-                    className="w-full shadow-sm hover:shadow transition-all"
-                    onClick={handleContinueShopping}
-                  >
+                  <Button variant="ghost" className="w-full h-12 rounded-xl text-white/40 font-bold uppercase tracking-widest italic hover:text-white" onClick={handleContinueShopping}>
                     Continue Shopping
                   </Button>
                 </CardFooter>
               </Card>
             </div>
-          </div>
-        )}
-      </div>
+          </aside>
+        </div>
+      )}
 
       <SolanaCheckoutDialog
         open={isSolanaDialogOpen}
         onOpenChange={setIsSolanaDialogOpen}
-        cartItems={prepareSolanaCartItems()}
+        cartItems={solanaCheckoutItems}
         onCheckoutSuccess={handlePaymentSuccess}
       />
-    </MainLayoutWithPlayer>
+    </div>
   );
 }

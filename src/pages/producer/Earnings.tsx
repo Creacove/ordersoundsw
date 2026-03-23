@@ -1,10 +1,9 @@
+
 import { useEffect, useState } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, TrendingUp, BarChart3, Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { DollarSign, TrendingUp, BarChart3, Calendar, Clock } from "lucide-react";
 import { getProducerStats, ProducerStats } from "@/lib/producerStats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BeatSalesTable } from "@/components/producer/dashboard/BeatSalesTable";
@@ -12,6 +11,7 @@ import { EarningsChart } from "@/components/producer/dashboard/EarningsChart";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { formatCurrency } from "@/utils/formatters";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 
 type Payout = Database['public']['Tables']['payouts']['Row'];
 
@@ -24,9 +24,8 @@ export default function Earnings() {
     const [payoutsLoading, setPayoutsLoading] = useState(true);
 
     useEffect(() => {
-        document.title = "Earnings | OrderSOUNDS";
+        document.title = "Earnings Dashboard | OrderSOUNDS";
 
-        // Redirect to login if not authenticated or not a producer
         if (!user) {
             navigate('/login', { state: { from: '/producer/earnings' } });
         } else if (user.role !== 'producer') {
@@ -54,7 +53,6 @@ export default function Earnings() {
             if (user && user.id) {
                 setPayoutsLoading(true);
                 try {
-                    // Get payouts for this producer
                     const { data: payoutsData, error: payoutsError } = await supabase
                         .from('payouts')
                         .select('*')
@@ -76,22 +74,10 @@ export default function Earnings() {
         fetchPayouts();
     }, [user, currency]);
 
-    // If not logged in or not a producer, show login prompt
     if (!user || user.role !== 'producer') {
-        return (
-            <MainLayout>
-                <div className="container py-16">
-                    <div className="text-center">
-                        <h1 className="heading-responsive-md mb-4">Producer Access Required</h1>
-                        <p className="text-responsive-base mb-4">You need to be logged in as a producer to access this page.</p>
-                        <Button onClick={() => navigate('/login')}>Login</Button>
-                    </div>
-                </div>
-            </MainLayout>
-        );
+        return null;
     }
 
-    // Format currency helper
     const formatStatsCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
@@ -105,177 +91,183 @@ export default function Earnings() {
         switch (status) {
             case 'successful':
             case 'completed':
-                return <div className="flex items-center text-green-600 bg-green-50 px-2 py-1 rounded text-xs font-medium"><CheckCircle className="w-3 h-3 mr-1" /> Paid</div>;
+                return <Badge className="bg-emerald-500/10 text-emerald-500 border-none rounded-full px-3 py-0.5 font-bold uppercase italic tracking-widest text-[9px]">Completed</Badge>;
             case 'pending':
-                return <div className="flex items-center text-amber-600 bg-amber-50 px-2 py-1 rounded text-xs font-medium"><Clock className="w-3 h-3 mr-1" /> Pending</div>;
+                return <Badge className="bg-yellow-500/10 text-yellow-500 border-none rounded-full px-3 py-0.5 font-bold uppercase italic tracking-widest text-[9px]">Pending</Badge>;
             case 'failed':
-                return <div className="flex items-center text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-medium"><AlertCircle className="w-3 h-3 mr-1" /> Failed</div>;
+                return <Badge className="bg-red-500/10 text-red-500 border-none rounded-full px-3 py-0.5 font-bold uppercase italic tracking-widest text-[9px]">Failed</Badge>;
             default:
-                return <div className="px-2 py-1 rounded text-xs bg-gray-100">{status}</div>;
+                return <Badge className="bg-white/5 text-white/40 border-none rounded-full px-3 py-0.5 font-bold uppercase italic tracking-widest text-[9px]">{status}</Badge>;
         }
     };
 
     return (
-        <MainLayout>
-            <div className="container py-6 md:py-8 space-y-8">
-                <div>
-                    <h1 className="heading-responsive-lg text-3xl font-bold tracking-tight">Earnings</h1>
-                    <p className="text-muted-foreground mt-2">Track your revenue, sales performance, and payouts.</p>
+        <div className="container py-8 md:py-12 px-4 md:px-6 max-w-7xl">
+            <div className="mb-12">
+                <SectionTitle 
+                  title="Earnings Dashboard" 
+                  icon={<DollarSign className="h-6 w-6" />}
+                />
+                <p className="text-white/40 italic mt-2 text-lg">Detailed overview of your sales and payouts.</p>
+            </div>
+
+            <div className="space-y-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/30 italic">Total Revenue</span>
+                            <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[#9A3BDC]">
+                                <DollarSign size={16} />
+                            </div>
+                        </div>
+                        {statsLoading ? <Skeleton className="h-8 w-24 bg-white/5" /> : (
+                            <div>
+                                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">{formatStatsCurrency(stats?.totalRevenue || 0)}</h3>
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic mt-1">Lifetime Earnings</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/30 italic">This Month</span>
+                            <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[#9A3BDC]">
+                                <Calendar size={16} />
+                            </div>
+                        </div>
+                        {statsLoading ? <Skeleton className="h-8 w-24 bg-white/5" /> : (
+                            <div>
+                                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">{formatStatsCurrency(stats?.monthlyRevenue || 0)}</h3>
+                                <div className="flex items-center gap-1 mt-1">
+                                    <TrendingUp size={10} className={stats && stats.revenueChange >= 0 ? "text-emerald-500" : "text-red-500"} />
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest italic ${stats && stats.revenueChange >= 0 ? "text-emerald-500/50" : "text-red-500/50"}`}>
+                                        {stats && stats.revenueChange >= 0 ? `+${stats.revenueChange}%` : `${stats?.revenueChange || 0}%`} Growth
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/30 italic">Beats Sold</span>
+                            <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[#9A3BDC]">
+                                <BarChart3 size={16} />
+                            </div>
+                        </div>
+                        {statsLoading ? <Skeleton className="h-8 w-16 bg-white/5" /> : (
+                            <div>
+                                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">{stats?.beatsSold || 0}</h3>
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic mt-1">Total Sales</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/30 italic">Sales Growth</span>
+                            <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[#9A3BDC]">
+                                <TrendingUp size={16} />
+                            </div>
+                        </div>
+                        {statsLoading ? <Skeleton className="h-8 w-16 bg-white/5" /> : (
+                            <div>
+                                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">{stats?.salesChange || 0}%</h3>
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic mt-1">Yearly Growth</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Stats Cards Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            {statsLoading ? (
-                                <Skeleton className="h-8 w-24" />
-                            ) : (
-                                <>
-                                    <div className="text-2xl font-bold">{formatStatsCurrency(stats?.totalRevenue || 0)}</div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Lifetime earnings
-                                    </p>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            {statsLoading ? (
-                                <Skeleton className="h-8 w-24" />
-                            ) : (
-                                <>
-                                    <div className="text-2xl font-bold">
-                                        {formatStatsCurrency(stats?.monthlyRevenue || 0)}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {stats && stats.revenueChange > 0 ? `+${stats.revenueChange}%` : `${stats?.revenueChange || 0}%`} from last month
-                                    </p>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Sales</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            {statsLoading ? (
-                                <Skeleton className="h-8 w-16" />
-                            ) : (
-                                <>
-                                    <div className="text-2xl font-bold">{stats?.beatsSold || 0}</div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Total beats purchased
-                                    </p>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Growth</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            {statsLoading ? (
-                                <Skeleton className="h-8 w-16" />
-                            ) : (
-                                <>
-                                    <div className="text-2xl font-bold">{stats?.salesChange || 0}%</div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Year over year growth
-                                    </p>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
+                <div className="space-y-10">
+                    <div className="flex items-center gap-8">
+                        <h2 className="text-sm font-black uppercase tracking-widest text-white/20 italic whitespace-nowrap">Revenue History</h2>
+                        <div className="h-px w-full bg-white/5" />
+                    </div>
+                    <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent">
+                      <div className="bg-[#030407] rounded-[2.4rem] p-8 md:p-12 overflow-hidden">
+                        <EarningsChart data={stats?.revenueByMonth || []} loading={statsLoading} />
+                      </div>
+                    </div>
                 </div>
 
-                {/* Charts Section */}
-                <div className="grid grid-cols-1 gap-4">
-                    <EarningsChart data={stats?.revenueByMonth || []} loading={statsLoading} />
-                </div>
-
-                {/* Payouts Section */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Payouts</CardTitle>
-                        <CardDescription>History of funds transferred to your bank account</CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                <div className="space-y-10">
+                    <div className="flex items-center gap-8">
+                        <h2 className="text-sm font-black uppercase tracking-widest text-white/20 italic whitespace-nowrap">Payout History</h2>
+                        <div className="h-px w-full bg-white/5" />
+                    </div>
+                    <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent">
+                      <div className="bg-[#030407] rounded-[2.4rem] p-8 overflow-hidden">
                         {payoutsLoading ? (
-                            <div className="space-y-2">
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
+                            <div className="space-y-4">
+                                <Skeleton className="h-16 w-full rounded-2xl bg-white/5" />
+                                <Skeleton className="h-16 w-full rounded-2xl bg-white/5" />
+                                <Skeleton className="h-16 w-full rounded-2xl bg-white/5" />
                             </div>
                         ) : payouts.length > 0 ? (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b">
-                                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Date</th>
-                                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Amount</th>
-                                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
-                                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-right">Reference</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {payouts.map((payout) => (
-                                            <tr key={payout.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                                <td className="p-4 align-middle">
-                                                    {payout.payout_date ? new Date(payout.payout_date).toLocaleDateString() :
-                                                        payout.created_at ? new Date(payout.created_at).toLocaleDateString() : 'N/A'}
-                                                </td>
-                                                <td className="p-4 align-middle font-medium">
-                                                    {formatCurrency(payout.amount)}
-                                                </td>
-                                                <td className="p-4 align-middle">
-                                                    {getStatusBadge(payout.status)}
-                                                </td>
-                                                <td className="p-4 align-middle text-right font-mono text-xs text-muted-foreground">
-                                                    {payout.transaction_reference || '—'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                              <table className="w-full text-sm">
+                                  <thead>
+                                      <tr className="border-b border-white/5">
+                                          <th className="h-14 px-4 text-left align-middle font-black uppercase italic tracking-widest text-white/30 text-[10px]">Date</th>
+                                          <th className="h-14 px-4 text-left align-middle font-black uppercase italic tracking-widest text-white/30 text-[10px]">Amount</th>
+                                          <th className="h-14 px-4 text-left align-middle font-black uppercase italic tracking-widest text-white/30 text-[10px]">Status</th>
+                                          <th className="h-14 px-4 text-right align-middle font-black uppercase italic tracking-widest text-white/30 text-[10px]">Reference</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {payouts.map((payout) => (
+                                          <tr key={payout.id} className="border-b border-white/5 transition-colors hover:bg-white/[0.02]">
+                                              <td className="p-6 align-middle text-white/40 font-bold italic">
+                                                  {payout.payout_date ? new Date(payout.payout_date).toLocaleDateString() :
+                                                      payout.created_at ? new Date(payout.created_at).toLocaleDateString() : 'N/A'}
+                                              </td>
+                                              <td className="p-6 align-middle font-black text-white italic tracking-tighter text-base">
+                                                  {formatCurrency(payout.amount)}
+                                              </td>
+                                              <td className="p-6 align-middle">
+                                                  {getStatusBadge(payout.status)}
+                                              </td>
+                                              <td className="p-6 align-middle text-right font-mono text-[10px] text-white/20 italic">
+                                                  {payout.transaction_reference || '—'}
+                                              </td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center bg-muted/5 rounded-lg border border-dashed">
-                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                    <Clock className="h-6 w-6 text-muted-foreground" />
+                            <div className="flex flex-col items-center justify-center py-20 text-center bg-white/[0.01] rounded-[2rem] border border-dashed border-white/5">
+                                <div className="h-16 w-16 rounded-3xl bg-white/5 flex items-center justify-center mb-6">
+                                    <Clock className="h-8 w-8 text-white/10" />
                                 </div>
-                                <h3 className="font-semibold text-lg">No payouts yet</h3>
-                                <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-4">
-                                    Payouts will appear here once your earnings have been processed and sent to your bank account.
+                                <h3 className="font-black text-white italic tracking-tighter uppercase text-xl mb-2">No Payouts Yet</h3>
+                                <p className="text-white/30 italic max-w-sm mb-8 px-4">
+                                    Your payout history is empty. Once you've earned enough, payouts will be processed to your linked account.
                                 </p>
-                                <Button variant="outline" size="sm" onClick={() => navigate('/producer/settings')}>
-                                    Check Payout Settings
+                                <Button variant="outline" className="h-12 rounded-xl border-white/10 bg-white/5 text-white font-bold px-8 hover:bg-white/10 transition-all" onClick={() => navigate('/producer/settings')}>
+                                    Update Payment Info
                                 </Button>
                             </div>
                         )}
-                    </CardContent>
-                </Card>
+                      </div>
+                    </div>
+                </div>
 
-                {/* Beat Sales Performance Table */}
-                <div>
+                <div className="space-y-10">
+                    <div className="flex items-center gap-8">
+                        <h2 className="text-sm font-black uppercase tracking-widest text-white/20 italic whitespace-nowrap">Beat Sales</h2>
+                        <div className="h-px w-full bg-white/5" />
+                    </div>
                     <BeatSalesTable producerId={user?.id || ''} currency={currency} />
                 </div>
             </div>
-        </MainLayout>
+        </div>
     );
 }
+
+const Badge = ({ children, className }: { children: React.ReactNode, className?: string }) => (
+  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`}>
+    {children}
+  </span>
+);

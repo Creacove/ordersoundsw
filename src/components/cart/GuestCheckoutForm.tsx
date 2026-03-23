@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,11 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import WalletButton from '@/components/wallet/WalletButton';
+import { ensureUserProfile } from '@/features/auth/profileService';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+    return error instanceof Error ? error.message : fallback;
+};
 
 interface GuestCheckoutFormProps {
     onAccountCreated: (userId: string, walletAddress?: string) => void;
@@ -28,7 +33,7 @@ export function GuestCheckoutForm({ onAccountCreated, totalAmount, currency }: G
     const walletConnected = wallet.connected && wallet.publicKey;
     const walletAddress = wallet.publicKey?.toBase58();
 
-    const handleCreateAccountAndPay = async (e: React.FormEvent) => {
+    const handleCreateAccountAndPay = async (e: FormEvent) => {
         e.preventDefault();
 
         if (!email || !password) {
@@ -54,7 +59,11 @@ export function GuestCheckoutForm({ onAccountCreated, totalAmount, currency }: G
             console.log('Wallet address to link:', walletAddress);
 
             // Create account with buyer role and wallet (if connected)
-            const userData: Record<string, any> = {
+            const userData: {
+                role: 'buyer';
+                full_name: string;
+                wallet_address?: string;
+            } = {
                 role: 'buyer',
                 full_name: email.split('@')[0],
             };
@@ -87,42 +96,21 @@ export function GuestCheckoutForm({ onAccountCreated, totalAmount, currency }: G
 
             console.log('Account created successfully:', data.user.id);
 
-            // INSERT user row into users table (Supabase trigger may not exist)
-            const userRowData: Record<string, any> = {
-                id: data.user.id,
-                email: email,
+            if (!data.session?.user) {
+                toast.info('Account created. Please verify your email, then sign in before completing payment.');
+                navigate('/login');
+                setIsCreating(false);
+                return;
+            }
+
+            await ensureUserProfile(data.user, {
                 full_name: email.split('@')[0],
                 role: 'buyer',
                 status: 'active',
-            };
+                wallet_address: isUSD ? walletAddress : null,
+            });
 
-            // Add wallet address for USD users
-            if (isUSD && walletAddress) {
-                userRowData.wallet_address = walletAddress;
-            }
-
-            const { error: insertError } = await supabase
-                .from('users')
-                .insert([userRowData] as any);
-
-            if (insertError) {
-                // Could be duplicate key if trigger exists, that's OK
-                if (!insertError.message.includes('duplicate key')) {
-                    console.error('Failed to insert user row:', insertError);
-                } else {
-                    console.log('User row already exists (trigger created it)');
-
-                    // If trigger created the row, UPDATE with wallet address
-                    if (isUSD && walletAddress) {
-                        await supabase
-                            .from('users')
-                            .update({ wallet_address: walletAddress })
-                            .eq('id', data.user.id);
-                    }
-                }
-            } else {
-                console.log('User row created successfully with wallet:', walletAddress);
-            }
+            console.log('User profile ensured successfully with wallet:', walletAddress);
 
             // Migrate guest cart to user cart
             const guestCart = localStorage.getItem('cart_guest');
@@ -137,9 +125,9 @@ export function GuestCheckoutForm({ onAccountCreated, totalAmount, currency }: G
             // Notify parent component
             onAccountCreated(data.user.id, walletAddress);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Account creation error:', error);
-            toast.error(error.message || 'Failed to create account');
+            toast.error(getErrorMessage(error, 'Failed to create account'));
             setIsCreating(false);
         }
     };

@@ -1,9 +1,9 @@
-
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 // Audio processing edge function for OrderSOUNDS
 // Simply extracts first 30% of audio file for preview
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateRequest, createServiceRoleClient, requireRole } from "../_shared/auth.ts";
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -11,17 +11,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
 
-// Validate environment variables
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
-const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-const supabaseServiceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-if (!supabaseUrl || !supabaseServiceRole || !supabaseAnonKey) {
+if (!supabaseUrl) {
   console.error("Missing required environment variables");
 }
-
-// Use service role key for admin access to storage
-const supabase = createClient(supabaseUrl, supabaseServiceRole);
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -33,6 +26,18 @@ serve(async (req) => {
   }
 
   try {
+    const supabase = createServiceRoleClient();
+    const authResult = await authenticateRequest(req, supabase);
+    if ("response" in authResult) {
+      return authResult.response;
+    }
+
+    const actor = authResult.actor;
+    const roleResponse = requireRole(actor, ["producer", "admin"]);
+    if (roleResponse) {
+      return roleResponse;
+    }
+
     // Parse the request body
     const { fullTrackUrl } = await req.json();
 
@@ -54,9 +59,25 @@ serve(async (req) => {
 
     // Extract file path from URL
     const urlObj = new URL(fullTrackUrl);
+    const expectedOrigin = new URL(supabaseUrl).origin;
+    const allowedPathPrefix = "/storage/v1/object/public/beats/full-tracks/";
+    if (urlObj.origin !== expectedOrigin || !urlObj.pathname.startsWith(allowedPathPrefix)) {
+      console.error("Rejected preview generation for unexpected storage URL:", fullTrackUrl);
+      return new Response(JSON.stringify({
+        error: "Invalid full track URL",
+        status: "error"
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
     const pathParts = urlObj.pathname.split('/');
     // Determine the file path based on URL structure
-    let fileName = pathParts[pathParts.length - 1];
+    const fileName = pathParts[pathParts.length - 1];
     const fileBase = fileName.split('.')[0];
     const fileExt = fileName.split('.').pop() || 'mp3';
     const outputFileName = `preview_${fileBase}_${Date.now()}.${fileExt}`;

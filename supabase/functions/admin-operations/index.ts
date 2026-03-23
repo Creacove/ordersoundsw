@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateRequest, createServiceRoleClient, requireRole } from "../_shared/auth.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +15,10 @@ interface AdminOperationRequest {
   beatId?: string;
 }
 
+type WeightedBeat = {
+  id: string;
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -22,13 +26,20 @@ serve(async (req) => {
   }
 
   try {
-    // Create client for admin operations (uses service role key)
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabase = createServiceRoleClient();
+    const authResult = await authenticateRequest(req, supabase);
+    if ("response" in authResult) {
+      return authResult.response;
+    }
+
+    const actor = authResult.actor;
+    const roleResponse = requireRole(actor, ["admin"]);
+    if (roleResponse) {
+      return roleResponse;
+    }
 
     const { operation, count = 5, producerId, beatIds, beatId }: AdminOperationRequest = await req.json()
+    console.log(`Admin operation requested by ${actor.authUser.id}: ${operation}`);
     
     if (operation === 'set_producer_of_week') {
       if (!producerId) {
@@ -209,7 +220,7 @@ serve(async (req) => {
       }
 
       // Set selected beats as trending
-      const beatIdsList = randomBeats.map((beat: any) => beat.id)
+      const beatIdsList = (randomBeats as WeightedBeat[]).map((beat) => beat.id)
       const { error: updateError } = await supabase
         .from('beats')
         .update({ is_trending: true })
@@ -265,7 +276,7 @@ serve(async (req) => {
       }
 
       // Step 3: Set selected beats as featured
-      const beatIdsList = randomBeats.map((beat: any) => beat.id)
+      const beatIdsList = (randomBeats as WeightedBeat[]).map((beat) => beat.id)
       const { error: updateError } = await supabase
         .from('beats')
         .update({ is_featured: true })
@@ -320,7 +331,7 @@ serve(async (req) => {
       }
 
       // Step 3: Set selected beats as weekly picks
-      const beatIdsList = randomBeats.map((beat: any) => beat.id)
+      const beatIdsList = (randomBeats as WeightedBeat[]).map((beat) => beat.id)
       const { error: updateError } = await supabase
         .from('beats')
         .update({ is_weekly_pick: true })

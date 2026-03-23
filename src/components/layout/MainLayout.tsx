@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
@@ -18,46 +18,53 @@ export function MainLayout({ children, activeTab, currentPath, hideSidebar }: Ma
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isMobile = useIsMobile();
+  const location = useLocation();
   const isAnnouncementVisible = useAnnouncementVisible();
+  const resolvedPath = currentPath || location.pathname;
+  const isAuthPage = resolvedPath === "/login" || resolvedPath === "/signup" || resolvedPath === "/reset-password";
 
-  // Listen for sidebar open/close events
   useEffect(() => {
-    const handleSidebarChange = (event: CustomEvent) => {
-      setSidebarVisible(event.detail.isOpen);
+    const handleSidebarChange: EventListener = (event) => {
+      const sidebarEvent = event as CustomEvent<{ isOpen?: boolean }>;
+      setSidebarVisible(Boolean(sidebarEvent.detail?.isOpen));
     };
 
-    window.addEventListener('sidebarChange' as any, handleSidebarChange);
+    window.addEventListener("sidebarChange", handleSidebarChange);
     return () => {
-      window.removeEventListener('sidebarChange' as any, handleSidebarChange);
+      window.removeEventListener("sidebarChange", handleSidebarChange);
     };
   }, []);
-
-  // Check if the current path is an auth page
-  const isAuthPage = currentPath === "/login" || currentPath === "/signup" || currentPath === "/reset-password";
 
   return (
     <>
       <AnnouncementBanner />
-      <div className={`flex min-h-screen w-full transition-[padding] duration-300 ${isAnnouncementVisible ? 'pt-10' : 'pt-0'}`}>
-        {!hideSidebar && (
-          <Sidebar 
-            activeTab={activeTab} 
-            currentPath={currentPath} 
-            onCollapsedChange={setIsCollapsed}
-          />
-        )}
-        <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${!isMobile && !hideSidebar ? (isCollapsed ? "md:ml-[80px]" : "md:ml-[240px]") : ""}`}>
-          {/* Only show topbar if not explicitly hidden or if it's not an auth page with hideSidebar */}
-          {!(isAuthPage && hideSidebar) && (
-            <div className={cn(!isMobile && !hideSidebar && (isCollapsed ? "ml-[80px]" : "ml-[240px]"))}>
-              <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
-            </div>
+      <div className={cn("relative min-h-screen w-full overflow-hidden", isAnnouncementVisible && "pt-10")}>
+        <div className="canvas-orb left-[-8rem] top-[-6rem] h-64 w-64 bg-brand-blue/20 md:h-80 md:w-80" />
+        <div className="canvas-orb bottom-[8%] right-[-8rem] h-72 w-72 bg-brand-violet/20 md:h-96 md:w-96" />
+
+        <div className="relative flex min-h-screen w-full">
+          {!hideSidebar && (
+            <Sidebar
+              activeTab={activeTab}
+              currentPath={currentPath}
+              onCollapsedChange={setIsCollapsed}
+            />
           )}
-          <main className={`flex-1 w-full overflow-x-hidden ${isAuthPage ? 'pb-0' : 'pb-32 md:pb-24'}`}>
-            <div className="w-full max-w-full flex flex-col">
-              {children}
-            </div>
-          </main>
+
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ease-out",
+              !isMobile && !hideSidebar && (isCollapsed ? "lg:ml-[96px]" : "lg:ml-[272px]")
+            )}
+          >
+            {!(isAuthPage && hideSidebar) && (
+              <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+            )}
+
+            <main className={cn("flex-1 w-full overflow-x-hidden", isAuthPage ? "pb-0" : "pb-32 md:pb-12")}>
+              <div className="w-full max-w-full flex flex-col">{children}</div>
+            </main>
+          </div>
         </div>
       </div>
     </>

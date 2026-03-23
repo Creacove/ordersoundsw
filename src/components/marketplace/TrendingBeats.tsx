@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { TrendingUp, ChevronRight } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
@@ -10,40 +9,40 @@ import { Beat } from "@/types";
 
 export const TrendingBeats = () => {
   const { data: allTrendingBeats = [], isLoading } = useQuery({
-    queryKey: ['curated-trending-beats'],
-    queryFn: () => fetchTrendingBeats(20), // Fetch a few more
+    queryKey: ["curated-trending-beats"],
+    queryFn: () => fetchTrendingBeats(20),
     staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000, // Proper memory management
-    placeholderData: keepPreviousData, // Updated syntax for TanStack Query v5
-  }) as { data: Beat[], isLoading: boolean };
+    gcTime: 10 * 60 * 1000,
+    placeholderData: keepPreviousData,
+  }) as { data: Beat[]; isLoading: boolean };
 
-  // Memoized slice for homepage display
-  const trendingBeats = useMemo(() => 
-    allTrendingBeats.slice(0, 5), 
-    [allTrendingBeats]
-  );
+  const trendingBeats = useMemo(() => allTrendingBeats.slice(0, 5), [allTrendingBeats]);
 
   return (
-    <section className="w-full">
-      <div className="flex items-center justify-between mb-6">
-        <SectionTitle 
-          title="Trending Beats" 
-          icon={<TrendingUp className="w-5 h-5 text-purple-500" />}
+    <section className="panel p-5 md:p-6">
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <SectionTitle
+          title="Trending beats"
+          icon={<TrendingUp className="h-5 w-5 text-accent" />}
           badge="Hot"
+          className="mb-0"
         />
-        <Link to="/trending" className="flex items-center text-sm text-muted-foreground hover:text-primary">
-          View all <ChevronRight className="w-4 h-4 ml-1" />
+        <Link to="/trending" className="hidden items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:flex">
+          View all
+          <ChevronRight className="ml-1 h-4 w-4" />
         </Link>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          {Array(5).fill(0).map((_, i) => (
-            <div key={i} className="h-52 rounded-lg bg-muted/40 animate-pulse"></div>
-          ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {Array(5)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="h-[320px] rounded-[1.5rem] border border-white/10 bg-white/[0.05] animate-pulse" />
+            ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {trendingBeats.map((beat) => (
             <BeatCardCompact key={beat.id} beat={beat} />
           ))}

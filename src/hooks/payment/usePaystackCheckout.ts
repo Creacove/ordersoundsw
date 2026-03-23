@@ -1,35 +1,81 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { publicEnv } from '@/config/publicEnv';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useCartWithBeatDetailsOptimized } from '@/hooks/useCartWithBeatDetailsOptimized';
 import { supabase } from '@/integrations/supabase/client';
+import { buildCheckoutLineItems } from '@/features/checkout/cartCheckout';
+import {
+  clearPaymentSession,
+  getStoredPaymentSession,
+  markPurchaseSuccess,
+  persistPaymentSession,
+} from '@/lib/paymentFlowStorage';
 import { createOrder, verifyPaystackPayment } from '@/utils/payment/paystackUtils';
 
 declare global {
   interface Window {
-    PaystackPop: any;
+    PaystackPop?: {
+      setup: (config: PaystackConfig) => PaystackHandler;
+    };
   }
+}
+
+interface PaystackCallbackResponse {
+  reference: string;
+}
+
+interface PaystackHandler {
+  close?: () => void;
+  openIframe: () => void;
+}
+
+interface PaystackConfig {
+  amount: number;
+  callback: (response: PaystackCallbackResponse) => void;
+  container?: undefined;
+  currency: string;
+  email: string;
+  key: string;
+  label: string;
+  metadata: {
+    custom_fields: Array<{
+      display_name: string;
+      value: string;
+      variable_name: string;
+    }>;
+  };
+  onClose: () => void;
+  ref: string;
+  split_code?: string;
 }
 
 interface UsePaystackCheckoutProps {
   onSuccess: (reference: string) => void;
   onClose: () => void;
   totalAmount: number;
-  splitCode?: string | null;
   producerId?: string;
   beatId?: string;
-  testMode?: boolean;
 }
+
+interface OrderItem {
+  item_type: 'beat' | 'soundpack';
+  license: string;
+  license_type?: string;
+  price: number;
+  producer_id?: string;
+  product_id: string;
+  title: string;
+}
+
+const PAYSTACK_PUBLIC_KEY = publicEnv.paystackPublicKey;
 
 export function usePaystackCheckout({
   onSuccess,
   onClose,
   totalAmount,
-  splitCode,
   producerId,
   beatId,
-  testMode = false // This parameter is now ignored - we always use live mode
 }: UsePaystackCheckoutProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -37,16 +83,19 @@ export function usePaystackCheckout({
   const [paymentStarted, setPaymentStarted] = useState(false);
   const { user } = useAuth();
   const { cartItems, clearCart } = useCartWithBeatDetailsOptimized();
-  const navigate = useNavigate();
+  const checkoutLineItems = useMemo(
+    () => buildCheckoutLineItems(cartItems, 'NGN'),
+    [cartItems],
+  );
   const paymentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const paystackHandlerRef = useRef<any>(null);
+  const paystackHandlerRef = useRef<PaystackHandler | null>(null);
 
   // Create function references for Paystack callbacks
   const paystackCloseRef = useRef(() => {
     console.log('Payment window closed');
     setIsProcessing(false);
     setPaymentStarted(false);
-    localStorage.removeItem('paymentInProgress');
+    clearPaymentSession();
 
     if (paymentTimeoutRef.current) {
       clearTimeout(paymentTimeoutRef.current);
@@ -57,7 +106,7 @@ export function usePaystackCheckout({
   });
 
   // Function to handle successful payments
-  const paystackSuccessRef = useRef((response: any) => {
+  const paystackSuccessRef = useRef((response: PaystackCallbackResponse) => {
     console.log('Payment complete! Response:', response);
 
     if (paymentTimeoutRef.current) {
@@ -67,17 +116,14 @@ export function usePaystackCheckout({
 
     const handleSuccess = async () => {
       try {
-        const orderId = localStorage.getItem('pendingOrderId');
-        const orderItemsStr = localStorage.getItem('orderItems');
+        const { orderId, orderItems } = getStoredPaymentSession<OrderItem>();
 
-        if (!orderId || !orderItemsStr) {
+        if (!orderId || orderItems.length === 0) {
           toast.error('Order information missing. Please try again.');
           setIsProcessing(false);
           setPaymentStarted(false);
           return;
         }
-
-        const orderItemsData = JSON.parse(orderItemsStr);
 
         // Check current order status first
         const { data: orderData, error: orderCheckError } = await supabase
@@ -94,8 +140,8 @@ export function usePaystackCheckout({
           toast.success('Payment successful! Redirecting to your library...');
 
           clearCart();
-          localStorage.setItem('purchaseSuccess', 'true');
-          localStorage.setItem('purchaseTime', Date.now().toString());
+          markPurchaseSuccess();
+          clearPaymentSession();
           setIsProcessing(false);
           setPaymentStarted(false);
           onSuccess(response.reference);
@@ -114,7 +160,7 @@ export function usePaystackCheckout({
         const verificationResult = await verifyPaystackPayment(
           response.reference,
           orderId,
-          orderItemsData
+          orderItems
         );
 
         // Dismiss the loading toast
@@ -122,11 +168,8 @@ export function usePaystackCheckout({
 
         if (verificationResult.success) {
           clearCart();
-          localStorage.setItem('purchaseSuccess', 'true');
-          localStorage.setItem('purchaseTime', Date.now().toString());
-          localStorage.removeItem('paymentInProgress');
-          localStorage.removeItem('pendingOrderId');
-          localStorage.removeItem('orderItems');
+          markPurchaseSuccess();
+          clearPaymentSession();
           setIsProcessing(false);
           setPaymentStarted(false);
           onSuccess(response.reference);
@@ -263,50 +306,91 @@ export function usePaystackCheckout({
         return false;
       }
 
-      const beatIds = cartItems.map(item => item.beat.id);
-      const { data: beatsData, error: beatsError } = await supabase
-        .from('beats')
-        .select('id, status')
-        .in('id', beatIds);
+      const beatItems = checkoutLineItems.filter((item) => item.type === 'beat');
+      const soundpackItems = checkoutLineItems.filter((item) => item.type === 'soundpack');
 
-      if (beatsError) {
-        console.error('Error validating beats:', beatsError);
-        setValidationError('Failed to validate your cart items');
-        return false;
+      if (beatItems.length > 0) {
+        const beatIds = beatItems.map((item) => item.productId);
+        const { data: beatsData, error: beatsError } = await supabase
+          .from('beats')
+          .select('id, status')
+          .in('id', beatIds);
+
+        if (beatsError || !beatsData) {
+          console.error('Error validating beats:', beatsError);
+          setValidationError('Failed to validate your beat purchases');
+          return false;
+        }
+
+        const availableBeats = beatsData.filter((beat) => beat.status === 'published');
+        if (availableBeats.length !== beatIds.length) {
+          setValidationError('Some beats in your cart are no longer available');
+          return false;
+        }
+
+        const { data: purchasedBeats, error: purchasedBeatsError } = await supabase
+          .from('user_purchased_beats')
+          .select('beat_id')
+          .eq('user_id', user.id)
+          .in('beat_id', beatIds);
+
+        if (purchasedBeatsError) {
+          console.error('Error checking purchased beats:', purchasedBeatsError);
+          setValidationError('Failed to validate your previous beat purchases');
+          return false;
+        }
+
+        if (purchasedBeats && purchasedBeats.length > 0) {
+          const alreadyPurchasedTitles = beatItems
+            .filter((item) => purchasedBeats.some((purchase) => purchase.beat_id === item.productId))
+            .map((item) => item.title);
+
+          setValidationError(`You've already purchased: ${alreadyPurchasedTitles.join(', ')}`);
+          return false;
+        }
       }
 
-      if (!beatsData) {
-        setValidationError('Failed to validate your cart items');
-        return false;
-      }
+      if (soundpackItems.length > 0) {
+        const soundpackIds = soundpackItems.map((item) => item.productId);
+        const { data: soundpacksData, error: soundpacksError } = await supabase
+          .from('soundpacks')
+          .select('id, published')
+          .in('id', soundpackIds);
 
-      const availableBeats = beatsData.filter(beat => beat.status === 'published');
-      if (availableBeats.length !== beatIds.length) {
-        setValidationError(`Some beats in your cart are no longer available`);
-        return false;
-      }
+        if (soundpacksError || !soundpacksData) {
+          console.error('Error validating soundpacks:', soundpacksError);
+          setValidationError('Failed to validate your soundpack purchases');
+          return false;
+        }
 
-      const { data: purchasedData, error: purchasedError } = await supabase
-        .from('user_purchased_beats')
-        .select('beat_id')
-        .eq('user_id', user.id)
-        .in('beat_id', beatIds);
+        const publishedSoundpacks = soundpacksData.filter((soundpack) => soundpack.published);
+        if (publishedSoundpacks.length !== soundpackIds.length) {
+          setValidationError('Some soundpacks in your cart are no longer available');
+          return false;
+        }
 
-      if (purchasedError) {
-        console.error('Error checking purchased beats:', purchasedError);
-        setValidationError('Failed to validate your previous purchases');
-        return false;
-      }
+        const { data: purchasedSoundpacks, error: purchasedSoundpacksError } = await supabase
+          .from('user_purchased_soundpacks')
+          .select('pack_id')
+          .eq('user_id', user.id)
+          .in('pack_id', soundpackIds);
 
-      if (purchasedData && purchasedData.length > 0) {
-        const alreadyPurchasedTitles = cartItems
-          .filter(item => purchasedData.some(p => p.beat_id === item.beat.id))
-          .map(item => item.beat.title);
+        if (purchasedSoundpacksError) {
+          console.error('Error checking purchased soundpacks:', purchasedSoundpacksError);
+          setValidationError('Failed to validate your previous soundpack purchases');
+          return false;
+        }
 
-        setValidationError(
-          `You've already purchased: ${alreadyPurchasedTitles.join(', ')}`
-        );
-        return false;
+        if (purchasedSoundpacks && purchasedSoundpacks.length > 0) {
+          const alreadyPurchasedTitles = soundpackItems
+            .filter((item) =>
+              purchasedSoundpacks.some((purchase) => purchase.pack_id === item.productId),
+            )
+            .map((item) => item.title);
+
+          setValidationError(`You've already purchased: ${alreadyPurchasedTitles.join(', ')}`);
+          return false;
+        }
       }
 
       return true;
@@ -317,7 +401,7 @@ export function usePaystackCheckout({
     } finally {
       setIsValidating(false);
     }
-  }, [user, cartItems, producerId, beatId]);
+  }, [user, cartItems, producerId, beatId, checkoutLineItems]);
 
   // Start the payment process
   const handlePaymentStart = useCallback(async () => {
@@ -330,6 +414,12 @@ export function usePaystackCheckout({
       if (typeof window === 'undefined' || !window.PaystackPop || typeof window.PaystackPop.setup !== 'function') {
         console.error('PaystackPop not properly loaded');
         toast.error('Payment system not ready. Please refresh the page and try again.');
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!PAYSTACK_PUBLIC_KEY) {
+        toast.error('Payment gateway is not configured. Please contact support.');
         setIsProcessing(false);
         return;
       }
@@ -351,18 +441,26 @@ export function usePaystackCheckout({
         return;
       }
 
-      // Determine the producer ID for split code fetching
-      let targetProducerId = producerId;
+      const cartProducerIds = Array.from(
+        new Set(checkoutLineItems.map((item) => item.producerId).filter(Boolean)),
+      );
+      const hasSingleProducerCart = cartProducerIds.length <= 1;
 
-      // For cart purchases, get the first producer ID (assuming single producer per cart for now)
-      if (!targetProducerId && cartItems && cartItems.length > 0) {
-        targetProducerId = cartItems[0].beat.producer_id;
+      // Determine the producer ID for split code fetching.
+      let targetProducerId = producerId;
+      if (!targetProducerId && hasSingleProducerCart) {
+        targetProducerId = cartProducerIds[0];
       }
 
       // Fetch split code if producer ID is available
-      let dynamicSplitCode = splitCode; // Use passed splitCode as fallback
+      let dynamicSplitCode: string | null = null;
 
-      if (targetProducerId) {
+      if (!producerId && !hasSingleProducerCart) {
+        console.warn(
+          'Skipping Paystack split code because the cart contains items from multiple producers.',
+        );
+        toast.info('This cart contains multiple producers, so automatic Paystack split routing has been skipped for this order.');
+      } else if (targetProducerId) {
         const fetchedSplitCode = await fetchProducerSplitCode(targetProducerId);
         if (fetchedSplitCode) {
           dynamicSplitCode = fetchedSplitCode;
@@ -376,13 +474,13 @@ export function usePaystackCheckout({
       const reference = `ORDER_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
 
       // Prepare order item data
-      let orderItemsData;
+      let orderItemsData: OrderItem[];
 
       if (producerId && beatId) {
         // Direct beat purchase
         const { data: beatData, error: beatError } = await supabase
           .from('beats')
-          .select('id, title, basic_license_price_local')
+          .select('id, producer_id, title, basic_license_price_local')
           .eq('id', beatId)
           .maybeSingle();
 
@@ -393,20 +491,35 @@ export function usePaystackCheckout({
         }
 
         orderItemsData = [{
-          beat_id: beatData.id,
-          title: beatData.title,
-          price: beatData.basic_license_price_local,
+          item_type: 'beat',
           license: 'basic',
-          item_type: 'beat'
+          license_type: 'basic',
+          price: beatData.basic_license_price_local,
+          producer_id: beatData.producer_id,
+          product_id: beatData.id,
+          title: beatData.title,
         }];
       } else {
-        // Cart purchase - use optimized cart items
-        orderItemsData = cartItems.map(item => ({
-          beat_id: item.beat.id,
-          title: item.beat.title,
-          price: item.beat.basic_license_price_local,
+        if (checkoutLineItems.length !== cartItems.length) {
+          toast.error('Some cart items could not be prepared for checkout. Please refresh your cart.');
+          setIsProcessing(false);
+          return;
+        }
+
+        if (checkoutLineItems.some((item) => item.price <= 0)) {
+          toast.error('One or more cart items have invalid pricing. Please review your cart.');
+          setIsProcessing(false);
+          return;
+        }
+
+        orderItemsData = checkoutLineItems.map((item) => ({
+          item_type: item.type,
           license: item.licenseType || 'basic',
-          item_type: 'beat'
+          license_type: item.licenseType || 'basic',
+          price: item.price,
+          producer_id: item.producerId,
+          product_id: item.productId,
+          title: item.title,
         }));
       }
 
@@ -450,12 +563,11 @@ export function usePaystackCheckout({
       }
 
       // Store order data for verification
-      localStorage.setItem('pendingOrderId', orderId);
-      localStorage.setItem('orderItems', JSON.stringify(orderItemsData));
-      localStorage.setItem('paystackReference', reference);
-      localStorage.setItem('paystackAmount', totalAmount.toString());
-      localStorage.setItem('paymentInProgress', 'true');
-      localStorage.setItem('purchaseTime', Date.now().toString());
+      persistPaymentSession({
+        orderId,
+        orderItems: orderItemsData,
+        reference,
+      });
 
       // Add metadata
       const metadata = {
@@ -471,73 +583,49 @@ export function usePaystackCheckout({
       console.log('Starting Paystack payment in LIVE mode');
       console.log('Split code status:', dynamicSplitCode ? 'INCLUDED' : 'NOT_INCLUDED');
 
-      // Mark payment as started
-      setPaymentStarted(true);
-
       try {
-        // Create Paystack handler configuration
-        const paystackConfig: any = {
-          key: 'pk_live_699eb330ab23079fd06b6567349abd7af5a758ba', // Correct live public key from dashboard
+        // Create Paystack handler - popup mode
+        const paystackConfig: PaystackConfig = {
+          key: PAYSTACK_PUBLIC_KEY,
           email: user?.email || '',
-          amount: totalAmount * 100, // Convert to kobo
+          amount: totalAmount * 100,
           currency: 'NGN',
           ref: reference,
           label: 'OrderSOUNDS',
           metadata: metadata,
           onClose: paystackCloseRef.current,
           callback: paystackSuccessRef.current,
-          // These settings are important for the payment window to display properly
-          frame: true,
-          embed: false,
-          container: undefined, // Make sure we don't set a container
+          container: undefined,
         };
 
-        // Include split code if available
         if (dynamicSplitCode) {
           paystackConfig.split_code = dynamicSplitCode;
           console.log('Added split code to Paystack configuration');
         }
 
-        // Create Paystack handler with LIVE configuration
         const handler = window.PaystackPop.setup(paystackConfig);
-
         paystackHandlerRef.current = handler;
 
-        // Explicitly open the payment iframe
+        // Open popup FIRST, then set paymentStarted.
+        // This prevents the blank-page flash.
         handler.openIframe();
+        setPaymentStarted(true);
 
-        // Set timeout to check for problems
-        if (paymentTimeoutRef.current) {
-          clearTimeout(paymentTimeoutRef.current);
-        }
-
-        // First timeout - provide feedback
-        paymentTimeoutRef.current = setTimeout(() => {
-          if (!paymentStarted) return;
-
-          // Longer timeout for the overall process
-          paymentTimeoutRef.current = setTimeout(() => {
-            if (!paymentStarted) return;
-            console.log('Payment taking too long - automatic timeout');
-            toast.error('Payment taking too long. Please try again.');
-            setIsProcessing(false);
-            setPaymentStarted(false);
-            localStorage.removeItem('paymentInProgress');
-          }, 120000); // 2 minute overall timeout
-        }, 3000);
       } catch (error) {
         console.error('Paystack initialization error:', error);
         toast.error('Failed to initialize payment. Please try again.');
         setIsProcessing(false);
         setPaymentStarted(false);
+        clearPaymentSession();
       }
     } catch (error) {
       console.error('Payment error:', error);
       toast.error('Failed to start payment process');
       setIsProcessing(false);
       setPaymentStarted(false);
+      clearPaymentSession();
     }
-  }, [isProcessing, isValidating, paymentStarted, totalAmount, user, validateCartItems, cartItems, producerId, beatId, splitCode, clearCart]);
+  }, [isProcessing, isValidating, paymentStarted, totalAmount, user, validateCartItems, cartItems, checkoutLineItems, producerId, beatId]);
 
   // Handle cart refresh
   const handleRefreshCart = async () => {
@@ -550,10 +638,7 @@ export function usePaystackCheckout({
     setIsProcessing(false);
     setPaymentStarted(false);
     setValidationError(null);
-    localStorage.removeItem('paymentInProgress');
-    localStorage.removeItem('pendingOrderId');
-    localStorage.removeItem('paystackReference');
-    localStorage.removeItem('orderItems');
+    clearPaymentSession();
 
     if (paymentTimeoutRef.current) {
       clearTimeout(paymentTimeoutRef.current);

@@ -5,19 +5,22 @@ import { Heart } from "lucide-react";
 import { useBeats } from "@/hooks/useBeats";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ToggleFavoriteButtonProps {
   beatId: string;
   size?: "sm" | "md" | "lg";
   absolutePosition?: boolean;
   onToggleComplete?: (isFavorited: boolean) => void;
+  className?: string;
 }
 
 const ToggleFavoriteButton = memo(function ToggleFavoriteButton({ 
   beatId, 
   size = "md", 
   absolutePosition = true,
-  onToggleComplete
+  onToggleComplete,
+  className
 }: ToggleFavoriteButtonProps) {
   const { isFavorite, toggleFavorite } = useBeats();
   const { user } = useAuth();
@@ -78,13 +81,14 @@ const ToggleFavoriteButton = memo(function ToggleFavoriteButton({
     <Button
       variant="secondary"
       size="icon"
-      className={`
-        ${absolutePosition ? 'absolute top-2 right-2 z-10' : ''}
-        ${sizeClasses[size]}
-        bg-background/60 backdrop-blur-sm hover:bg-background/80
-        ${favorite ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground'}
-        transition-colors
-      `}
+      className={cn(
+        absolutePosition ? 'absolute top-2 right-2 z-10' : '',
+        sizeClasses[size],
+        "bg-background/60 backdrop-blur-sm hover:bg-background/80",
+        favorite ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground',
+        "transition-colors",
+        className
+      )}
       onClick={handleToggleFavorite}
       disabled={isButtonClicked}
     >

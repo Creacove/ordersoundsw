@@ -2,7 +2,7 @@
 import { useLocation, Link, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Home, ArrowLeft } from "lucide-react";
+import { Home, ArrowLeft, Ghost } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -14,16 +14,13 @@ const NotFound = () => {
       location.pathname
     );
     
-    document.title = "Page Not Found | Creacove";
+    document.title = "404 - Page Not Found | OrderSOUNDS";
     
-    // Check if this is a direct page load (not a navigation within the app)
     const isDirectPageLoad = !window.performance
       .getEntriesByType("navigation")
       .some((nav) => (nav as any).type === "navigate");
       
-    // For deep links that might be valid but just need React Router to handle them
     if (isDirectPageLoad && location.pathname !== "/404") {
-      // Try to let React Router handle this path before showing 404
       const validPaths = [
         '/trending', '/new', '/playlists', '/genres', '/producers', 
         '/charts', '/search', '/contact', '/cart', '/library',
@@ -31,14 +28,11 @@ const NotFound = () => {
         '/login', '/signup', '/settings'
       ];
       
-      // Check if the current path or its parent path is in validPaths
-      const pathParts = location.pathname.split('/').filter(Boolean);
       const isPathPotentiallyValid = validPaths.some(validPath => 
         location.pathname.startsWith(validPath)
       );
       
       if (isPathPotentiallyValid) {
-        // Wait a moment to let React Router try to match the route
         const timer = setTimeout(() => {
           setShouldRedirect(true);
         }, 100);
@@ -48,48 +42,58 @@ const NotFound = () => {
     }
   }, [location.pathname]);
 
-  // Redirect to home for paths that should be handled by React Router
   if (shouldRedirect) {
     return <Navigate to="/" replace />;
   }
 
-  // Check if the path starts with "playlist/" (without the 's')
   const isPlaylistPath = location.pathname.includes('/playlist/');
   const correctPath = isPlaylistPath 
     ? location.pathname.replace('/playlist/', '/playlists/') 
     : null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center max-w-md mx-auto p-6">
-        <h1 className="text-5xl font-bold mb-4">404</h1>
-        <p className="text-xl text-muted-foreground mb-6">Oops! Page not found</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#030407] overflow-hidden relative">
+      <div className="absolute inset-0 z-0">
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#9A3BDC]/10 blur-[120px] rounded-full" />
+      </div>
+
+      <div className="text-center max-w-lg mx-auto p-12 relative z-10">
+        <div className="mb-8 flex justify-center">
+          <div className="w-24 h-24 rounded-3xl bg-white/[0.03] border border-white/10 flex items-center justify-center animate-bounce">
+            <Ghost size={48} className="text-[#9A3BDC]" />
+          </div>
+        </div>
+        
+        <h1 className="text-8xl md:text-9xl font-black text-white italic tracking-tighter uppercase mb-4 opacity-20">404</h1>
+        <h2 className="text-2xl md:text-4xl font-black text-white italic tracking-tighter uppercase mb-6 -mt-12 md:-mt-16 relative z-20">Page Not Found</h2>
+        <p className="text-lg text-white/50 mb-10 italic">The page you're looking for doesn't exist or may have moved.</p>
         
         {isPlaylistPath && (
-          <div className="mb-6 p-3 bg-muted rounded-md">
-            <p className="text-sm mb-2">
-              It looks like you're trying to access a playlist with an incorrect URL.
+          <div className="mb-10 p-6 bg-white/[0.03] border border-white/5 rounded-3xl backdrop-blur-sm">
+            <p className="text-sm text-white/70 mb-4 italic">
+              It looks like you have a legacy playlist link. Try the updated URL below.
             </p>
-            <Button asChild variant="outline" className="w-full">
+            <Button asChild className="w-full h-12 rounded-xl font-bold bg-[#9A3BDC] text-white hover:bg-[#9A3BDC]/90">
               <Link to={correctPath || '/'}>
-                Go to correct playlist URL
+                Go to Playlists
               </Link>
             </Button>
           </div>
         )}
         
-        <div className="flex flex-col xs:flex-row gap-2 justify-center">
-          <Button asChild variant="default">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button asChild className="h-14 px-8 rounded-2xl font-black uppercase italic tracking-tighter text-lg bg-white text-black hover:bg-white/90">
             <Link to="/">
-              <Home className="mr-2 h-4 w-4" />
-              Back to Home
+              <Home className="mr-2 h-5 w-5" />
+              Go Home
             </Link>
           </Button>
           <Button 
             variant="outline" 
+            className="h-14 px-8 rounded-2xl font-black uppercase italic tracking-tighter text-lg border-white/10 bg-white/[0.03] text-white hover:bg-white/10"
             onClick={() => window.history.back()}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 h-5 w-5" />
             Go Back
           </Button>
         </div>

@@ -61,28 +61,28 @@ export const DetailTab = ({
                 setBeatDetails({...beatDetails, category: value});
               }
             }}
-            className="w-full justify-start mt-2"
+            className="w-full justify-start mt-2 flex-wrap gap-2"
           >
             <ToggleGroupItem 
               value="Music Beat" 
-              className="flex items-center gap-2 flex-1 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              className="flex items-center gap-2 min-w-0 flex-1 basis-[calc(33%-0.5rem)] min-basis-32 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs md:text-sm"
             >
-              <Music3 size={16} />
-              Music Beat
+              <Music3 size={14} className="shrink-0" />
+              <span className="truncate">Music Beat</span>
             </ToggleGroupItem>
             <ToggleGroupItem 
               value="Gaming & Soundtrack" 
-              className="flex items-center gap-2 flex-1 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              className="flex items-center gap-2 min-w-0 flex-1 basis-[calc(33%-0.5rem)] min-basis-32 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs md:text-sm"
             >
-              <Gamepad2 size={16} />
-              Gaming & Soundtrack
+              <Gamepad2 size={14} className="shrink-0" />
+              <span className="truncate">Gaming & Soundtrack</span>
             </ToggleGroupItem>
             <ToggleGroupItem 
               value="Soundpack" 
-              className="flex items-center gap-2 flex-1 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              className="flex items-center gap-2 min-w-0 flex-1 basis-[calc(33%-0.5rem)] min-basis-32 justify-center data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs md:text-sm"
             >
-              <Package size={16} />
-              Soundpack
+              <Package size={14} className="shrink-0" />
+              <span className="truncate">Soundpack</span>
             </ToggleGroupItem>
           </ToggleGroup>
         </div>

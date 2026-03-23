@@ -16,15 +16,15 @@ export function BuyerTabs({ user }: BuyerTabsProps) {
   return (
     <>
       <TabsList className="border-b w-full mb-6 md:mb-8 rounded-none p-0 h-auto bg-transparent">
-        <TabsTrigger value="profile" className="rounded-none border-0 data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:shadow-none py-3 px-4">
+        <TabsTrigger value="profile" className="rounded-none border-0 data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-4">
           <UserIcon className="mr-2 h-4 w-4" />
           Profile
         </TabsTrigger>
-        <TabsTrigger value="account" className="rounded-none border-0 data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:shadow-none py-3 px-4">
+        <TabsTrigger value="account" className="rounded-none border-0 data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-4">
           <Shield className="mr-2 h-4 w-4" />
           Account
         </TabsTrigger>
-        <TabsTrigger value="preferences" className="rounded-none border-0 data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:shadow-none py-3 px-4">
+        <TabsTrigger value="preferences" className="rounded-none border-0 data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:shadow-none data-[state=active]:bg-transparent py-3 px-4">
           <SettingsIcon className="mr-2 h-4 w-4" />
           Preferences
         </TabsTrigger>

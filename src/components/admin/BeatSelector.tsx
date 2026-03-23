@@ -149,7 +149,7 @@ export function BeatSelector({
     const badges = [];
     if (beat.is_trending) badges.push({ label: 'Trending', color: 'bg-orange-100 text-orange-800' });
     if (beat.is_featured) badges.push({ label: 'Featured', color: 'bg-yellow-100 text-yellow-800' });
-    if (beat.is_weekly_pick) badges.push({ label: 'Weekly', color: 'bg-blue-100 text-blue-800' });
+    if (beat.is_weekly_pick) badges.push({ label: 'Weekly', color: '-purple- -purple-' });
     if (currentBeatIds.includes(beat.id)) badges.push({ label: 'Current', color: 'bg-green-100 text-green-800' });
     return badges;
   };

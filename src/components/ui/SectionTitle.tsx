@@ -17,13 +17,19 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
   className 
 }) => {
   return (
-    <div className={cn("flex items-center gap-2 mb-4", className)}>
-      <h2 className="text-lg md:text-xl font-bold tracking-tight">
-        {icon && <span className="mr-2 inline-flex">{icon}</span>}
-        {title}
-      </h2>
+    <div className={cn("mb-4 flex items-center justify-between gap-3", className)}>
+      <div className="flex items-center gap-3">
+        {icon && (
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-primary">
+            {icon}
+          </span>
+        )}
+        <h2 className="text-xl md:text-2xl font-black tracking-tighter uppercase italic text-white/90">
+          {title}
+        </h2>
+      </div>
       {badge && (
-        <Badge variant="secondary" className="bg-amber-600/20 text-amber-500 hover:bg-amber-600/30 px-2">
+        <Badge variant="secondary" className="border-white/10 bg-white/[0.06] px-3 text-amber-300 hover:bg-white/[0.08]">
           {badge}
         </Badge>
       )}

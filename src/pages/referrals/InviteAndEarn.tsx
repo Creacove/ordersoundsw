@@ -1,5 +1,5 @@
+
 import { useState, useEffect } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { ReferralStatsCard } from "@/components/referrals/ReferralStatsCard";
 import { ReferralLinkSection } from "@/components/referrals/ReferralLinkSection";
 import { TasksSection } from "@/components/referrals/TasksSection";
@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ReferralStats, Referral } from "@/types/referral";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { Gift, ShieldCheck, LoaderCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function InviteAndEarn() {
   const { user } = useAuth();
@@ -19,6 +22,8 @@ export default function InviteAndEarn() {
   const [todaysPoints, setTodaysPoints] = useState(0);
 
   useEffect(() => {
+    document.title = "Invite & Earn | OrderSOUNDS";
+    
     if (!user) {
       navigate('/login');
       return;
@@ -28,7 +33,6 @@ export default function InviteAndEarn() {
       try {
         setLoading(true);
 
-        // Fetch session once
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session?.access_token) {
@@ -41,7 +45,6 @@ export default function InviteAndEarn() {
           'Content-Type': 'application/json'
         };
 
-        // Fetch stats, referrals, and task submissions in parallel
         const [statsResponse, listResponse, taskSubmissionsResponse] = await Promise.all([
           fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=stats`, { headers }),
           fetch(`https://uoezlwkxhbzajdivrlby.supabase.co/functions/v1/referral-operations?action=list`, { headers }),
@@ -64,7 +67,6 @@ export default function InviteAndEarn() {
           const refData = await listResponse.json();
           setReferrals(Array.isArray(refData) ? refData : []);
           
-          // Calculate today's points from successful referrals
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           referralPointsToday = (Array.isArray(refData) ? refData : [])
@@ -80,7 +82,6 @@ export default function InviteAndEarn() {
           const taskData = await taskSubmissionsResponse.json();
           const submissions = taskData.submissions || [];
           
-          // Calculate points from approved task submissions in last 24 hours
           const twentyFourHoursAgo = new Date();
           twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
           
@@ -106,46 +107,52 @@ export default function InviteAndEarn() {
 
   if (loading) {
     return (
-      <MainLayout>
-        <div className="container py-8 max-w-6xl mx-auto">
-          <Skeleton className="h-10 w-48 mb-8" />
-          <div className="grid gap-4 md:grid-cols-3 mb-8">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </div>
-          <Skeleton className="h-64 mb-8" />
-          <Skeleton className="h-96" />
+      <div className="container py-20 px-4 md:px-6">
+        <div className="mx-auto flex min-h-[400px] max-w-xl flex-col items-center justify-center p-12 text-center rounded-[2.5rem] bg-white/[0.02] border border-white/5">
+          <LoaderCircle className="h-10 w-10 animate-spin text-[#9A3BDC] mb-4" />
+          <h2 className="text-2xl font-black italic tracking-tighter text-white uppercase">Loading...</h2>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   if (!stats) {
     return (
-      <MainLayout>
-        <div className="container py-8 max-w-6xl mx-auto text-center">
-          <p>Unable to load referral data. Please try again later.</p>
+      <div className="container py-20 px-4 md:px-6">
+        <div className="max-w-md mx-auto p-12 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col items-center text-center">
+          <ShieldCheck className="h-10 w-10 text-red-500/50 mb-6" />
+          <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-4">Something Went Wrong</h1>
+          <p className="text-white/50 italic mb-8">We couldn't load your referral data. Please try again.</p>
+          <Button onClick={() => window.location.reload()} className="h-12 px-8 rounded-xl font-bold bg-white text-black">Retry</Button>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   return (
-    <MainLayout>
-      <div className="container py-8 max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Invite & Earn</h1>
-          <p className="text-muted-foreground">
-            Share OrderSounds with friends and earn points for every successful referral
-          </p>
+    <div className="container py-8 md:py-12 px-4 md:px-6 max-w-7xl">
+      <div className="mb-12">
+        <SectionTitle 
+          title="Invite & Earn" 
+          icon={<Gift className="h-6 w-6" />}
+        />
+        <p className="text-white/40 italic mt-2">Invite friends, complete tasks, and earn reward points.</p>
+      </div>
+
+      <div className="space-y-12">
+        <ReferralStatsCard stats={stats} todaysPoints={todaysPoints} />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+           <ReferralLinkSection referralCode={stats.referralCode} />
+           <ReferralRulesCard />
         </div>
 
-        <ReferralStatsCard stats={stats} todaysPoints={todaysPoints} />
-        <ReferralLinkSection referralCode={stats.referralCode} />
-        <TasksSection />
-        <ReferralRulesCard />
+        <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent">
+          <div className="bg-[#030407] rounded-[2.4rem] p-8 md:p-12 overflow-hidden">
+            <TasksSection />
+          </div>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }

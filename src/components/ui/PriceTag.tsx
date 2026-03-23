@@ -35,9 +35,9 @@ export function PriceTag({
     : formatPrice(diasporaPrice || 0, 'USD');
 
   const sizeClasses = {
-    sm: "text-xs sm:text-sm font-medium px-1.5 py-0.5 leading-normal",
-    md: "text-sm sm:text-base font-semibold px-2 py-0.5 leading-normal",
-    lg: "text-base sm:text-lg font-bold px-2.5 py-0.5 leading-normal"
+    sm: "px-2.5 py-1 text-xs sm:text-sm font-semibold leading-normal",
+    md: "px-3 py-1 text-sm sm:text-base font-semibold leading-normal",
+    lg: "px-3.5 py-1.5 text-base sm:text-lg font-bold leading-normal"
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -50,7 +50,7 @@ export function PriceTag({
     <span 
       onClick={handleClick}
       className={cn(
-        "inline-flex items-center justify-center bg-primary/10 text-primary rounded-full whitespace-nowrap", 
+        "inline-flex items-center justify-center rounded-full whitespace-nowrap border border-white/10 bg-white/[0.05] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
         sizeClasses[size],
         onClick && "cursor-pointer hover:bg-primary/20 transition-colors",
         className

@@ -1,16 +1,8 @@
 
 import { useEffect, useState } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -19,11 +11,13 @@ import { ProducerWalletDetailsForm } from "@/components/payment/ProducerWalletDe
 import { supabase } from "@/integrations/supabase/client";
 import {
   Bell,
-  Settings as SettingsIcon,
   DollarSign,
   User,
   KeyRound,
   Wallet,
+  Shield,
+  Cog,
+  Layout
 } from "lucide-react";
 import { ProfileForm } from "@/components/producer/settings/ProfileForm";
 import { ProfilePictureUploader } from "@/components/producer/settings/ProfilePictureUploader";
@@ -32,6 +26,7 @@ import { PreferencesForm } from "@/components/producer/settings/PreferencesForm"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 
 export default function ProducerSettings() {
   const { user } = useAuth();
@@ -48,7 +43,15 @@ export default function ProducerSettings() {
     smsNotifications: false,
     autoPlayPreviews: true,
   });
-  const [producerData, setProducerData] = useState<any>(null);
+  const [producerData, setProducerData] = useState<{
+    bank_code?: string;
+    account_number?: string;
+    verified_account_name?: string;
+    paystack_subaccount_code?: string;
+    paystack_split_code?: string;
+    wallet_address?: string;
+  } | null>(null);
+  const [activeTab, setActiveTab] = useState("profile");
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -84,7 +87,6 @@ export default function ProducerSettings() {
     }
   }, [user, navigate]);
 
-  // Fetch producer data including bank details and subaccount info
   useEffect(() => {
     const fetchProducerData = async () => {
       if (!user) return;
@@ -113,9 +115,7 @@ export default function ProducerSettings() {
   }, [user]);
 
   const handleBankDetailsSuccess = () => {
-    // No need to reload the page
     if (user) {
-      // Refresh the bank details data
       supabase
         .from("users")
         .select("bank_code, account_number, verified_account_name")
@@ -130,7 +130,6 @@ export default function ProducerSettings() {
   };
 
   const handleWalletUpdateSuccess = () => {
-    // Refresh producer data after wallet update
     if (user) {
       supabase
         .from("users")
@@ -143,7 +142,7 @@ export default function ProducerSettings() {
             return;
           }
           if (data) {
-            setProducerData(prev => ({...prev, wallet_address: data.wallet_address}));
+            setProducerData(prev => ({...(prev || {}), wallet_address: data.wallet_address}));
             toast.success("Wallet address updated successfully");
           }
         });
@@ -153,7 +152,6 @@ export default function ProducerSettings() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate passwords
     if (!currentPassword) {
       toast.error("Please enter your current password");
       return;
@@ -192,11 +190,8 @@ export default function ProducerSettings() {
     try {
       setIsChangingPassword(true);
 
-      // Verify current password by attempting to sign in
       if (!user?.email) {
-        toast.error(
-          "Unable to verify your current session, please log in again"
-        );
+        toast.error("Unable to verify your current session");
         return;
       }
 
@@ -211,7 +206,6 @@ export default function ProducerSettings() {
         return;
       }
 
-      // Update the password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -222,132 +216,109 @@ export default function ProducerSettings() {
         return;
       }
 
-      // Success
       toast.success("Password updated successfully");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
       console.error("Password change error:", error);
-      toast.error("An error occurred while changing your password");
+      toast.error("An error occurred during verification");
     } finally {
       setIsChangingPassword(false);
     }
   };
 
   if (!user || user.role !== "producer") {
-    return (
-      <MainLayout>
-        <div className="container py-16 pb-32">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">
-              Producer Access Required
-            </h1>
-            <p className="text-base mb-4">
-              You need to be logged in as a producer to access this page.
-            </p>
-            <Button onClick={() => navigate("/login")}>Login</Button>
-          </div>
-        </div>
-      </MainLayout>
-    );
+    return null;
   }
 
   return (
-    <MainLayout>
-      <div
-        className={cn(
-          "container py-6 md:py-8 pb-32",
-          isMobile ? "mobile-content-padding" : ""
-        )}
-      >
-        <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">
-          Producer Settings
-        </h1>
+    <div className="container py-8 md:py-16 px-4 md:px-8 max-w-7xl relative">
+      <div className="absolute top-0 right-0 w-[40vw] h-[40vh] bg-[#9A3BDC]/5 blur-[120px] -mr-[10vw] -mt-[10vh] pointer-events-none" />
+      
+      <div className="mb-16">
+        <SectionTitle 
+          title="Producer Dashboard" 
+          icon={<Cog className="h-6 w-6" />}
+          badge="SETTINGS"
+        />
+        <p className="text-white/40 italic mt-2 text-lg font-medium">Manage your public profile, payment methods, and account preferences.</p>
+      </div>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-4 mb-6 md:mb-8 overflow-hidden">
-            <TabsTrigger value="profile" className="flex items-center gap-1">
-              <User className="w-4 h-4" />
-              <span>Profile</span>
-            </TabsTrigger>
-            <TabsTrigger value="payment" className="flex items-center gap-1">
-              <DollarSign className="w-4 h-4" />
-              <span>Payment</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="preferences"
-              className="flex items-center gap-1"
-            >
-              <Bell className="w-4 h-4" />
-              <span>Preferences</span>
-            </TabsTrigger>
-            <TabsTrigger value="account" className="flex items-center gap-1">
-              <KeyRound className="w-4 h-4" />
-              <span>Account</span>
-            </TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full space-y-16">
+        <div className="border-b border-white/5 pb-8 overflow-x-auto no-scrollbar">
+            <TabsList className="bg-transparent border-none p-0 flex space-x-10 min-w-max">
+              <TabsTrigger value="profile" className="bg-transparent border-none p-0 font-black uppercase italic tracking-widest text-sm data-[state=active]:text-[#9A3BDC] text-white/20 transition-all gap-2 relative">
+                Public Profile
+                {activeTab === 'profile' && <div className="absolute -bottom-[25px] left-0 right-0 h-1 bg-[#9A3BDC] rounded-full" />}
+              </TabsTrigger>
+              <TabsTrigger value="payment" className="bg-transparent border-none p-0 font-black uppercase italic tracking-widest text-sm data-[state=active]:text-[#9A3BDC] text-white/20 transition-all gap-2 relative">
+                Payment Info
+                {activeTab === 'payment' && <div className="absolute -bottom-[25px] left-0 right-0 h-1 bg-[#9A3BDC] rounded-full" />}
+              </TabsTrigger>
+              <TabsTrigger value="preferences" className="bg-transparent border-none p-0 font-black uppercase italic tracking-widest text-sm data-[state=active]:text-[#9A3BDC] text-white/20 transition-all gap-2 relative">
+                Notifications
+                {activeTab === 'preferences' && <div className="absolute -bottom-[25px] left-0 right-0 h-1 bg-[#9A3BDC] rounded-full" />}
+              </TabsTrigger>
+              <TabsTrigger value="account" className="bg-transparent border-none p-0 font-black uppercase italic tracking-widest text-sm data-[state=active]:text-[#9A3BDC] text-white/20 transition-all gap-2 relative">
+                Account Security
+                {activeTab === 'account' && <div className="absolute -bottom-[25px] left-0 right-0 h-1 bg-[#9A3BDC] rounded-full" />}
+              </TabsTrigger>
+            </TabsList>
+        </div>
 
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">
-                  Profile Information
-                </CardTitle>
-                <CardDescription className="text-sm md:text-base">
-                  Update your producer profile information that will be visible
-                  to buyers
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        <TabsContent value="profile" className="outline-none space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent">
+            <div className="bg-[#030407] rounded-[2.4rem] p-8 md:p-12">
+              <div className="mb-10 flex flex-col items-center md:items-start gap-8">
                 <ProfilePictureUploader
                   avatarUrl={user.avatar_url || null}
                   displayName={user.producer_name || user.name || "User"}
                 />
+                <div className="w-full h-px bg-white/5" />
+              </div>
 
-                <ProfileForm
-                  initialProducerName={user.producer_name || user.name || ""}
-                  initialBio={user.bio || ""}
-                  initialLocation={user.country || ""}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+              <ProfileForm
+                initialProducerName={user.producer_name || user.name || ""}
+                initialBio={user.bio || ""}
+                initialLocation={user.country || ""}
+              />
+            </div>
+          </div>
+        </TabsContent>
 
-          <TabsContent value="payment">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl md:text-2xl">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="h-5 w-5" />
-                      Solana Wallet
+        <TabsContent value="payment" className="outline-none space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+             <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-[#9A3BDC]/20 to-transparent">
+               <div className="bg-[#030407] rounded-[2.4rem] p-8 h-full">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-10 h-10 rounded-xl bg-[#9A3BDC]/10 flex items-center justify-center text-[#9A3BDC]">
+                      <Wallet size={20} />
                     </div>
-                  </CardTitle>
-                  <CardDescription className="text-sm md:text-base">
-                    Set up your Solana wallet address to receive earnings from your beat sales in USD
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                    <div>
+                      <h3 className="font-black text-white italic tracking-tighter uppercase text-xl">USDC Wallet</h3>
+                      <p className="text-white/30 text-[10px] uppercase font-black tracking-widest italic">For international payouts</p>
+                    </div>
+                  </div>
                   <ProducerWalletDetailsForm
                     producerId={user.id}
                     walletAddress={producerData?.wallet_address}
                     onSuccess={handleWalletUpdateSuccess}
                   />
-                </CardContent>
-              </Card>
-            
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl md:text-2xl">
-                    Payment Account
-                  </CardTitle>
-                  <CardDescription className="text-sm md:text-base">
-                    Set up your bank account to receive earnings from your beat
-                    sales in NGN
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+               </div>
+             </div>
+
+             <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-emerald-500/20 to-transparent">
+               <div className="bg-[#030407] rounded-[2.4rem] p-8 h-full">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                      <DollarSign size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-white italic tracking-tighter uppercase text-xl">Local Bank</h3>
+                      <p className="text-white/30 text-[10px] uppercase font-black tracking-widest italic">For local currency payouts</p>
+                    </div>
+                  </div>
                   <ProducerBankDetailsForm
                     producerId={user.id}
                     existingBankCode={producerData?.bank_code}
@@ -355,117 +326,113 @@ export default function ProducerSettings() {
                     existingAccountName={producerData?.verified_account_name}
                     onSuccess={handleBankDetailsSuccess}
                   />
-                </CardContent>
-              </Card>
+               </div>
+             </div>
+          </div>
 
-              <PaymentStatsSection
-                userId={user.id}
-                hasVerifiedAccount={!!producerData?.verified_account_name}
-                verifiedAccountName={producerData?.verified_account_name}
+          <PaymentStatsSection
+            userId={user.id}
+            hasVerifiedAccount={!!producerData?.verified_account_name}
+            verifiedAccountName={producerData?.verified_account_name}
+          />
+        </TabsContent>
+
+        <TabsContent value="preferences" className="outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent">
+            <div className="bg-[#030407] rounded-[2.4rem] p-8 md:p-12">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40">
+                  <Bell size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-white italic tracking-tighter uppercase text-xl">Notifications</h3>
+                  <p className="text-white/30 text-[10px] uppercase font-black tracking-widest italic">Configure how you receive updates</p>
+                </div>
+              </div>
+              
+              <PreferencesForm
+                initialEmailNotifications={producerSettings.emailNotifications}
+                initialPushNotifications={producerSettings.pushNotifications}
+                initialSmsNotifications={producerSettings.smsNotifications}
+                initialAutoPlayPreviews={producerSettings.autoPlayPreviews}
               />
             </div>
-          </TabsContent>
+          </div>
+        </TabsContent>
 
-          <TabsContent value="preferences">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">
-                  Preferences
-                </CardTitle>
-                <CardDescription className="text-sm md:text-base">
-                  Customize your producer experience
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PreferencesForm
-                  initialEmailNotifications={
-                    producerSettings.emailNotifications
-                  }
-                  initialPushNotifications={producerSettings.pushNotifications}
-                  initialSmsNotifications={producerSettings.smsNotifications}
-                  initialAutoPlayPreviews={producerSettings.autoPlayPreviews}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+        <TabsContent value="account" className="outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent">
+            <div className="bg-[#030407] rounded-[2.4rem] p-8 md:p-12">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40">
+                  <Shield size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-white italic tracking-tighter uppercase text-xl">Change Password</h3>
+                  <p className="text-white/30 text-[10px] uppercase font-black tracking-widest italic">Secure your account access</p>
+                </div>
+              </div>
 
-          <TabsContent value="account">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">
-                  Account Security
-                </CardTitle>
-                <CardDescription className="text-sm md:text-base">
-                  Change your password to keep your account secure
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePasswordChange} className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="current-password">Current Password</Label>
-                      <Input
-                        id="current-password"
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="Enter your current password"
-                        className="bg-background"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="new-password">New Password</Label>
-                      <Input
-                        id="new-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Enter your new password"
-                        className="bg-background"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-password">
-                        Confirm New Password
-                      </Label>
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm your new password"
-                        className="bg-background"
-                      />
-                    </div>
+              <form onSubmit={handlePasswordChange} className="space-y-10 max-w-xl">
+                <div className="grid grid-cols-1 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Current Password</Label>
+                    <Input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6"
+                    />
                   </div>
 
-                  <div className="text-sm text-muted-foreground">
-                    <p>Password requirements:</p>
-                    <ul className="list-disc list-inside pl-2 mt-1 space-y-1">
-                      <li>At least 8 characters long</li>
-                      <li>At least one uppercase letter</li>
-                      <li>At least one number</li>
-                      <li>At least one special character</li>
-                    </ul>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">New Password</Label>
+                    <Input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6"
+                    />
                   </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isChangingPassword}
-                    className="w-full md:w-auto"
-                  >
-                    {isChangingPassword
-                      ? "Updating Password..."
-                      : "Update Password"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </MainLayout>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Confirm New Password</Label>
+                    <Input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/20 italic mb-3 block border-b border-white/5 pb-2">Password Requirements:</span>
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                     {['Min 8 characters', 'One uppercase', 'One number', 'One symbol'].map(req => (
+                       <div key={req} className="flex items-center gap-2">
+                         <div className="w-1.5 h-1.5 rounded-full bg-[#9A3BDC]/40" />
+                         <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest italic">{req}</span>
+                       </div>
+                     ))}
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="h-14 rounded-2xl bg-white text-black font-black uppercase italic tracking-tighter px-10 hover:bg-white/90 disabled:opacity-50 transition-all"
+                >
+                  {isChangingPassword ? "Updating..." : "Update Password"}
+                </Button>
+              </form>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

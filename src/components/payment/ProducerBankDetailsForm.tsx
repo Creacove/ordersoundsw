@@ -335,30 +335,39 @@ export function ProducerBankDetailsForm({
   if (hasCompleteDetails && !isEditMode) {
     // Show read-only view of bank details with edit button
     return (
-      <div className="space-y-4">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-base font-medium text-green-800 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                Bank Account Connected
-              </h3>
-              <p className="text-sm text-green-700 mt-1">
-                {getBankNameFromCode(existingBankCode)} Account{" "}
-                {existingAccountName}
-              </p>
-              <p className="text-xs text-green-600 mt-1">
-                Account Number: {formatAccountNumber(existingAccountNumber)}
-              </p>
+      <div className="space-y-6">
+        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-[2rem] p-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+          <div className="flex justify-between items-start relative z-10">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                  <CheckCircle2 size={16} />
+                </div>
+                <h3 className="text-sm font-black text-white italic tracking-widest uppercase">
+                  Payout Node Active
+                </h3>
+              </div>
+              <div>
+                <p className="text-xl font-black text-white italic tracking-tighter uppercase">
+                  {getBankNameFromCode(existingBankCode)}
+                </p>
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest italic mt-1">
+                  Account Holder: {existingAccountName}
+                </p>
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">
+                  Identifier: {formatAccountNumber(existingAccountNumber)}
+                </p>
+              </div>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsEditMode(true)}
-              className="flex items-center gap-1"
+              className="h-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase italic tracking-widest px-4"
             >
-              <PenLine className="h-3 w-3" />
-              <span>Edit Bank Details</span>
+              <PenLine className="h-3 w-3 mr-2" />
+              Reconfigure
             </Button>
           </div>
         </div>
@@ -370,13 +379,13 @@ export function ProducerBankDetailsForm({
   return (
     <div className="w-full">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <FormField
             control={form.control}
             name="bank_code"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bank Name</FormLabel>
+              <FormItem className="space-y-4">
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Financial Institution / Bank</FormLabel>
                 <Select
                   disabled={isLoadingBanks || isLoading}
                   onValueChange={(value) => {
@@ -389,19 +398,19 @@ export function ProducerBankDetailsForm({
                   value={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your bank" />
+                    <SelectTrigger className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6">
+                      <SelectValue placeholder="Select institution..." />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-80">
+                  <SelectContent className="bg-[#0c0d12] border-white/10 rounded-2xl max-h-80">
                     {isLoadingBanks ? (
-                      <div className="flex items-center justify-center py-2">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        <span>Loading banks...</span>
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2 text-accent" />
+                        <span className="text-[10px] font-black uppercase italic text-white/40">Querying registry...</span>
                       </div>
                     ) : (
                       banks.map((bank) => (
-                        <SelectItem key={bank.code} value={bank.code}>
+                        <SelectItem key={bank.code} value={bank.code} className="text-white focus:bg-white/5 focus:text-white py-3 font-bold italic">
                           {bank.name}
                         </SelectItem>
                       ))
@@ -417,11 +426,12 @@ export function ProducerBankDetailsForm({
             control={form.control}
             name="account_number"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Account Number</FormLabel>
+              <FormItem className="space-y-4">
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Account Identifier / Number</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Enter 10-digit account number"
+                    placeholder="Enter 10-digit numeric code"
+                    className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6"
                     {...field}
                     disabled={isLoading}
                     onChange={(e) => {
@@ -441,41 +451,40 @@ export function ProducerBankDetailsForm({
           {/* Account name verification result */}
           {(isVerifying || accountName || existingAccountName) && (
             <div
-              className={`p-3 rounded-md ${
+              className={cn(
+                "p-6 rounded-[1.8rem] border transition-all animate-in fade-in duration-500",
                 isVerifying
-                  ? "bg-blue-50 border border-blue-200"
-                  : accountName
-                  ? "bg-green-50 border border-green-200"
-                  : "bg-amber-50 border border-amber-200"
-              }`}
+                  ? "bg-[#9A3BDC]/5 border-[#9A3BDC]/20"
+                  : (accountName || existingAccountName)
+                  ? "bg-emerald-500/5 border-emerald-500/20"
+                  : "bg-red-500/5 border-red-500/20"
+              )}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
                 {isVerifying ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                    <span className="text-sm text-blue-600">
-                      Verifying account details...
+                    <Loader2 className="h-4 w-4 animate-spin text-[#9A3BDC]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#9A3BDC] italic">
+                      Verifying Node Credentials...
                     </span>
                   </>
-                ) : accountName ? (
+                ) : (accountName || existingAccountName) ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-600">
-                      Account Name: {accountName}
-                    </span>
-                  </>
-                ) : existingAccountName ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm text-amber-600">
-                      Account Name: {existingAccountName}
-                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/40 italic">Account Verified</p>
+                      <p className="text-sm font-black text-white italic uppercase tracking-tight">
+                        {accountName || existingAccountName}
+                      </p>
+                    </div>
                   </>
                 ) : (
                   <>
                     <AlertCircle className="h-4 w-4 text-red-500" />
-                    <span className="text-sm text-red-600">
-                      Account verification failed
+                    <span className="text-[10px] font-black uppercase tracking-widest text-red-500 italic">
+                      Verification Failure
                     </span>
                   </>
                 )}
@@ -485,45 +494,44 @@ export function ProducerBankDetailsForm({
 
           {/* Verification warning */}
           {verificationWarning && (
-            <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm text-yellow-700">
+            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <span className="text-[9px] font-bold text-amber-500/80 uppercase tracking-widest italic leading-relaxed">
                   {verificationWarning}
                 </span>
               </div>
             </div>
           )}
 
-          <FormDescription className="text-xs">
-            Your bank details are securely encrypted and only used for payment
-            processing. Please ensure your account details are correct to avoid
-            payment issues.
+          <FormDescription className="text-[9px] font-bold text-white/20 uppercase tracking-[0.1em] italic leading-relaxed">
+            Encrypted settlement protocols active. Your financial telemetry remains isolated within the vault.
           </FormDescription>
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6">
             {hasCompleteDetails && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsEditMode(false)}
+                className="h-14 rounded-2xl border-white/5 bg-transparent text-white/40 font-black uppercase italic tracking-widest px-8 hover:bg-white/5 hover:text-white"
               >
-                Cancel
+                Abort
               </Button>
             )}
             <Button
               type="submit"
               disabled={isLoading || isVerifying}
-              className="relative"
+              className="h-14 rounded-2xl bg-white text-black font-black uppercase italic tracking-tighter px-10 hover:bg-white/90 disabled:opacity-50 transition-all flex-1 sm:flex-none"
             >
-              {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center">
+              {isLoading ? (
+                <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Syncing...</span>
                 </div>
+              ) : (
+                <span>{existingBankCode ? "Commit Changes" : "Establish Payout Node"}</span>
               )}
-              <span className={isLoading ? "opacity-0" : ""}>
-                {existingBankCode ? "Save Changes" : "Save Bank Details"}
-              </span>
             </Button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LogoProps {
   className?: string;
@@ -7,29 +8,31 @@ interface LogoProps {
   showText?: boolean;
 }
 
-export function Logo({ className, size = "mobile", showText = false }: LogoProps) {
-  const logoSizes = {
-    mobile: "h-8 w-auto",
-    desktop: "h-36 w-auto"
-  };
-
+export function Logo({ className, size, showText }: LogoProps) {
+  const isMobileHook = useIsMobile();
+  // Prefer explicit size prop, fallback to hook
+  const isMobile = size === "mobile" || (size === undefined && isMobileHook);
+  
   return (
     <Link
       to="/"
       className={cn(
-        "flex items-center gap-2 relative transition-all hover:opacity-80",
+        "flex items-center relative transition-all hover:opacity-80 outline-none",
         className
       )}
     >
-      <img
-        src="/lovable-uploads/86ceb56c-c6e8-400c-8c94-ec40647db5bc.png"
-        alt="OrderSOUNDS"
-        className={logoSizes[size]}
-      />
-      {showText && (
-        <span className="text-xl font-bold tracking-tight text-white">
-          OrderSounds
-        </span>
+      {isMobile ? (
+        <img
+          src="/lovable-uploads/86ceb56c-c6e8-400c-8c94-ec40647db5bc.png"
+          alt="OrderSOUNDS Icon"
+          className="h-6 w-auto object-contain"
+        />
+      ) : (
+        <img
+          src="/lovable-uploads/eb4345ae-2714-491f-822d-46a5ea0844af.png"
+          alt="OrderSOUNDS Wordmark"
+          className="h-5 w-auto object-contain mt-1"
+        />
       )}
     </Link>
   );

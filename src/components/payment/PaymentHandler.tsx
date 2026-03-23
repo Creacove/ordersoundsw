@@ -1,12 +1,12 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
+import { publicEnv } from '@/config/publicEnv';
 import { PaystackCheckout } from './PaystackCheckout';
 import { useAuth } from '@/context/AuthContext';
 import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useCartWithBeatDetailsOptimized } from '@/hooks/useCartWithBeatDetailsOptimized';
 import { toast } from 'sonner';
-import { getProducerSplitCode } from '@/utils/payment/paystackSplitUtils';
 
 interface PaymentHandlerProps {
   totalAmount: number;
@@ -14,6 +14,8 @@ interface PaymentHandlerProps {
   producerId?: string;
   beatId?: string;
 }
+
+const hasConfiguredPaystackKey = Boolean(publicEnv.paystackPublicKey);
 
 export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: PaymentHandlerProps) {
   const [isPaystackOpen, setIsPaystackOpen] = useState(false);
@@ -24,8 +26,6 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
   const [scriptError, setScriptError] = useState(false);
   const [loadingScript, setLoadingScript] = useState(false);
   const [initiatingPayment, setInitiatingPayment] = useState(false);
-  const [splitCode, setSplitCode] = useState<string | null>(null);
-  const [loadingSplitCode, setLoadingSplitCode] = useState(false);
   const scriptLoadAttempts = useRef(0);
   const maxScriptLoadAttempts = 3;
   const scriptCheckInterval = useRef<NodeJS.Timeout | null>(null);
@@ -33,7 +33,7 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
   const scriptRef = useRef<HTMLScriptElement | null>(null);
 
   // Check if Paystack is already available in the window object
-  const verifyPaystackAvailable = () => {
+  const verifyPaystackAvailable = useCallback(() => {
     try {
       return window.PaystackPop && 
              typeof window.PaystackPop === 'object' && 
@@ -42,18 +42,18 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
       console.error('Error checking PaystackPop:', e);
       return false;
     }
-  };
+  }, []);
 
   // Clean up any ongoing checks or timeouts
-  const cleanupPaystackResources = () => {
+  const cleanupPaystackResources = useCallback(() => {
     if (scriptCheckInterval.current) {
       clearInterval(scriptCheckInterval.current);
       scriptCheckInterval.current = null;
     }
-  };
+  }, []);
 
   // Improved script loading with better error handling
-  const loadPaystackScript = () => {
+  const loadPaystackScript = useCallback(() => {
     // Don't try loading if we've reached the max attempts
     if (scriptLoadAttempts.current >= maxScriptLoadAttempts) {
       console.error('Maximum script load attempts reached');
@@ -134,10 +134,16 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
     };
     
     document.body.appendChild(script);
-  };
+  }, [cleanupPaystackResources, verifyPaystackAvailable]);
 
   // Load script on component mount
   useEffect(() => {
+    if (!hasConfiguredPaystackKey) {
+      setScriptLoaded(false);
+      setLoadingScript(false);
+      return;
+    }
+
     // If Paystack is already available, don't load the script again
     if (verifyPaystackAvailable()) {
       console.log('Paystack already loaded');
@@ -146,49 +152,23 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
       return;
     }
     
-    // Don't load if already loading
-    if (loadingScript) return;
-    
     loadPaystackScript();
     
     return () => {
       cleanupPaystackResources();
     };
-  }, []);
+  }, [cleanupPaystackResources, loadPaystackScript, verifyPaystackAvailable]);
 
   // Update hasItems when cart changes
   useEffect(() => {
     setHasItems(cartItems && cartItems.length > 0);
   }, [cartItems]);
   
-  // Fetch producer split code if needed
-  useEffect(() => {
-    const fetchSplitCode = async () => {
-      if (!producerId) return;
-      
-      try {
-        setLoadingSplitCode(true);
-        const code = await getProducerSplitCode(producerId);
-        console.log(`Split code for producer ${producerId}:`, code);
-        setSplitCode(code);
-      } catch (error) {
-        console.error('Error fetching split code:', error);
-      } finally {
-        setLoadingSplitCode(false);
-      }
-    };
-    
-    fetchSplitCode();
-  }, [producerId]);
-
   // Handle successful payment
   const handlePaystackSuccess = (reference: string) => {
     console.log('Payment successful with reference:', reference);
     
     clearCart();
-    
-    localStorage.setItem('purchaseSuccess', 'true');
-    localStorage.setItem('purchaseTime', Date.now().toString());
     
     toast.success('Payment successful! Redirecting to your library...');
     
@@ -251,7 +231,7 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
     );
   }
 
-  const isDisabled = totalAmount <= 0 || (!hasItems && !producerId) || !scriptLoaded || loadingScript || loadingSplitCode;
+  const isDisabled = totalAmount <= 0 || (!hasItems && !producerId) || !scriptLoaded || loadingScript;
 
   return (
     <div className="space-y-4">
@@ -271,21 +251,20 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
           </Button>
         </div>
       )}
+
+      {!hasConfiguredPaystackKey && (
+        <div className="p-3 border border-destructive/50 bg-destructive/10 rounded-md mb-4">
+          <p className="text-sm font-medium text-destructive">
+            NGN checkout is unavailable because `VITE_PAYSTACK_PUBLIC_KEY` is missing from the browser env.
+          </p>
+        </div>
+      )}
       
       {loadingScript && !scriptError && (
         <div className="p-3 border border-primary/20 bg-primary/5 rounded-md mb-4">
           <p className="text-sm text-primary/80 flex items-center gap-2">
             <Loader2 size={14} className="animate-spin" />
             Loading payment system...
-          </p>
-        </div>
-      )}
-      
-      {loadingSplitCode && producerId && (
-        <div className="p-3 border border-primary/20 bg-primary/5 rounded-md mb-4">
-          <p className="text-sm text-primary/80 flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin" />
-            Preparing transaction...
           </p>
         </div>
       )}
@@ -305,8 +284,6 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
               </>
             ) : loadingScript ? (
               'Loading Payment System...'
-            ) : loadingSplitCode ? (
-              'Preparing Payment...'
             ) : (
               `Pay with Paystack (₦${Math.round(totalAmount).toLocaleString()})`
             )}
@@ -317,7 +294,6 @@ export function PaymentHandler({ totalAmount, onSuccess, producerId, beatId }: P
             onSuccess={handlePaystackSuccess}
             onClose={handlePaystackClose}
             totalAmount={totalAmount}
-            splitCode={splitCode}
             beatId={beatId}
             producerId={producerId}
           />

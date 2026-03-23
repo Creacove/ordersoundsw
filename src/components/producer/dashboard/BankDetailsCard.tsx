@@ -1,11 +1,6 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+
 import { ProducerBankDetailsForm } from "@/components/payment/ProducerBankDetailsForm";
+import { Building2 } from "lucide-react";
 
 interface BankDetailsCardProps {
   userId: string;
@@ -19,16 +14,23 @@ export function BankDetailsCard({
   onSuccess,
 }: BankDetailsCardProps) {
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle>Set Up NGN Bank Account</CardTitle>
-        <CardDescription>
-          Enter your Nigerian bank details to receive automatic NGN payments for your beat
-          sales. You will receive 90% of each sale directly to your NGN bank
-          account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="h-full flex flex-col">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+            <Building2 size={16} className="text-emerald-500" />
+          </div>
+          <h3 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">
+            Banking <span className="text-emerald-500">Node</span>
+          </h3>
+        </div>
+        <p className="text-[11px] text-white/40 italic leading-relaxed">
+          Configure your Nigerian bank details to activate automated NGN settlements. 
+          Receive 90% revenue directly to your local account.
+        </p>
+      </div>
+
+      <div className="flex-1">
         <ProducerBankDetailsForm
           producerId={userId}
           existingBankCode={producerData?.bank_code}
@@ -36,7 +38,7 @@ export function BankDetailsCard({
           existingAccountName={producerData?.verified_account_name}
           onSuccess={onSuccess}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

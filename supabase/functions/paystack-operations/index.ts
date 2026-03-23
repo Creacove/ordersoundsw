@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { authenticateRequest, createServiceRoleClient, requireRole } from "../_shared/auth.ts"
 
 // Get the secret key from environment variables
 const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')
@@ -11,6 +12,49 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+type JsonObject = Record<string, unknown>
+type ResolveAccountPayload = {
+  account_number?: string
+  bank_code?: string
+}
+type SplitPayload = JsonObject & {
+  id?: string
+}
+
+function asJsonObject(value: unknown): JsonObject | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+
+  return value as JsonObject
+}
+
+function getOptionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined
+}
+
+function parseResolveAccountPayload(value: unknown): ResolveAccountPayload | null {
+  const data = asJsonObject(value)
+  if (!data) {
+    return null
+  }
+
+  return {
+    account_number: getOptionalString(data.account_number),
+    bank_code: getOptionalString(data.bank_code),
+  }
+}
+
+function parseSplitPayload(value: unknown): SplitPayload | null {
+  const data = asJsonObject(value)
+  if (!data) {
+    return null
+  }
+
+  const id = getOptionalString(data.id)
+  return id ? { ...data, id } : { ...data }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -18,7 +62,16 @@ serve(async (req) => {
   }
 
   try {
-    const { operation, data } = await req.json()
+    const serviceClient = createServiceRoleClient();
+    const authResult = await authenticateRequest(req, serviceClient);
+    if ("response" in authResult) {
+      return authResult.response;
+    }
+
+    const actor = authResult.actor;
+    const requestBody = asJsonObject(await req.json())
+    const operation = getOptionalString(requestBody?.operation)
+    const data = requestBody?.data
 
     if (!PAYSTACK_SECRET_KEY) {
       return new Response(
@@ -41,15 +94,35 @@ serve(async (req) => {
     // Handle different Paystack operations
     switch (operation) {
       case 'fetch-banks':
+        {
+          const roleResponse = requireRole(actor, ['producer', 'admin']);
+          if (roleResponse) return roleResponse;
+        }
         return await handleFetchBanks()
       case 'resolve-account':
-        return await handleResolveAccount(data)
+        {
+          const roleResponse = requireRole(actor, ['producer', 'admin']);
+          if (roleResponse) return roleResponse;
+        }
+        return await handleResolveAccount(parseResolveAccountPayload(data) ?? undefined)
       case 'create-split':
-        return await handleCreateSplit(data)
+        {
+          const roleResponse = requireRole(actor, ['admin']);
+          if (roleResponse) return roleResponse;
+        }
+        return await handleCreateSplit(asJsonObject(data) ?? undefined)
       case 'update-split':
-        return await handleUpdateSplit(data)
+        {
+          const roleResponse = requireRole(actor, ['admin']);
+          if (roleResponse) return roleResponse;
+        }
+        return await handleUpdateSplit(parseSplitPayload(data) ?? undefined)
       case 'fetch-split':
-        return await handleFetchSplit(data)
+        {
+          const roleResponse = requireRole(actor, ['admin']);
+          if (roleResponse) return roleResponse;
+        }
+        return await handleFetchSplit(parseSplitPayload(data) ?? undefined)
       default:
         return new Response(
           JSON.stringify({ error: 'Unknown operation' }),
@@ -66,7 +139,7 @@ serve(async (req) => {
   }
 })
 
-async function makePaystackRequest(endpoint: string, method: string, body?: any) {
+async function makePaystackRequest(endpoint: string, method: string, body?: JsonObject) {
   const url = `https://api.paystack.co${endpoint}`
   
   const options: RequestInit = {
@@ -119,9 +192,9 @@ async function handleFetchBanks() {
   }
 }
 
-async function handleResolveAccount(data: any) {
+async function handleResolveAccount(data?: ResolveAccountPayload) {
   try {
-    const { account_number, bank_code } = data
+    const { account_number, bank_code } = data ?? {}
     if (!account_number || !bank_code) {
       return new Response(
         JSON.stringify({ error: 'Missing account_number or bank_code' }),
@@ -151,19 +224,40 @@ async function handleResolveAccount(data: any) {
   }
 }
 
-async function handleCreateSplit(data: any) {
+async function handleCreateSplit(data?: JsonObject) {
+  if (!data) {
+    return new Response(
+      JSON.stringify({ error: 'Missing split payload' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
   console.log('Creating split with live key')
   return await makePaystackRequest('/split', 'POST', data)
 }
 
-async function handleUpdateSplit(data: any) {
-  const { id, ...updateData } = data
+async function handleUpdateSplit(data?: SplitPayload) {
+  const { id, ...updateData } = data ?? {}
+  if (!id) {
+    return new Response(
+      JSON.stringify({ error: 'Missing split id' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
   console.log(`Updating split ${id} with live key`)
   return await makePaystackRequest(`/split/${id}`, 'PUT', updateData)
 }
 
-async function handleFetchSplit(data: any) {
-  const { id } = data
+async function handleFetchSplit(data?: SplitPayload) {
+  const { id } = data ?? {}
+  if (!id) {
+    return new Response(
+      JSON.stringify({ error: 'Missing split id' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
   console.log(`Fetching split ${id} with live key`)
   return await makePaystackRequest(`/split/${id}`, 'GET')
 }

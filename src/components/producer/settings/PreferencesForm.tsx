@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, Bell, Volume2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
@@ -75,83 +75,96 @@ export function PreferencesForm({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Notification Settings</h3>
-        
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <h4 className="text-base font-medium">Email Notifications</h4>
-            <p className="text-sm text-muted-foreground">
-              Receive beat sales and important updates via email
-            </p>
-          </div>
-          <Switch 
-            checked={emailNotifications} 
-            onCheckedChange={setEmailNotifications}
-          />
+    <div className="space-y-12">
+      <div className="space-y-8">
+        <div className="flex items-center gap-3">
+          <Bell size={18} className="text-[#9A3BDC]" />
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 italic">Notifications</h3>
         </div>
         
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <h4 className="text-base font-medium">Push Notifications</h4>
-            <p className="text-sm text-muted-foreground">
-              Receive in-app notifications for sales and messages
-            </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+            <div className="space-y-1">
+              <h4 className="text-sm font-black text-white italic tracking-tight uppercase">Email Alerts</h4>
+              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic">
+                Sales and critical updates
+              </p>
+            </div>
+            <Switch 
+              checked={emailNotifications} 
+              onCheckedChange={setEmailNotifications}
+              className="data-[state=checked]:bg-[#9A3BDC]"
+            />
           </div>
-          <Switch 
-            checked={pushNotifications} 
-            onCheckedChange={setPushNotifications} 
-          />
-        </div>
-        
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <h4 className="text-base font-medium">SMS Notifications</h4>
-            <p className="text-sm text-muted-foreground">
-              Receive important alerts via text message
-            </p>
+          
+          <div className="flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+            <div className="space-y-1">
+              <h4 className="text-sm font-black text-white italic tracking-tight uppercase">Desktop Push</h4>
+              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic">
+                Real-time activity pings
+              </p>
+            </div>
+            <Switch 
+              checked={pushNotifications} 
+              onCheckedChange={setPushNotifications} 
+              className="data-[state=checked]:bg-[#9A3BDC]"
+            />
           </div>
-          <Switch 
-            checked={smsNotifications} 
-            onCheckedChange={setSmsNotifications} 
-          />
-        </div>
-      </div>
-      
-      <div className="border-t pt-4 space-y-4">
-        <h3 className="text-lg font-medium">Display Settings</h3>
-        
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <h4 className="text-base font-medium">Auto-Play Previews</h4>
-            <p className="text-sm text-muted-foreground">
-              Automatically play beat previews when viewed
-            </p>
+          
+          <div className="flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+            <div className="space-y-1">
+              <h4 className="text-sm font-black text-white italic tracking-tight uppercase">SMS Direct</h4>
+              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic">
+                Important account security
+              </p>
+            </div>
+            <Switch 
+              checked={smsNotifications} 
+              onCheckedChange={setSmsNotifications} 
+              className="data-[state=checked]:bg-[#9A3BDC]"
+            />
           </div>
-          <Switch 
-            checked={autoPlayPreviews} 
-            onCheckedChange={setAutoPlayPreviews}
-          />
         </div>
       </div>
       
-      <div className="flex items-center gap-2">
+      <div className="space-y-8">
+        <div className="flex items-center gap-3">
+          <Volume2 size={18} className="text-[#9A3BDC]" />
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 italic">Interface Experience</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex items-center justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+            <div className="space-y-1">
+              <h4 className="text-sm font-black text-white italic tracking-tight uppercase">Auto-Play Previews</h4>
+              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic">
+                Stream beats on hover/view
+              </p>
+            </div>
+            <Switch 
+              checked={autoPlayPreviews} 
+              onCheckedChange={setAutoPlayPreviews}
+              className="data-[state=checked]:bg-[#9A3BDC]"
+            />
+          </div>
+        </div>
+      </div>
+      
+      <div className="pt-6 border-t border-white/5 flex flex-col md:flex-row items-center gap-6">
         <Button 
-          className="w-full md:w-auto bg-purple-600 hover:bg-purple-700"
+          className="h-14 rounded-2xl bg-white text-black font-black uppercase italic tracking-tighter px-10 hover:bg-white/90 disabled:opacity-50 transition-all w-full md:w-auto overflow-hidden relative"
           onClick={handleSavePreferences}
           disabled={isLoading}
-          variant={saveSuccess ? "outline" : "default"}
         >
           {isLoading ? (
-            <div className="flex items-center justify-center w-full">
+            <div className="flex items-center justify-center">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Saving...</span>
+              <span>Updating...</span>
             </div>
           ) : saveSuccess ? (
-            <div className="flex items-center justify-center w-full">
-              <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-              <span>Saved</span>
+            <div className="flex items-center justify-center animate-in zoom-in duration-300">
+              <ShieldCheck className="mr-2 h-4 w-4 text-emerald-600" />
+              <span>Applied</span>
             </div>
           ) : (
             <span>Save Preferences</span>
@@ -159,7 +172,9 @@ export function PreferencesForm({
         </Button>
         
         {saveSuccess && (
-          <span className="text-sm text-muted-foreground">Preferences saved successfully</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/60 italic animate-in fade-in slide-in-from-left-4">
+            System preferences updated successfully
+          </span>
         )}
       </div>
     </div>

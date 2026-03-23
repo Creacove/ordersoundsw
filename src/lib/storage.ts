@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadImage, deleteImage as deleteImageFile } from './imageStorage';
 import { toast } from 'sonner';
@@ -13,6 +13,27 @@ export { isFile } from './imageStorage';
 // Re-export uploadImage and deleteImage functions
 export const uploadImageFile = uploadImage;
 export const deleteImage = deleteImageFile;
+
+async function getUploadAuthHeaders(): Promise<{ accessToken: string; apiKey: string }> {
+  const { data: { session }, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw new Error(`Unable to resolve upload session: ${error.message}`);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('You must be signed in to upload files.');
+  }
+
+  if (!SUPABASE_PUBLISHABLE_KEY) {
+    throw new Error('Missing Supabase publishable key.');
+  }
+
+  return {
+    accessToken: session.access_token,
+    apiKey: SUPABASE_PUBLISHABLE_KEY,
+  };
+}
 
 /**
  * Uploads a file to Supabase storage
@@ -29,7 +50,7 @@ export const uploadFile = async (
   progressCallback?: (progress: number) => void,
   maxRetries = 3
 ): Promise<string> => {
-  let lastError: any;
+  let lastError: unknown;
   
   // Retry logic with exponential backoff
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -110,20 +131,19 @@ async function uploadFileInternal(
       if ((isLargeFile && isStems) || realFile.size > 100 * 1024 * 1024) {
         return uploadLargeFileManually(realFile, bucket, filePath, contentType, progressCallback, uploadTimeoutMs);
       }
+
+      const { data } = await supabase.storage.from(bucket).getPublicUrl('dummy');
+      const baseUrl = new URL(data.publicUrl).origin;
+      const uploadUrl = `${baseUrl}/storage/v1/object/${bucket}/${filePath}`;
+      const { accessToken, apiKey } = await getUploadAuthHeaders();
       
-      return new Promise<string>(async (resolve, reject) => {
+      return new Promise<string>((resolve, reject) => {
         try {
           // Initial progress indication
           progressCallback(5);
           
           // Set up XMLHttpRequest for tracking upload progress
           const xhr = new XMLHttpRequest();
-          
-          // Construct the upload URL
-          // Get the base URL from Supabase storage endpoint
-          const { data } = await supabase.storage.from(bucket).getPublicUrl('dummy');
-          const baseUrl = new URL(data.publicUrl).origin;
-          const uploadUrl = `${baseUrl}/storage/v1/object/${bucket}/${filePath}`;
           
           xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
@@ -167,17 +187,7 @@ async function uploadFileInternal(
           xhr.timeout = uploadTimeoutMs;
           xhr.open("POST", uploadUrl, true);
           
-          // Set required headers - Get the session from Supabase auth
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          // Get the API key from localStorage or URL parameters
-          const apiKey = window.localStorage.getItem('supabase.auth.token.access_token') || 
-                        new URLSearchParams(window.location.search).get('apikey') ||
-                        '';
-          
-          if (session?.access_token) {
-            xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
-          }
+          xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
           xhr.setRequestHeader("apikey", apiKey);
           xhr.setRequestHeader("Content-Type", contentType);
           xhr.setRequestHeader("Cache-Control", "3600");
@@ -265,18 +275,13 @@ async function uploadLargeFileManually(
     const baseUrl = new URL(urlData.publicUrl).origin;
     const storageApiUrl = `${baseUrl}/storage/v1`;
     
-    // Get auth information once
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token || '';
-    
-    // Get the API key from localStorage
-    const apiKey = window.localStorage.getItem('supabase.auth.token.access_token') || '';
+    const { accessToken, apiKey } = await getUploadAuthHeaders();
     
     if (chunks === 1) {
       // For files that fit in a single chunk, use standard upload
       console.log("File size allows for single upload");
       
-      return new Promise<string>(async (resolve, reject) => {
+      return new Promise<string>((resolve, reject) => {
         try {
           // Set up XMLHttpRequest for tracking upload progress
           const xhr = new XMLHttpRequest();
@@ -326,10 +331,7 @@ async function uploadLargeFileManually(
           xhr.timeout = timeoutMs;
           xhr.open("POST", uploadUrl, true);
           
-          // Set required headers
-          if (accessToken) {
-            xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
-          }
+          xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
           xhr.setRequestHeader("apikey", apiKey);
           xhr.setRequestHeader("Content-Type", contentType);
           xhr.setRequestHeader("Cache-Control", "3600");
@@ -374,13 +376,13 @@ async function uploadLargeFileManually(
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Check if any promises have completed
-        const pendingCount = partPromises.filter(p => !p.hasOwnProperty('resolved')).length;
+        const pendingCount = partPromises.filter(p => !('resolved' in p)).length;
         activeBatch = pendingCount;
       }
       
       activeBatch++;
       
-      const uploadPromise = new Promise<{ path: string; size: number }>(async (resolve, reject) => {
+      const uploadPromise = new Promise<{ path: string; size: number }>((resolve, reject) => {
         try {
           const chunkNumber = i + 1;
           const xhr = new XMLHttpRequest();

@@ -39,7 +39,7 @@ export const LicensingTab = ({
   return (
     <div className="space-y-4">
       <div className="bg-muted/30 rounded-lg p-4 flex items-start gap-3">
-        <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <Info className="h-5 w-5 -purple- flex-shrink-0 mt-0.5" />
         <div>
           <h3 className="text-sm font-medium">Important: License Selection</h3>
           <p className="text-xs text-muted-foreground">
@@ -83,7 +83,7 @@ export const LicensingTab = ({
                       <span className="ml-2 text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">MP3</span>
                     )}
                     {option.value === 'premium' && (
-                      <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">WAV</span>
+                      <span className="ml-2 text-xs px-2 py-0.5 -purple- -purple- rounded-full">WAV</span>
                     )}
                     {option.value === 'exclusive' && (
                       <span className="ml-2 text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full">WAV + Stems</span>

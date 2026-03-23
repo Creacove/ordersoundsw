@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Playlist } from "@/types";
 import { useAuth } from "@/context/AuthContext";
@@ -91,31 +90,29 @@ export default function BuyerProfile() {
   };
 
   return (
-    <MainLayoutWithPlayer>
-      <div className="container py-6 md:py-8">
-        {isLoading ? (
-          <ProfileLoading />
-        ) : buyer ? (
-          <>
-            <ProfileHeader 
+    <div className="container py-8 md:py-12 px-4 md:px-6">
+      {isLoading ? (
+        <ProfileLoading />
+      ) : buyer ? (
+        <>
+          <ProfileHeader 
+            buyer={buyer} 
+            playlists={playlists} 
+            isOwnProfile={isOwnProfile} 
+          />
+          
+          <div className="mt-8">
+            <ProfileTabs 
               buyer={buyer} 
               playlists={playlists} 
+              isLoadingPlaylists={isLoadingPlaylists} 
               isOwnProfile={isOwnProfile} 
             />
-            
-            <div className="mt-6">
-              <ProfileTabs 
-                buyer={buyer} 
-                playlists={playlists} 
-                isLoadingPlaylists={isLoadingPlaylists} 
-                isOwnProfile={isOwnProfile} 
-              />
-            </div>
-          </>
-        ) : (
-          <NotFound />
-        )}
-      </div>
-    </MainLayoutWithPlayer>
+          </div>
+        </>
+      ) : (
+        <NotFound />
+      )}
+    </div>
   );
 }

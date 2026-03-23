@@ -206,7 +206,7 @@ const WalletButton: React.FC<WalletButtonProps> = ({ className, buttonClass }) =
     // Default connected state
     return (
       <div className="flex flex-col gap-2">
-        <div className="text-sm text-blue-600 dark:text-blue-400">
+        <div className="text-sm -purple- dark:-purple-">
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4" />
             Wallet connected

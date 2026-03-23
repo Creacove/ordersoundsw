@@ -1,8 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
-import { Search, MusicIcon, UserIcon, Filter } from "lucide-react";
+import { Search, MusicIcon, UserIcon, Filter, X, ChevronRight, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BeatCard } from "@/components/ui/BeatCard";
@@ -11,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCart } from "@/context/CartContext";
 import { useOptimizedSearch } from "@/hooks/search/useOptimizedSearch";
+import { Badge } from "@/components/ui/badge";
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,11 +53,11 @@ export default function SearchPage() {
     }
   }, [initialQuery, initialGenre, updateSearchTerm, updateFilters]);
 
-  const handleTabChange = (value: 'all' | 'beats' | 'producers') => {
-    setActiveTab(value);
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as any);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Update URL parameters
@@ -88,237 +87,274 @@ export default function SearchPage() {
   };
 
   return (
-    <MainLayoutWithPlayer>
-      <div className={cn(
-        "container py-4 sm:py-6",
-        isMobile ? "px-3 sm:px-6" : ""
-      )}>
-        <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Search</h1>
-        
-        <div className="relative mb-4 sm:mb-6">
-          <form onSubmit={handleSearch} className="relative flex items-center">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-            <Input 
-              id="search-input"
-              type="text"
-              placeholder="Search beats, producers, genres, moods..."
-              className="pl-10 pr-12 py-5 h-10 sm:h-12 bg-background border-input"
-              value={searchTerm}
-              onChange={(e) => updateSearchTerm(e.target.value)}
-              autoFocus
-            />
-            {searchTerm && (
-              <Button 
-                type="button"
-                variant="ghost" 
-                size="sm" 
-                className="absolute right-2 rounded-full"
-                onClick={() => updateSearchTerm("")}
+    <div className="min-h-screen bg-[#030407]">
+      <div className="container py-12 px-6 md:px-8 max-w-7xl mx-auto">
+        {/* Command Center Search Bar */}
+        <div className="flex flex-col items-center mb-16">
+          <Badge className="mb-6 bg-white/5 text-white/60 border-white/10 px-4 py-1.5 rounded-full text-[10px] uppercase tracking-[0.2em] font-bold">
+            Sonic Intelligence Search
+          </Badge>
+          
+          <div className="w-full max-w-3xl relative">
+            <form onSubmit={handleSearchSubmit} className="relative group">
+              <div className="absolute inset-0 bg-accent/20 blur-3xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700 -z-10" />
+              <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-white/20 group-focus-within:text-accent transition-colors duration-300" size={24} />
+              <Input 
+                id="search-input"
+                type="text"
+                placeholder="Find your sound: beats, producers, genres..."
+                className="w-full pl-16 pr-20 py-8 h-20 text-xl md:text-2xl bg-white/[0.03] border-white/10 rounded-[2.5rem] focus:ring-accent/50 focus:border-accent transition-all duration-300 placeholder:text-white/10 text-white font-medium"
+                value={searchTerm}
+                onChange={(e) => updateSearchTerm(e.target.value)}
+                autoFocus
+              />
+              {searchTerm && (
+                <button 
+                  type="button"
+                  className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white/5 hover:bg-white/10 p-2 rounded-full transition-colors duration-300"
+                  onClick={() => updateSearchTerm("")}
+                >
+                  <X size={20} className="text-white/40" />
+                </button>
+              )}
+            </form>
+          </div>
+          
+          <div className="flex flex-wrap justify-center items-center gap-3 mt-8">
+            <span className="text-white/20 text-xs font-bold uppercase tracking-widest mr-2">Quick Access:</span>
+            {['Afrobeat', 'Hip Hop', 'Trap', 'Amapiano'].map((term) => (
+              <button
+                key={term}
+                onClick={() => updateSearchTerm(term)}
+                className="px-4 py-1.5 rounded-full bg-white/[0.02] border border-white/5 text-white/40 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all text-xs font-bold"
               >
-                Clear
-              </Button>
-            )}
-          </form>
+                {term}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange} className="mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-            <TabsList className="tabs-mobile w-full sm:w-auto">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="beats">Beats</TabsTrigger>
-              <TabsTrigger value="producers">Producers</TabsTrigger>
+        <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange} className="mb-12">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 border-b border-white/5 pb-6">
+            <TabsList className="bg-transparent h-auto p-0 gap-8">
+              <TabsTrigger 
+                value="all" 
+                className="p-0 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-white text-white/40 text-lg font-bold transition-all relative after:absolute after:bottom-[-25px] after:left-0 after:right-0 after:h-[2px] after:bg-accent after:opacity-0 data-[state=active]:after:opacity-100"
+              >
+                All Results
+              </TabsTrigger>
+              <TabsTrigger 
+                value="beats" 
+                className="p-0 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-white text-white/40 text-lg font-bold transition-all relative after:absolute after:bottom-[-25px] after:left-0 after:right-0 after:h-[2px] after:bg-accent after:opacity-0 data-[state=active]:after:opacity-100"
+              >
+                Beats
+              </TabsTrigger>
+              <TabsTrigger 
+                value="producers" 
+                className="p-0 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-white text-white/40 text-lg font-bold transition-all relative after:absolute after:bottom-[-25px] after:left-0 after:right-0 after:h-[2px] after:bg-accent after:opacity-0 data-[state=active]:after:opacity-100"
+              >
+                Producers
+              </TabsTrigger>
             </TabsList>
             
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="gap-2 w-full sm:w-auto"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter size={16} />
-              <span>Filter</span>
-            </Button>
-          </div>
-          
-          {/* Genre filters */}
-          <div className="mb-4 overflow-x-auto pb-2">
-            <div className="flex gap-2 flex-nowrap">
-              {genres.map((genre) => (
-                <Button
-                  key={genre}
-                  variant={filters.genre === genre ? "default" : "outline"}
-                  size="sm"
-                  className="rounded-full whitespace-nowrap"
-                  onClick={() => handleGenreSelect(genre)}
-                >
-                  {genre}
-                </Button>
-              ))}
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  "rounded-2xl h-11 px-6 font-bold transition-all duration-300 gap-2 border border-white/5",
+                  showFilters ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <Filter size={18} />
+                Filters
+                {Object.values(filters).filter(Boolean).length > 0 && (
+                  <span className="ml-1 bg-accent text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                    {Object.values(filters).filter(Boolean).length}
+                  </span>
+                )}
+              </Button>
             </div>
           </div>
-          
-          {/* Mood filters */}
-          {moods.length > 0 && (
-            <div className="mb-4 overflow-x-auto pb-2">
-              <h3 className="text-sm font-medium mb-2">Mood</h3>
-              <div className="flex gap-2 flex-nowrap">
-                {moods.slice(0, 12).map((mood) => (
-                  <Button
-                    key={mood}
-                    variant={filters.mood === mood ? "default" : "outline"}
-                    size="sm"
-                    className="rounded-full whitespace-nowrap"
-                    onClick={() => {
-                      if (filters.mood === mood) {
-                        updateFilters({ mood: undefined });
-                      } else {
-                        updateFilters({ mood });
-                      }
-                    }}
-                  >
-                    {mood}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
           
           {showFilters && (
-            <div className="bg-card rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 animate-slide-down shadow-sm border">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Price Range</label>
-                  <select 
-                    className="w-full rounded-md bg-muted border-border p-2 text-xs sm:text-sm"
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === 'under-5000') {
-                        updateFilters({ minPrice: 0, maxPrice: 5000 });
-                      } else if (value === '5000-10000') {
-                        updateFilters({ minPrice: 5000, maxPrice: 10000 });
-                      } else if (value === '10000-15000') {
-                        updateFilters({ minPrice: 10000, maxPrice: 15000 });
-                      } else if (value === 'over-15000') {
-                        updateFilters({ minPrice: 15000, maxPrice: undefined });
-                      } else {
-                        updateFilters({ minPrice: undefined, maxPrice: undefined });
-                      }
-                    }}
-                  >
-                    <option value="">Any price</option>
-                    <option value="under-5000">Under ₦5,000</option>
-                    <option value="5000-10000">₦5,000 - ₦10,000</option>
-                    <option value="10000-15000">₦10,000 - ₦15,000</option>
-                    <option value="over-15000">Over ₦15,000</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Genre</label>
-                  <select 
-                    className="w-full rounded-md bg-muted border-border p-2 text-xs sm:text-sm"
-                    value={filters.genre || ""}
-                    onChange={(e) => updateFilters({ genre: e.target.value || undefined })}
-                  >
-                    <option value="">All genres</option>
+            <div className="bg-white/[0.02] border border-white/10 rounded-[2rem] p-8 mb-12 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Genre</label>
+                  <div className="flex flex-wrap gap-2">
                     {genres.map((genre) => (
-                      <option key={genre} value={genre}>{genre}</option>
+                      <button
+                        key={genre}
+                        onClick={() => handleGenreSelect(genre)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border",
+                          filters.genre === genre 
+                            ? "bg-accent/20 text-accent border-accent/50" 
+                            : "bg-white/5 text-white/60 border-white/5 hover:border-white/20"
+                        )}
+                      >
+                        {genre}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Sort By</label>
-                  <select 
-                    className="w-full rounded-md bg-muted border-border p-2 text-xs sm:text-sm"
-                    value={filters.sortBy || 'relevance'}
-                    onChange={(e) => handleSortChange(e.target.value as any)}
-                  >
-                    <option value="relevance">Most Relevant</option>
-                    <option value="newest">Newest</option>
-                    <option value="popular">Most Popular</option>
-                    <option value="price_low">Price: Low to High</option>
-                    <option value="price_high">Price: High to Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Mood</label>
-                  <select 
-                    className="w-full rounded-md bg-muted border-border p-2 text-xs sm:text-sm"
-                    value={filters.mood || ""}
-                    onChange={(e) => updateFilters({ mood: e.target.value || undefined })}
-                  >
-                    <option value="">All moods</option>
-                    {moods.map((mood) => (
-                      <option key={mood} value={mood}>{mood}</option>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Mood</label>
+                  <div className="flex flex-wrap gap-2">
+                    {moods.slice(0, 8).map((mood) => (
+                      <button
+                        key={mood}
+                        onClick={() => updateFilters({ mood: filters.mood === mood ? undefined : mood })}
+                        className={cn(
+                          "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border",
+                          filters.mood === mood 
+                            ? "bg-accent/20 text-accent border-accent/50" 
+                            : "bg-white/5 text-white/60 border-white/5 hover:border-white/20"
+                        )}
+                      >
+                        {mood}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">BPM Range</label>
-                  <select 
-                    className="w-full rounded-md bg-muted border-border p-2 text-xs sm:text-sm"
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '80-90') {
-                        updateFilters({ bpmMin: 80, bpmMax: 90 });
-                      } else if (value === '90-100') {
-                        updateFilters({ bpmMin: 90, bpmMax: 100 });
-                      } else if (value === '100-120') {
-                        updateFilters({ bpmMin: 100, bpmMax: 120 });
-                      } else if (value === '120+') {
-                        updateFilters({ bpmMin: 120, bpmMax: undefined });
-                      } else {
-                        updateFilters({ bpmMin: undefined, bpmMax: undefined });
-                      }
-                    }}
-                  >
-                    <option value="">Any BPM</option>
-                    <option value="80-90">80-90 BPM</option>
-                    <option value="90-100">90-100 BPM</option>
-                    <option value="100-120">100-120 BPM</option>
-                    <option value="120+">120+ BPM</option>
-                  </select>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Sort Preference</label>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { l: 'Most Relevant', v: 'relevance' },
+                      { l: 'Newly Listed', v: 'newest' },
+                      { l: 'Most Popular', v: 'popular' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.v}
+                        onClick={() => handleSortChange(opt.v as any)}
+                        className={cn(
+                          "text-left px-4 py-2 rounded-xl text-xs font-bold transition-all border",
+                          filters.sortBy === opt.v || (!filters.sortBy && opt.v === 'relevance')
+                            ? "bg-accent/20 text-accent border-accent/50" 
+                            : "bg-white/5 text-white/40 border-transparent hover:bg-white/10"
+                        )}
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest pl-1">Price Filter</label>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { l: 'Under ₦5k', v: 'under-5000' },
+                      { l: '₦5k - ₦15k', v: '5000-15000' },
+                      { l: 'Over ₦15k', v: 'over-15000' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.v}
+                        onClick={() => {
+                          if (opt.v === 'under-5000') updateFilters({ minPrice: 0, maxPrice: 5000 });
+                          else if (opt.v === '5000-15000') updateFilters({ minPrice: 5000, maxPrice: 15000 });
+                          else updateFilters({ minPrice: 15000, maxPrice: undefined });
+                        }}
+                        className={cn(
+                          "text-left px-4 py-2 rounded-xl text-xs font-bold transition-all border",
+                          (opt.v === 'under-5000' && filters.maxPrice === 5000) ||
+                          (opt.v === '5000-15000' && filters.maxPrice === 15000) ||
+                          (opt.v === 'over-15000' && filters.minPrice === 15000)
+                            ? "bg-accent/20 text-accent border-accent/50" 
+                            : "bg-white/5 text-white/40 border-transparent hover:bg-white/10"
+                        )}
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="flex justify-end mt-3 sm:mt-4">
-                <Button 
-                  size="sm" 
-                  className="shadow-sm text-xs sm:text-sm"
-                  onClick={handleSearch}
-                >
-                  Apply Filters
+
+              <div className="flex justify-between items-center mt-10 pt-6 border-t border-white/5">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-white/40 hover:text-white">
+                  Reset All Filters
+                </Button>
+                <Button size="sm" onClick={() => setShowFilters(false)} className="rounded-xl px-8 bg-white text-black hover:bg-white/90">
+                  View Results
                 </Button>
               </div>
             </div>
           )}
 
-          <TabsContent value="all" className="mt-0">
+          <TabsContent value="all" className="mt-0 focus-visible:ring-0">
             {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-                {[...Array(10)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="bg-card rounded-lg aspect-square animate-pulse"
-                    style={{ animationDelay: `${i * 0.1}s` }}
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-white/5 aspect-[4/5] rounded-[2rem] animate-pulse" />
                 ))}
               </div>
             ) : showNoResults ? (
-              <div className="text-center py-8 sm:py-12">
-                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted mb-3 sm:mb-4">
-                  <Search size={24} className="text-muted-foreground" />
+              <div className="text-center py-24 rounded-[3rem] bg-white/[0.02] border border-dashed border-white/10">
+                <div className="bg-white/5 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search className="text-white/20 h-10 w-10" />
                 </div>
-                <h3 className="text-base sm:text-lg font-medium mb-1 sm:mb-2">No results found</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">
-                  We couldn't find anything matching "{debouncedSearchTerm}". Try different keywords.
+                <h3 className="text-2xl font-bold text-white mb-2">Sound not found</h3>
+                <p className="text-white/40 max-w-sm mx-auto mb-8">
+                  We couldn't find matches for "{debouncedSearchTerm}". Try broadening your search or exploring popular genres.
                 </p>
+                <Button variant="outline" onClick={() => updateSearchTerm("")}>Clear Search</Button>
               </div>
             ) : (
-              <div className="space-y-8">
-                {/* Beats Results */}
+              <div className="space-y-20">
+                {/* Producers Segment */}
+                {producers.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-3">
+                        <UserIcon className="text-accent" size={20} />
+                        <h3 className="text-xl font-black uppercase italic tracking-wider">Top Producers</h3>
+                      </div>
+                      <Link to="/producers" className="text-white/40 hover:text-white text-sm font-bold flex items-center gap-2 transition-colors">
+                        Explore All <ChevronRight size={16} />
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      {producers.slice(0, 4).map((producer) => (
+                        <Link 
+                          key={producer.id}
+                          to={`/producer/${producer.id}`}
+                          className="group relative bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-[2.5rem] p-6 text-center transition-all duration-500 overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-accent/20 p-2 rounded-full backdrop-blur-md">
+                              <TrendingUp size={14} className="text-accent" />
+                            </div>
+                          </div>
+                          <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/10 overflow-hidden mb-6 mx-auto border-4 border-white/5 group-hover:border-accent/20 transition-all duration-500">
+                            <img 
+                              src={producer.profile_picture || '/placeholder.svg'} 
+                              alt={producer.stage_name}
+                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                            />
+                          </div>
+                          <h4 className="font-bold text-lg mb-1 group-hover:text-accent transition-colors">{producer.stage_name || producer.full_name}</h4>
+                          <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-black">{producer.country || 'Global'}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Beats Segment */}
                 {beats.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Beats</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-3">
+                        <MusicIcon className="text-accent" size={20} />
+                        <h3 className="text-xl font-black uppercase italic tracking-wider">Matched Beats</h3>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                       {beats.map((beat) => (
                         <BeatCard 
                           key={beat.id} 
@@ -329,52 +365,20 @@ export default function SearchPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Producers Results */}
-                {producers.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Producers</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {producers.map((producer) => (
-                        <Link 
-                          key={producer.id}
-                          to={`/producer/${producer.id}`}
-                          className="bg-card rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow"
-                        >
-                          <div className="w-24 h-24 rounded-full bg-muted overflow-hidden mb-3">
-                            <img 
-                              src={producer.profile_picture || '/placeholder.svg'} 
-                              alt={producer.stage_name || producer.full_name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <h3 className="font-medium">{producer.stage_name || producer.full_name}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">Producer</p>
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{producer.country || 'Unknown location'}</p>
-                          <Button variant="outline" size="sm" className="w-full">View Profile</Button>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="beats" className="mt-0">
+          <TabsContent value="beats" className="mt-0 focus-visible:ring-0">
             {isLoadingBeats ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {[...Array(10)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="bg-card rounded-lg aspect-square animate-pulse"
-                    style={{ animationDelay: `${i * 0.1}s` }}
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-white/5 aspect-[4/5] rounded-[2rem] animate-pulse" />
                 ))}
               </div>
             ) : beats.length > 0 ? (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="space-y-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                   {beats.map((beat) => (
                     <BeatCard 
                       key={beat.id} 
@@ -383,99 +387,84 @@ export default function SearchPage() {
                     />
                   ))}
                 </div>
-                
-                {/* Load more button */}
                 {hasNextPage && (
-                  <div className="flex justify-center mt-6">
+                  <div className="flex justify-center pt-8">
                     <Button 
                       onClick={loadMoreBeats} 
                       disabled={isFetchingNextPage}
                       variant="outline"
+                      className="rounded-2xl px-12 h-14 border-white/10 hover:bg-white hover:text-black transition-all font-bold"
                     >
-                      {isFetchingNextPage ? 'Loading...' : 'Load More'}
+                      {isFetchingNextPage ? 'Extracting more...' : 'Load more sounds'}
                     </Button>
                   </div>
                 )}
-              </>
+              </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                  <MusicIcon size={24} className="text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No beats found</h3>
-                <p className="text-muted-foreground mb-6">
-                  We couldn't find any beats matching "{debouncedSearchTerm}".
-                </p>
+              <div className="text-center py-24">
+                <p className="text-white/40 italic">No beats found for "{searchTerm}"</p>
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="producers" className="mt-0">
+          <TabsContent value="producers" className="mt-0 focus-visible:ring-0">
             {isLoadingProducers ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {[...Array(8)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="bg-card rounded-lg h-48 animate-pulse"
-                    style={{ animationDelay: `${i * 0.1}s` }}
-                  />
+                  <div key={i} className="bg-white/5 h-48 rounded-[2.5rem] animate-pulse" />
                 ))}
               </div>
             ) : producers.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {producers.map((producer) => (
                   <Link 
                     key={producer.id}
                     to={`/producer/${producer.id}`}
-                    className="bg-card rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow"
+                    className="group relative bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-[2.5rem] p-6 text-center transition-all duration-500"
                   >
-                    <div className="w-24 h-24 rounded-full bg-muted overflow-hidden mb-3">
+                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/10 overflow-hidden mb-6 mx-auto border-4 border-white/5 group-hover:border-accent/20 transition-all duration-500">
                       <img 
                         src={producer.profile_picture || '/placeholder.svg'} 
-                        alt={producer.stage_name || producer.full_name}
-                        className="w-full h-full object-cover"
+                        alt={producer.stage_name}
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                       />
                     </div>
-                    <h3 className="font-medium">{producer.stage_name || producer.full_name}</h3>
-                    <p className="text-sm text-muted-foreground mb-2">Producer</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{producer.country || 'Unknown location'}</p>
-                    <Button variant="outline" size="sm" className="w-full">View Profile</Button>
+                    <h4 className="font-bold text-lg mb-1 group-hover:text-accent transition-colors">{producer.stage_name || producer.full_name}</h4>
+                    <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-black">{producer.country || 'Global'}</p>
+                    <div className="mt-6">
+                       <Button variant="ghost" className="h-9 rounded-xl text-xs font-bold text-white/40 group-hover:text-white transition-colors bg-white/5">View Profile</Button>
+                    </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                  <UserIcon size={24} className="text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No producers found</h3>
-                <p className="text-muted-foreground mb-6">
-                  We couldn't find any producers matching "{debouncedSearchTerm}".
-                </p>
+              <div className="text-center py-24">
+                <p className="text-white/40 italic">No producers found for "{searchTerm}"</p>
               </div>
             )}
           </TabsContent>
         </Tabs>
 
-        {!searchTerm && !filters.genre && (
-          <div className="mt-6 sm:mt-8">
-            <h2 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Popular Searches</h2>
-            <div className="flex flex-wrap gap-2">
-              {['Afrobeat', 'Hip Hop', 'Amapiano', 'R&B', 'Trap', 'Chill', 'Dancehall'].map((term) => (
-                <Button
+        {!searchTerm && !filters.genre && !isLoading && (
+          <div className="mt-24 pt-12 border-t border-white/5">
+            <h2 className="text-sm font-bold text-white/20 uppercase tracking-[0.3em] mb-8 text-center">Curated Collections</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+              {['Afrobeat', 'Amapiano', 'Hip Hop', 'Trap', 'R&B', 'Dancehall', 'Chill'].map((term) => (
+                <button
                   key={term}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full text-xs"
                   onClick={() => updateSearchTerm(term)}
+                  className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:border-accent/40 hover:bg-accent/5 transition-all text-sm font-bold text-center flex flex-col items-center gap-3 group"
                 >
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                    <MusicIcon size={16} className="text-white/20 group-hover:text-accent" />
+                  </div>
                   {term}
-                </Button>
+                </button>
               ))}
             </div>
           </div>
         )}
       </div>
-    </MainLayoutWithPlayer>
+    </div>
   );
 }

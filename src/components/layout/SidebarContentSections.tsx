@@ -55,7 +55,6 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
         { icon: TrendingUp, title: "Trending", href: "/trending" },
         { icon: Clock, title: "New", href: "/new" },
         { icon: Gamepad2, title: "Gaming & Soundtrack", href: "/gaming-soundtrack" },
-        { icon: List, title: "Playlists", href: "/playlists" },
         { icon: Disc, title: "Genres", href: "/genres" },
         { icon: ShoppingCart, title: "Cart", href: "/cart" },
         { icon: Users, title: "Producers", href: "/producers" },
@@ -67,7 +66,6 @@ export const getSidebarSections = (user: UserType | null, handleSignOut: () => v
       title: "Library",
       items: [
         { icon: Heart, title: "Favorites", href: "/favorites" },
-        { icon: LayoutGrid, title: "My Playlists", href: "/my-playlists" },
         { icon: Music, title: "Purchased", href: "/purchased" },
       ]
     });

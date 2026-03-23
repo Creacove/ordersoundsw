@@ -18,7 +18,7 @@ export const PricingTab = ({
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="bg-muted/30 rounded-lg p-4 flex items-start gap-3">
-        <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <Info className="h-5 w-5 -purple- flex-shrink-0 mt-0.5" />
         <div>
           <h3 className="text-sm font-medium">License Pricing</h3>
           <p className="text-xs text-muted-foreground">

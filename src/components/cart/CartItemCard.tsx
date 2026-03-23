@@ -1,11 +1,10 @@
-
-import React, { memo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Music, Play, Pause, Trash2 } from 'lucide-react';
+import React, { memo } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Music, Play, Pause, Trash2, AudioWaveform } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
 import { useAuth } from "@/context/AuthContext";
-import { Beat } from '@/types';
+import { Beat } from "@/types";
 
 interface CartItemCardProps {
   item: {
@@ -30,35 +29,34 @@ interface CartItemCardProps {
   onRemove: (itemId: string) => void;
 }
 
-const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
+const CartItemCard = memo(({ item, onRemove }: CartItemCardProps) => {
   const { isPlaying, currentBeat, playBeat } = usePlayer();
   const { currency } = useAuth();
 
   const handlePlayBeat = () => {
-    // Create a complete Beat object for the player
     const completeBeat: Beat = {
       id: item.beat.id,
-      title: item.beat.title || 'Unknown Beat',
-      producer_id: '', // Not needed for playback
-      producer_name: item.beat.producer_name || 'Unknown Producer',
-      cover_image_url: item.beat.cover_image_url || '',
-      preview_url: '', // Will be handled by the player
-      full_track_url: '', // Will be handled by the player
-      genre: item.beat.genre || '',
-      track_type: 'Beat' as const,
+      title: item.beat.title || "Unknown Beat",
+      producer_id: "",
+      producer_name: item.beat.producer_name || "Unknown Producer",
+      cover_image_url: item.beat.cover_image_url || "",
+      preview_url: "",
+      full_track_url: "",
+      genre: item.beat.genre || "",
+      track_type: "Beat" as const,
       bpm: 0,
       tags: [],
       created_at: new Date().toISOString(),
       favorites_count: 0,
       purchase_count: 0,
-      status: 'published' as const,
+      status: "published" as const,
       basic_license_price_local: item.beat.basic_license_price_local || 0,
       basic_license_price_diaspora: item.beat.basic_license_price_diaspora || 0,
       premium_license_price_local: item.beat.premium_license_price_local || 0,
       premium_license_price_diaspora: item.beat.premium_license_price_diaspora || 0,
       exclusive_license_price_local: item.beat.exclusive_license_price_local || 0,
       exclusive_license_price_diaspora: item.beat.exclusive_license_price_diaspora || 0,
-      selected_license: item.licenseType
+      selected_license: item.licenseType,
     };
 
     if (currentBeat?.id === item.beat.id) {
@@ -68,21 +66,18 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
     }
   };
 
-  // Calculate the correct price based on currency and license type
   const getCorrectPrice = () => {
     const licenseType = item.licenseType;
     const beat = item.beat;
 
-    if (currency === 'NGN') {
-      // Use local prices for NGN
-      if (licenseType === 'basic') return beat.basic_license_price_local || 0;
-      if (licenseType === 'premium') return beat.premium_license_price_local || 0;
-      if (licenseType === 'exclusive') return beat.exclusive_license_price_local || 0;
+    if (currency === "NGN") {
+      if (licenseType === "basic") return beat.basic_license_price_local || 0;
+      if (licenseType === "premium") return beat.premium_license_price_local || 0;
+      if (licenseType === "exclusive") return beat.exclusive_license_price_local || 0;
     } else {
-      // Use diaspora prices for USD
-      if (licenseType === 'basic') return beat.basic_license_price_diaspora || 0;
-      if (licenseType === 'premium') return beat.premium_license_price_diaspora || 0;
-      if (licenseType === 'exclusive') return beat.exclusive_license_price_diaspora || 0;
+      if (licenseType === "basic") return beat.basic_license_price_diaspora || 0;
+      if (licenseType === "premium") return beat.premium_license_price_diaspora || 0;
+      if (licenseType === "exclusive") return beat.exclusive_license_price_diaspora || 0;
     }
 
     return 0;
@@ -91,65 +86,76 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
   const displayPrice = getCorrectPrice();
 
   return (
-    <div className="border rounded-xl bg-card/50 backdrop-blur-sm shadow-sm p-3 flex gap-3">
-      <div className="flex-shrink-0 w-16 h-16">
-        <div
-          className="relative w-16 h-16 rounded-md overflow-hidden cursor-pointer group"
-          onClick={handlePlayBeat}
-        >
+    <div className="panel overflow-hidden p-3 sm:p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="relative h-24 w-full overflow-hidden rounded-[1.2rem] border border-white/10 sm:h-24 sm:w-24">
           <img
             src={item.beat.cover_image_url || "/placeholder.svg"}
             alt={item.beat.title || "Beat"}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = "/placeholder.svg";
             }}
           />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#090b16] via-transparent to-transparent" />
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            rounded="full"
+            className="absolute bottom-2 left-2 h-9 w-9 bg-[#0a0d18]/85 text-white hover:bg-[#0a0d18]"
+            onClick={handlePlayBeat}
+          >
             {isPlaying && currentBeat?.id === item.beat.id ? (
-              <Pause className="h-6 w-6 text-white" />
+              <Pause className="h-4 w-4" />
             ) : (
-              <Play className="h-6 w-6 ml-1 text-white" />
+              <Play className="ml-0.5 h-4 w-4" />
             )}
-          </div>
+          </Button>
         </div>
-      </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-y-3 sm:gap-y-0">
-          <div className="flex-1 min-w-0 sm:mr-3">
-            <h3 className="font-semibold truncate">{item.beat.title || 'Unknown Beat'}</h3>
-            <p className="text-xs text-muted-foreground">{item.beat.producer_name || 'Unknown Producer'}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <h3 className="truncate text-lg font-semibold tracking-[-0.04em] text-white">
+                {item.beat.title || "Unknown Beat"}
+              </h3>
+              <p className="text-sm text-muted-foreground">{item.beat.producer_name || "Unknown Producer"}</p>
 
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {item.beat.genre && (
-                <Badge variant="outline" className="text-xs py-0 px-1.5">
-                  <Music size={10} className="mr-1" />
-                  {item.beat.genre}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {item.beat.genre && (
+                  <Badge variant="outline" className="bg-white/[0.04] text-white">
+                    <Music size={10} className="mr-1" />
+                    {item.beat.genre}
+                  </Badge>
+                )}
+
+                <Badge variant="secondary" className="capitalize">
+                  <AudioWaveform className="mr-1 h-3 w-3" />
+                  {item.licenseType} license
                 </Badge>
-              )}
-
-              <Badge variant="secondary" className="text-xs py-0 px-1.5 capitalize">
-                {item.licenseType} License
-              </Badge>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto flex-shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/50 sm:border-transparent mt-1 sm:mt-0">
-            <span className="font-semibold text-sm order-1 sm:order-none">
-              {currency === 'NGN' ? '₦' : '$'}
-              {Math.round(displayPrice).toLocaleString()}
-            </span>
+            <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
+              <div className="text-right">
+                <div className="text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">Price</div>
+                <div className="mt-1 text-lg font-semibold text-white">
+                  {currency === "NGN" ? "₦" : "$"}
+                  {Math.round(displayPrice).toLocaleString()}
+                </div>
+              </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive -ml-2 sm:ml-0 order-2 sm:order-none sm:mt-1"
-              onClick={() => onRemove(item.itemId)}
-            >
-              <Trash2 size={16} />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                rounded="full"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => onRemove(item.itemId)}
+              >
+                <Trash2 size={16} />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -157,6 +163,6 @@ const CartItemCard = memo(({ item, price, onRemove }: CartItemCardProps) => {
   );
 });
 
-CartItemCard.displayName = 'CartItemCard';
+CartItemCard.displayName = "CartItemCard";
 
 export default CartItemCard;

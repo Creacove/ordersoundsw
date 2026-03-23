@@ -157,21 +157,21 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-[#030407]/40 border-white/5 backdrop-blur-3xl rounded-[2.5rem]">
         <CardHeader>
-          <CardTitle>Beat Sales Performance</CardTitle>
-          <CardDescription>Revenue breakdown for your beats with sales</CardDescription>
+          <CardTitle className="text-white font-black italic uppercase tracking-tighter">Beat Sales Performance</CardTitle>
+          <CardDescription className="text-white/40 italic">Revenue breakdown for your beats</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-12 w-12 rounded-md" />
+                <Skeleton className="h-12 w-12 rounded-xl bg-white/5" />
                 <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-48 bg-white/5" />
+                  <Skeleton className="h-4 w-24 bg-white/5" />
                 </div>
-                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-16 bg-white/5" />
               </div>
             ))}
           </div>
@@ -182,16 +182,16 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
 
   if (salesData.length === 0) {
     return (
-      <Card>
+      <Card className="bg-[#030407]/40 border-white/5 backdrop-blur-3xl rounded-[2.5rem]">
         <CardHeader>
-          <CardTitle>Beat Sales Performance</CardTitle>
-          <CardDescription>Revenue breakdown for your beats with sales</CardDescription>
+          <CardTitle className="text-white font-black italic uppercase tracking-tighter">Beat Sales Performance</CardTitle>
+          <CardDescription className="text-white/40 italic">Revenue breakdown for your beats</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-2">No sales data available</p>
-            <p className="text-sm text-muted-foreground">Sales will appear here once your beats are purchased</p>
+          <div className="text-center py-12">
+            <Music className="h-12 w-12 text-white/10 mx-auto mb-4" />
+            <p className="text-white/20 font-black uppercase italic tracking-widest text-[10px] mb-2">No sales data recorded yet</p>
+            <p className="text-xs text-white/10 italic">Your performance analytics will appear here once your beats are purchased.</p>
           </div>
         </CardContent>
       </Card>
@@ -200,77 +200,61 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Beat Sales Performance</CardTitle>
-          <CardDescription>Revenue breakdown for your beats with completed sales</CardDescription>
+      <Card className="bg-[#030407]/40 border-white/5 backdrop-blur-3xl rounded-[2.5rem] overflow-hidden">
+        <CardHeader className="p-8">
+          <CardTitle className="text-white font-black italic uppercase tracking-tighter text-xl">Beat Sales Performance</CardTitle>
+          <CardDescription className="text-white/40 italic">Revenue breakdown for your beats with completed sales</CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Mobile-first responsive design */}
-          <div className="space-y-4 md:hidden">
-            {/* Mobile card layout */}
+        <CardContent className="p-0">
+          {/* Mobile card layout */}
+          <div className="space-y-4 md:hidden px-8 pb-8">
             {salesData.map((beat) => (
               <div
                 key={beat.beat_id}
-                className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-muted/50 transition-colors active:bg-muted"
+                className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 space-y-4 cursor-pointer hover:bg-white/[0.05] transition-all"
                 onClick={() => handleRowClick(beat)}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   {beat.beat_cover_image ? (
                     <img
                       src={beat.beat_cover_image}
                       alt={beat.beat_title}
-                      className="h-12 w-12 rounded-md object-cover"
+                      className="h-14 w-14 rounded-xl object-cover border border-white/10"
                     />
                   ) : (
-                    <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
-                      <Music className="h-6 w-6 text-muted-foreground" />
+                    <div className="h-14 w-14 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                      <Music className="h-7 w-7 text-white/20" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{beat.beat_title}</h3>
+                    <h3 className="font-black text-white italic tracking-tighter uppercase text-base truncate">{beat.beat_title}</h3>
                     {beat.beat_genre && (
-                      <Badge variant="outline" className="text-xs mt-1">
+                      <span className="text-[10px] font-black uppercase italic tracking-widest text-white/30">
                         {beat.beat_genre}
-                      </Badge>
+                      </span>
                     )}
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  <ChevronRight className="h-5 w-5 text-white/20" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-6 text-xs">
                   <div>
-                    <p className="text-muted-foreground">Sales</p>
-                    <p className="font-semibold">{beat.sales_count}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/20 italic mb-1">Sales</p>
+                    <p className="font-bold text-white italic uppercase tracking-tighter">{beat.sales_count}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Revenue</p>
-                    <p className="font-semibold">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/20 italic mb-1">Revenue</p>
+                    <p className="font-bold text-white italic uppercase tracking-tighter">
                       {formatCurrency(beat.total_revenue, currency)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Price</p>
-                    <p className="font-semibold">
-                      {formatCurrency(
-                        currency === 'NGN' ? beat.basic_price_local : beat.basic_price_diaspora,
-                        currency
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Last Sale</p>
-                    <p className="font-semibold">
-                      {formatDate(beat.last_purchase_date)}
                     </p>
                   </div>
                 </div>
 
                 {/* Currency breakdown for mobile */}
                 {(beat.currency_breakdown.NGN > 0 || beat.currency_breakdown.USD > 0) && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">Revenue Breakdown:</p>
-                    <div className="flex gap-4 text-xs">
+                  <div className="pt-4 border-t border-white/5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/10 italic mb-2">Revenue Breakdown:</p>
+                    <div className="flex flex-wrap gap-4 text-[10px] font-bold text-white/30 uppercase italic tracking-widest">
                       {beat.currency_breakdown.NGN > 0 && (
                         <span>NGN: {formatCurrency(beat.currency_breakdown.NGN, 'NGN')}</span>
                       )}
@@ -288,73 +272,75 @@ export function BeatSalesTable({ producerId, currency }: BeatSalesTableProps) {
           <div className="hidden md:block">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Beat</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead className="text-center">Sales</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead>Last Sale</TableHead>
-                  <TableHead>Currency Split</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                <TableRow className="border-white/5 hover:bg-transparent">
+                  <TableHead className="px-8 font-black uppercase italic tracking-widest text-white/30 text-[10px]">Beat</TableHead>
+                  <TableHead className="font-black uppercase italic tracking-widest text-white/30 text-[10px]">Price</TableHead>
+                  <TableHead className="text-center font-black uppercase italic tracking-widest text-white/30 text-[10px]">Sales</TableHead>
+                  <TableHead className="text-right font-black uppercase italic tracking-widest text-white/30 text-[10px]">Revenue</TableHead>
+                  <TableHead className="font-black uppercase italic tracking-widest text-white/30 text-[10px]">Last Sale</TableHead>
+                  <TableHead className="font-black uppercase italic tracking-widest text-white/30 text-[10px]">Currency Split</TableHead>
+                  <TableHead className="w-[80px] px-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {salesData.map((beat) => (
                   <TableRow
                     key={beat.beat_id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="border-white/5 hover:bg-white/[0.02] cursor-pointer transition-colors group"
                     onClick={() => handleRowClick(beat)}
                   >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
+                    <TableCell className="px-8 py-6">
+                      <div className="flex items-center gap-4">
                         {beat.beat_cover_image ? (
                           <img
                             src={beat.beat_cover_image}
                             alt={beat.beat_title}
-                            className="h-10 w-10 rounded-md object-cover"
+                            className="h-12 w-12 rounded-xl object-cover border border-white/10"
                           />
                         ) : (
-                          <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                            <Music className="h-5 w-5 text-muted-foreground" />
+                          <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                            <Music className="h-6 w-6 text-white/20" />
                           </div>
                         )}
                         <div>
-                          <p className="font-medium">{beat.beat_title}</p>
+                          <p className="font-black text-white italic tracking-tighter uppercase text-base">{beat.beat_title}</p>
                           {beat.beat_genre && (
-                            <Badge variant="outline" className="text-xs mt-1">
+                            <span className="text-[10px] font-black uppercase italic tracking-widest text-white/30">
                               {beat.beat_genre}
-                            </Badge>
+                            </span>
                           )}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="font-bold text-white/40 italic text-sm">
                       {formatCurrency(
                         currency === 'NGN' ? beat.basic_price_local : beat.basic_price_diaspora,
                         currency
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary">{beat.sales_count}</Badge>
+                      <span className="bg-white/5 text-white/60 px-3 py-1 rounded-full font-black italic uppercase tracking-widest text-[9px]">
+                        {beat.sales_count} Sales
+                      </span>
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="text-right font-black text-white italic tracking-tighter text-lg">
                       {formatCurrency(beat.total_revenue, currency)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-white/40 font-bold italic text-xs uppercase">
                       {formatDate(beat.last_purchase_date)}
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1 text-xs">
+                      <div className="space-y-1 text-[10px] font-black uppercase italic tracking-widest text-white/20">
                         {beat.currency_breakdown.NGN > 0 && (
-                          <div>NGN: {formatCurrency(beat.currency_breakdown.NGN, 'NGN')}</div>
+                          <div className="text-emerald-500/50">NGN: {formatCurrency(beat.currency_breakdown.NGN, 'NGN')}</div>
                         )}
                         {beat.currency_breakdown.USD > 0 && (
-                          <div>USD: {formatCurrency(beat.currency_breakdown.USD, 'USD')}</div>
+                          <div className="text-accent/50">USD: {formatCurrency(beat.currency_breakdown.USD, 'USD')}</div>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <TableCell className="px-8 text-right">
+                      <ChevronRight className="h-5 w-5 text-white/10 group-hover:text-white/40 transition-colors inline-block" />
                     </TableCell>
                   </TableRow>
                 ))}

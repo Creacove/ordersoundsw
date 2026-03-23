@@ -48,7 +48,7 @@ export function NotificationItem({
       case 'sale':
         return <ShoppingCart className="h-5 w-5 text-emerald-500" />;
       case 'message':
-        return <MessageSquare className="h-5 w-5 text-blue-500" />;
+        return <MessageSquare className="h-5 w-5 -purple-" />;
       case 'review':
         return <Star className="h-5 w-5 text-amber-500" />;
       case 'feature':

@@ -1,0 +1,4 @@
+project_id = "uoezlwkxhbzajdivrlby"
+
+[functions.verify-solana-payment]
+verify_jwt = true

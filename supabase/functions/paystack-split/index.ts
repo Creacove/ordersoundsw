@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { authenticateRequest, createServiceRoleClient, requireRole, requireSelfOrAdmin, type AuthenticatedActor } from "../_shared/auth.ts";
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -12,9 +12,75 @@ const corsHeaders = {
 const PAYSTACK_API_URL = "https://api.paystack.co";
 const PLATFORM_SHARE_PERCENT = 10; // 10% of the beat price goes to the platform
 const PRODUCER_SHARE_PERCENT = 90; // 90% goes to the producer
+type ServiceClient = ReturnType<typeof createServiceRoleClient>;
+type JsonObject = Record<string, unknown>;
+type ProducerRecord = {
+  id: string;
+  producer_name?: string | null;
+  full_name?: string | null;
+  bank_code?: string | null;
+  account_number?: string | null;
+  email?: string | null;
+  paystack_subaccount_code?: string | null;
+  paystack_split_code?: string | null;
+};
+type ActionPayload = JsonObject & { action?: string };
+type CreateSubaccountPayload = { producerId?: string };
+type UpdateSubaccountPayload = { producerId?: string; bankCode?: string; accountNumber?: string };
+type UpdateSplitPayload = { producerId?: string; share?: number };
+
+function asJsonObject(value: unknown): JsonObject | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as JsonObject;
+}
+
+function getOptionalString(value: unknown) {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+}
+
+function getOptionalNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function parseActionPayload(value: unknown): ActionPayload {
+  const data = asJsonObject(value);
+  if (!data) {
+    return {};
+  }
+
+  const action = getOptionalString(data.action);
+  return action ? { ...data, action } : { ...data };
+}
+
+function parseCreateSubaccountPayload(value: unknown): CreateSubaccountPayload {
+  const data = asJsonObject(value);
+  return {
+    producerId: getOptionalString(data?.producerId),
+  };
+}
+
+function parseUpdateSubaccountPayload(value: unknown): UpdateSubaccountPayload {
+  const data = asJsonObject(value);
+  return {
+    producerId: getOptionalString(data?.producerId),
+    bankCode: getOptionalString(data?.bankCode),
+    accountNumber: getOptionalString(data?.accountNumber),
+  };
+}
+
+function parseUpdateSplitPayload(value: unknown): UpdateSplitPayload {
+  const data = asJsonObject(value);
+  return {
+    producerId: getOptionalString(data?.producerId),
+    share: getOptionalNumber(data?.share),
+  };
+}
 
 // Function for external API calls (returns Response wrapper for endpoint responses)
-async function makePaystackRequest(endpoint: string, method: string, body?: any) {
+async function makePaystackRequest(endpoint: string, method: string, body?: JsonObject) {
   const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
   const url = `https://api.paystack.co${endpoint}`;
   
@@ -50,7 +116,7 @@ async function makePaystackRequest(endpoint: string, method: string, body?: any)
 }
 
 // Function for internal use (returns raw Paystack data)
-async function makePaystackApiCall(endpoint: string, method: string, body?: any) {
+async function makePaystackApiCall(endpoint: string, method: string, body?: JsonObject) {
   const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
   const url = `https://api.paystack.co${endpoint}`;
   
@@ -82,7 +148,7 @@ async function makePaystackApiCall(endpoint: string, method: string, body?: any)
 }
 
 // Function to create a Paystack subaccount for a producer
-async function createSubaccount(producer: any) {
+async function createSubaccount(producer: ProducerRecord) {
   try {
     console.log(`Creating subaccount for producer: ${producer.id}`);
     
@@ -167,7 +233,7 @@ async function fetchSplits() {
 }
 
 // Function to update a subaccount
-async function updateSubaccount(subaccountCode: string, updates: any) {
+async function updateSubaccount(subaccountCode: string, updates: JsonObject) {
   try {
     const result = await makePaystackApiCall(`/subaccount/${subaccountCode}`, 'PUT', updates);
     return result.data;
@@ -178,34 +244,13 @@ async function updateSubaccount(subaccountCode: string, updates: any) {
 }
 
 // Function to update a transaction split
-async function updateSplit(splitCode: string, updates: any) {
+async function updateSplit(splitCode: string, updates: JsonObject) {
   try {
     const result = await makePaystackApiCall(`/split/${splitCode}`, 'PUT', updates);
     return result.data;
   } catch (error) {
     console.error('Error updating split:', error);
     throw error;
-  }
-}
-
-// Function to validate Paystack webhook request
-function validateWebhook(signature: string, requestBody: any, secretKey: string): boolean {
-  try {
-    if (!signature) {
-      console.error('Missing x-paystack-signature header');
-      return false;
-    }
-    
-    const crypto = require('crypto');
-    const hash = crypto
-      .createHmac('sha512', secretKey)
-      .update(JSON.stringify(requestBody))
-      .digest('hex');
-    
-    return hash === signature;
-  } catch (error) {
-    console.error('Error validating webhook:', error);
-    return false;
   }
 }
 
@@ -216,12 +261,7 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
   
-  // Get Supabase client
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')!;
-  
-  if (!paystackSecretKey) {
+  if (!Deno.env.get('PAYSTACK_SECRET_KEY_LIVE')) {
     console.error('Missing Paystack secret key');
     return new Response(
       JSON.stringify({ 
@@ -235,17 +275,16 @@ serve(async (req) => {
     );
   }
   
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createServiceRoleClient();
   
   try {
     // Parse request body
-    let requestData;
+    let requestData: ActionPayload = {};
     if (req.method === 'POST' || req.method === 'PUT') {
-      requestData = await req.json();
+      requestData = parseActionPayload(await req.json());
     }
     
-    // Extract action from request body or check for webhook
-    const action = requestData?.action || (req.headers.get('x-paystack-signature') ? 'webhook' : null);
+    const action = requestData?.action ?? null;
     
     if (!action) {
       return new Response(
@@ -259,27 +298,52 @@ serve(async (req) => {
         }
       );
     }
+
+    if (action === 'webhook') {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Use the dedicated paystack-webhook function for webhook delivery',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403,
+        }
+      );
+    }
+
+    const authResult = await authenticateRequest(req, supabase);
+    if ("response" in authResult) {
+      return authResult.response;
+    }
+
+    const actor = authResult.actor;
     
     console.log(`Processing Paystack split action: ${action}`, { method: req.method });
     
     // Handle different actions using switch statement
     switch (action) {
-      case 'webhook':
-        return await handleWebhook(req, supabase, paystackSecretKey);
-      
       case 'create-subaccount':
-        return await handleCreateSubaccount(requestData, supabase);
+        return await handleCreateSubaccount(parseCreateSubaccountPayload(requestData), supabase, actor);
       
       case 'update-subaccount':
-        return await handleUpdateSubaccount(requestData, supabase);
+        return await handleUpdateSubaccount(parseUpdateSubaccountPayload(requestData), supabase, actor);
       
       case 'update-split':
-        return await handleUpdateSplit(requestData, supabase);
+        return await handleUpdateSplit(parseUpdateSplitPayload(requestData), supabase, actor);
       
       case 'subaccounts':
+        {
+          const roleResponse = requireRole(actor, ['admin']);
+          if (roleResponse) return roleResponse;
+        }
         return await handleFetchSubaccounts();
       
       case 'splits':
+        {
+          const roleResponse = requireRole(actor, ['admin']);
+          if (roleResponse) return roleResponse;
+        }
         return await handleFetchSplits();
       
       default:
@@ -311,114 +375,16 @@ serve(async (req) => {
 });
 
 // Handler functions
-async function handleWebhook(req: Request, supabase: any, paystackSecretKey: string) {
-  const requestBody = await req.json();
-  const signature = req.headers.get('x-paystack-signature');
-  
-  // Validate webhook signature
-  if (!validateWebhook(signature!, requestBody, paystackSecretKey)) {
-    console.error('Invalid webhook signature');
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: 'Invalid webhook signature',
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      }
-    );
-  }
-  
-  // Process webhook event
-  const event = requestBody.event;
-  const data = requestBody.data;
-  
-  console.log(`Processing webhook event: ${event}`);
-  
-  // Handle charge.success event (successful payment)
-  if (event === 'charge.success') {
-    const transactionReference = data.reference;
-    
-    // Find the order associated with this transaction
-    const { data: orderData, error: orderError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('payment_reference', transactionReference)
-      .single();
-    
-    if (orderError) {
-      console.error('Error fetching order:', orderError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Order not found',
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
-    }
-    
-    // Update order status to 'completed'
-    await supabase
-      .from('orders')
-      .update({ status: 'completed' })
-      .eq('id', orderData.id);
-    
-    // Create payment record
-    await supabase
-      .from('payments')
-      .insert({
-        order_id: orderData.id,
-        transaction_reference: transactionReference,
-        amount: data.amount / 100, // Convert from kobo to naira
-        status: 'success',
-        payment_method: 'paystack',
-        payment_details: data,
-      });
-  }
-  
-  // Handle transfer.success event (successful payout to producer)
-  if (event === 'transfer.success') {
-    const transferReference = data.reference;
-    
-    await supabase
-      .from('payouts')
-      .update({ 
-        status: 'success',
-        payout_date: new Date().toISOString(),
-        transaction_details: data,
-      })
-      .eq('transaction_reference', transferReference);
-  }
-  
-  // Handle transfer.failed event (failed payout to producer)
-  if (event === 'transfer.failed') {
-    const transferReference = data.reference;
-    
-    await supabase
-      .from('payouts')
-      .update({ 
-        status: 'failed',
-        failure_reason: data.reason || 'Unknown failure reason',
-        transaction_details: data,
-      })
-      .eq('transaction_reference', transferReference);
-  }
-  
-  return new Response(
-    JSON.stringify({ success: true }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    }
-  );
-}
-
-async function handleCreateSubaccount(requestData: any, supabase: any) {
+async function handleCreateSubaccount(
+  requestData: CreateSubaccountPayload,
+  supabase: ServiceClient,
+  actor: AuthenticatedActor
+) {
   const { producerId } = requestData;
+  const roleResponse = requireRole(actor, ['producer', 'admin']);
+  if (roleResponse) {
+    return roleResponse;
+  }
   
   if (!producerId) {
     console.error('Missing producer ID');
@@ -432,6 +398,11 @@ async function handleCreateSubaccount(requestData: any, supabase: any) {
         status: 400,
       }
     );
+  }
+
+  const ownershipResponse = requireSelfOrAdmin(actor, producerId);
+  if (ownershipResponse) {
+    return ownershipResponse;
   }
   
   const { data: producer, error: producerError } = await supabase
@@ -560,8 +531,16 @@ async function handleCreateSubaccount(requestData: any, supabase: any) {
   }
 }
 
-async function handleUpdateSubaccount(requestData: any, supabase: any) {
+async function handleUpdateSubaccount(
+  requestData: UpdateSubaccountPayload,
+  supabase: ServiceClient,
+  actor: AuthenticatedActor
+) {
   const { producerId, bankCode, accountNumber } = requestData;
+  const roleResponse = requireRole(actor, ['producer', 'admin']);
+  if (roleResponse) {
+    return roleResponse;
+  }
   
   console.log('Update subaccount request:', { producerId, bankCode, accountNumber });
   
@@ -577,6 +556,11 @@ async function handleUpdateSubaccount(requestData: any, supabase: any) {
         status: 400,
       }
     );
+  }
+
+  const ownershipResponse = requireSelfOrAdmin(actor, producerId);
+  if (ownershipResponse) {
+    return ownershipResponse;
   }
   
   if (!bankCode || !accountNumber) {
@@ -775,8 +759,16 @@ async function handleUpdateSubaccount(requestData: any, supabase: any) {
   }
 }
 
-async function handleUpdateSplit(requestData: any, supabase: any) {
+async function handleUpdateSplit(
+  requestData: UpdateSplitPayload,
+  supabase: ServiceClient,
+  actor: AuthenticatedActor
+) {
   const { producerId, share } = requestData;
+  const roleResponse = requireRole(actor, ['admin']);
+  if (roleResponse) {
+    return roleResponse;
+  }
   
   if (!producerId || !share) {
     return new Response(

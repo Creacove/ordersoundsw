@@ -1,35 +1,31 @@
-
-import React, { FC, ReactNode, useMemo } from 'react';
+import { FC, ReactNode, useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { getSolanaRpcEndpoint, isMainnetNetwork, publicEnv } from '@/config/publicEnv';
 
 interface SolanaWalletProviderProps {
     children: ReactNode;
 }
 
 const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({ children }) => {
-    // Dynamic network selection from environment
+    const envNetwork = publicEnv.solanaNetwork;
+
     const network = useMemo(() => {
-        const envNetwork = import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
-        const solanaNetwork = envNetwork === 'mainnet' ? WalletAdapterNetwork.Mainnet : WalletAdapterNetwork.Devnet;
-        console.log(`🌐 Using ${envNetwork} network for Solana operations`);
+        const usesMainnet = isMainnetNetwork(envNetwork);
+        const solanaNetwork = usesMainnet ? WalletAdapterNetwork.Mainnet : WalletAdapterNetwork.Devnet;
+        console.log(`Using ${envNetwork} network for Solana operations`);
         return solanaNetwork;
-    }, []);
+    }, [envNetwork]);
 
-    // Dynamic RPC endpoint selection
     const endpoint = useMemo(() => {
-        const envNetwork = import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
-        const rpcEndpoint = envNetwork === 'mainnet' 
-            ? (import.meta.env.VITE_MAINNET_RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com')
-            : (import.meta.env.VITE_DEVNET_RPC_ENDPOINT || 'https://greatest-proportionate-hill.solana-devnet.quiknode.pro/41e5bfe38a70eea3949938349ff08bed95d6290b/');
-        console.log(`🔗 Using ${envNetwork} RPC endpoint:`, rpcEndpoint);
+        const rpcEndpoint = getSolanaRpcEndpoint(envNetwork);
+        console.log(`Using ${envNetwork} RPC endpoint:`, rpcEndpoint);
         return rpcEndpoint;
-    }, []);
+    }, [envNetwork]);
 
-    // Configure wallet adapters - using browser-only adapters (no native deps)
     const wallets = useMemo(
         () => [
             new PhantomWalletAdapter(),
@@ -39,7 +35,7 @@ const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({ children }) => {
     );
 
     return (
-        <ConnectionProvider 
+        <ConnectionProvider
             endpoint={endpoint}
             config={{
                 commitment: 'confirmed',
@@ -47,11 +43,11 @@ const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({ children }) => {
                 httpHeaders: {
                     'Content-Type': 'application/json',
                 },
-                wsEndpoint: undefined, // Use HTTP only for QuickNode
+                wsEndpoint: undefined,
             }}
         >
-            <WalletProvider 
-                wallets={wallets} 
+            <WalletProvider
+                wallets={wallets}
                 autoConnect={true}
                 onError={(error) => {
                     console.error('Wallet error:', error);

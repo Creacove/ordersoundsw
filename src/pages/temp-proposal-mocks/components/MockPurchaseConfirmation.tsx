@@ -20,7 +20,7 @@ const MockPurchaseConfirmation = () => {
 
             {/* The "Frozen Rights" Visualization - UPSCALED */}
             <div className="relative">
-                <div className="absolute inset-0 bg-blue-500/5 blur-3xl rounded-full" />
+                <div className="absolute inset-0 -purple-/5 blur-3xl rounded-full" />
 
                 <Card className="bg-[#121212] border-white/10 overflow-hidden relative z-10 rounded-[3rem]">
                     <div className="flex flex-col md:flex-row h-[400px]">
@@ -42,17 +42,17 @@ const MockPurchaseConfirmation = () => {
                         </div>
 
                         {/* Right: Frozen State (The Core Message) */}
-                        <div className="flex-1 p-12 flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden bg-blue-900/[0.05]">
+                        <div className="flex-1 p-12 flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden -purple-/[0.05]">
                             <div className="absolute top-0 right-0 p-4">
-                                <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse shadow-[0_0_15px_rgba(59,130,246,1)]" />
+                                <div className="w-3 h-3 rounded-full -purple- animate-pulse shadow-[0_0_15px_rgba(59,130,246,1)]" />
                             </div>
 
-                            <div className="w-24 h-24 rounded-3xl bg-[#0a0a0a] border border-blue-500/30 flex items-center justify-center shadow-[0_0_50px_rgba(59,130,246,0.15)] relative z-10 transform scale-110">
-                                <Lock className="w-10 h-10 text-blue-400" />
+                            <div className="w-24 h-24 rounded-3xl bg-[#0a0a0a] border -purple-/30 flex items-center justify-center shadow-[0_0_50px_rgba(59,130,246,0.15)] relative z-10 transform scale-110">
+                                <Lock className="w-10 h-10 -purple-" />
                             </div>
 
                             <div className="relative z-10 space-y-2">
-                                <h3 className="text-lg font-black uppercase tracking-[0.2em] text-blue-400">Publishing Rights</h3>
+                                <h3 className="text-lg font-black uppercase tracking-[0.2em] -purple-">Publishing Rights</h3>
                                 <p className="text-sm text-white/80 font-bold bg-black/40 px-4 py-1.5 rounded-full border border-white/10 inline-block">
                                     PENDING FINALIZATION
                                 </p>

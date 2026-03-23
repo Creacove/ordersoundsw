@@ -10,8 +10,9 @@ import {
   TokenInvalidAccountOwnerError
 } from '@solana/spl-token';
 import { createMemoInstruction } from '@solana/spl-memo';
+import { getPlatformWalletAddress, normalizeSolanaNetwork, publicEnv } from '@/config/publicEnv';
 import { toast } from 'sonner';
-// Smart contract imports removed for direct transfer with platform fee - Holiday Promo Active
+// Smart contract imports removed in favor of direct token transfers with explicit revenue splits.
 
 // USDC Mint addresses for different networks
 const USDC_MINT_ADDRESSES = {
@@ -22,7 +23,7 @@ const USDC_MINT_ADDRESSES = {
 
 // Get current network's USDC mint - dynamic selection
 const getUSDCMint = (network: string = 'devnet'): PublicKey => {
-  const normalizedNetwork = network === 'mainnet' ? 'mainnet-beta' : network;
+  const normalizedNetwork = normalizeSolanaNetwork(network);
   const mint = USDC_MINT_ADDRESSES[normalizedNetwork as keyof typeof USDC_MINT_ADDRESSES] || USDC_MINT_ADDRESSES.devnet;
   console.log(`🌐 Using ${normalizedNetwork} USDC mint: ${mint.toString()}`);
   return mint;
@@ -44,6 +45,26 @@ export const isValidSolanaAddress = (address: string): boolean => {
 const usdToUSDCUnits = (usdAmount: number): bigint => {
   return BigInt(Math.round(usdAmount * 1_000_000)); // USDC has 6 decimals
 };
+
+const roundUsdAmount = (amount: number) => {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+};
+
+const calculateRevenueSplit = (usdAmount: number) => {
+  const platformAmount = roundUsdAmount(
+    (usdAmount * publicEnv.solanaPlatformFeeBps) / 10000,
+  );
+  const producerAmount = roundUsdAmount(usdAmount - platformAmount);
+
+  return {
+    platformAmount,
+    producerAmount,
+  };
+};
+
+function getErrorMessage(error: unknown, fallback = 'Unknown error') {
+  return error instanceof Error ? error.message : fallback;
+}
 
 // Check USDC balance for an account
 const checkUSDCBalance = async (
@@ -185,11 +206,9 @@ const addPriorityFee = (transaction: Transaction, microLamports: number = 10000)
 
 // Platform wallet for receiving 20% fee (dynamic selection)
 const getPlatformWallet = (network: string = 'devnet'): PublicKey => {
-  const isMainnet = network === 'mainnet' || network === 'mainnet-beta';
-  const walletAddress = isMainnet
-    ? (import.meta.env.VITE_PLATFORM_WALLET_MAINNET || import.meta.env.VITE_PLATFORM_WALLET || '9SqtDXzFnisGKMrhwUt81BCUixC7BnuA7ppQ3vPiAFpf')
-    : (import.meta.env.VITE_PLATFORM_WALLET || '9SqtDXzFnisGKMrhwUt81BCUixC7BnuA7ppQ3vPiAFpf');
-  console.log(`🏢 Using ${network} platform wallet: ${walletAddress}`);
+  const normalizedNetwork = normalizeSolanaNetwork(network);
+  const walletAddress = getPlatformWalletAddress(normalizedNetwork);
+  console.log(`Using ${normalizedNetwork} platform wallet: ${walletAddress}`);
   return new PublicKey(walletAddress);
 };
 
@@ -231,19 +250,18 @@ const processAtomicSplitPayment = async (
     // Create single transaction with memo + transfer instructions
     const transaction = new Transaction();
 
-    // Add memo instruction FIRST for wallet preview clarity
+    // Add memo instruction first for wallet preview clarity.
     const totalUSDC = (producerAmount + platformAmount).toFixed(2);
-    // TODO: HOLIDAY PROMO - Revert memo after January 31, 2025
-    // Original: const memoText = `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer + $${platformAmount.toFixed(2)} platform fee)`;
-    const memoText = platformAmount > 0
-      ? `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer + $${platformAmount.toFixed(2)} platform fee)`
-      : `USDC Payment: $${totalUSDC} (100% to producer - Holiday Promo 🎉)`;
+    const memoText =
+      platformAmount > 0
+        ? `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer + $${platformAmount.toFixed(2)} platform fee)`
+        : `USDC Payment: $${totalUSDC} total ($${producerAmount.toFixed(2)} to producer)`;
     const memoInstruction = createMemoInstruction(memoText, [wallet.publicKey]);
     transaction.add(memoInstruction);
 
     console.log(`📝 Added memo: ${memoText}`);
 
-    // Producer transfer instruction (100% during promo)
+    // Producer transfer instruction.
     const producerTransfer = createTransferInstruction(
       atas.senderATA,
       atas.producerATA,
@@ -256,8 +274,7 @@ const processAtomicSplitPayment = async (
     // Add producer transfer
     transaction.add(producerTransfer);
 
-    // TODO: HOLIDAY PROMO - Uncomment platform transfer after January 31, 2025
-    // Platform transfer instruction - SKIP when platformAmount is 0 (promo period)
+    // Only add the platform transfer when the configured split allocates funds to it.
     if (platformUSDCAmount > BigInt(0)) {
       const platformTransfer = createTransferInstruction(
         atas.senderATA,
@@ -275,9 +292,8 @@ const processAtomicSplitPayment = async (
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
 
-    // TODO: HOLIDAY PROMO - Update log after January 31, 2025
     const transferCount = platformUSDCAmount > BigInt(0) ? 2 : 1;
-    console.log(`🧪 Transaction contains ${transaction.instructions.length} instructions (1 memo + ${transferCount} transfer${transferCount > 1 ? 's' : ''})`);
+    console.log(`Transaction contains ${transaction.instructions.length} instructions (1 memo + ${transferCount} transfer${transferCount > 1 ? 's' : ''})`);
 
     // Simulate transaction before sending
     const simulation = await simulateTransaction(connection, transaction);
@@ -346,23 +362,24 @@ const processAtomicSplitPayment = async (
     console.log('✅ Atomic split transaction confirmed - both transfers completed');
     return signature;
 
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
     console.error("❌ Error in atomic split payment:", error);
 
     // Provide specific error messages
-    if (error.message.includes('0x1')) {
+    if (errorMessage.includes('0x1')) {
       throw new Error("Insufficient SOL balance for transaction fees. Please add SOL to your wallet.");
     }
-    if (error.message.includes('TokenAccountNotFoundError')) {
+    if (errorMessage.includes('TokenAccountNotFoundError')) {
       const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
       throw new Error(`${networkLabel} USDC token account not found. Please ensure you have ${networkLabel} USDC in your wallet.`);
     }
-    if (error.message.includes('insufficient funds')) {
+    if (errorMessage.includes('insufficient funds')) {
       const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
       throw new Error(`Insufficient ${networkLabel} USDC balance for this transaction.`);
     }
 
-    throw new Error(error.message || "Failed to process atomic split payment");
+    throw new Error(errorMessage || "Failed to process atomic split payment");
   }
 };
 
@@ -376,7 +393,7 @@ export const processPlatformOnlyPayment = async (
   try {
     if (!wallet.publicKey) throw new Error("Wallet not connected");
 
-    const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+    const activeNetwork = normalizeSolanaNetwork(network);
     console.log(`💰 Processing ${activeNetwork.toUpperCase()} platform-only payment: $${usdAmount}`);
 
     const PLATFORM_WALLET = getPlatformWallet(activeNetwork);
@@ -393,13 +410,13 @@ export const processPlatformOnlyPayment = async (
 
     console.log(`✅ Platform-only payment completed: ${signature}`);
     return signature;
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ Error in platform-only payment:", error);
-    throw new Error(error.message || "Failed to process platform-only payment");
+    throw new Error(getErrorMessage(error, "Failed to process platform-only payment"));
   }
 };
 
-// Process USDC payment with 80/20 split
+// Process a USDC payment using the configured producer/platform revenue split.
 export const processUSDCPayment = async (
   usdAmount: number,
   recipientAddress: string,
@@ -418,25 +435,19 @@ export const processUSDCPayment = async (
 
     if (!isValidSolanaAddress(recipientAddress)) throw new Error("Invalid recipient address");
 
-    // Use provided network or environment default
-    const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
-    // TODO: HOLIDAY PROMO - Revert to 80/20 split after January 31, 2025
-    console.log(`💰 Processing ${activeNetwork.toUpperCase()} USDC payment with 100/0 split (Holiday Promo): $${usdAmount} to ${recipientAddress}`);
+    const activeNetwork = normalizeSolanaNetwork(network);
+    const { producerAmount, platformAmount } = calculateRevenueSplit(usdAmount);
 
-    // Calculate splits: 100% to producer, 0% to platform (HOLIDAY PROMO)
-    // Original: const producerAmount = usdAmount * 0.8;
-    // Original: const platformAmount = usdAmount * 0.2;
-    const producerAmount = usdAmount * 1.0; // 100% to producer during promo
-    const platformAmount = usdAmount * 0.0; // 0% to platform during promo
-
-    console.log(`🎯 Producer gets: $${producerAmount.toFixed(2)} (100% - Holiday Promo 🎉)`);
-    console.log(`🏢 Platform gets: $${platformAmount.toFixed(2)} (0% - Holiday Promo)`);
+    console.log(
+      `Processing ${activeNetwork.toUpperCase()} USDC payment with ${publicEnv.solanaPlatformFeeBps}bps platform fee: $${usdAmount} to ${recipientAddress}`,
+    );
+    console.log(`Producer gets: $${producerAmount.toFixed(2)}`);
+    console.log(`Platform gets: $${platformAmount.toFixed(2)}`);
 
     const usdcMint = getUSDCMint(activeNetwork);
     const producerPublicKey = new PublicKey(recipientAddress);
     const PLATFORM_WALLET = getPlatformWallet(activeNetwork);
 
-    // CRITICAL: Check and create ALL THREE ATAs before any transfers
     const allWallets = [wallet.publicKey, producerPublicKey, PLATFORM_WALLET];
     const walletLabels = ['sender', 'producer', 'platform'];
 
@@ -506,9 +517,9 @@ export const processUSDCPayment = async (
 
     console.log(`✅ Atomic split payment completed: ${signature}`);
     return signature;
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ Error in split USDC payment:", error);
-    throw new Error(error.message || "Failed to process split payment");
+    throw new Error(getErrorMessage(error, "Failed to process split payment"));
   }
 };
 
@@ -651,26 +662,27 @@ const processSingleDirectTransfer = async (
     console.log(`✅ ${networkLabel} USDC transfer confirmed successfully`);
     return signature;
 
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
     const networkLabel = network === 'mainnet' || network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
     console.error(`❌ Error in ${networkLabel} USDC transfer:`, error);
 
     // Provide specific error messages for common issues
-    if (error.message.includes('0x1')) {
+    if (errorMessage.includes('0x1')) {
       throw new Error("Insufficient SOL balance for transaction fees. Please add SOL to your wallet.");
     }
-    if (error.message.includes('TokenAccountNotFoundError')) {
+    if (errorMessage.includes('TokenAccountNotFoundError')) {
       throw new Error(`${networkLabel} USDC token account not found. Please ensure you have ${networkLabel} USDC in your wallet.`);
     }
-    if (error.message.includes('insufficient funds')) {
+    if (errorMessage.includes('insufficient funds')) {
       throw new Error(`Insufficient ${networkLabel} USDC balance for this transaction.`);
     }
 
-    throw new Error(error.message || `Failed to process ${networkLabel} USDC transfer`);
+    throw new Error(errorMessage || `Failed to process ${networkLabel} USDC transfer`);
   }
 };
 
-// Process multiple USDC payments with 80/20 split
+// Process multiple USDC payments with the configured producer/platform split.
 export const processMultipleUSDCPayments = async (
   items: { price: number, producerWallet: string, id?: string, title?: string }[],
   connection: Connection,
@@ -681,9 +693,11 @@ export const processMultipleUSDCPayments = async (
     if (!wallet.publicKey) throw new Error("Wallet not connected");
 
     // Use provided network or environment default
-    const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+    const activeNetwork = normalizeSolanaNetwork(network);
     const networkLabel = activeNetwork === 'mainnet' || activeNetwork === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
-    console.log(`💰 Processing ${items.length} ${networkLabel} USDC payments with 80/20 split`);
+    console.log(
+      `Processing ${items.length} ${networkLabel} USDC payments with ${publicEnv.solanaPlatformFeeBps}bps platform fee`,
+    );
 
     // Validate recipient addresses and separate fallback items
     const validItems = items.filter(item => item.producerWallet && isValidSolanaAddress(item.producerWallet));
@@ -714,7 +728,7 @@ export const processMultipleUSDCPayments = async (
 
     const signatures: string[] = [];
 
-    // Process valid items with normal 80/20 split
+    // Process items with a valid producer wallet through the configured split path.
     for (let i = 0; i < validItems.length; i++) {
       const item = validItems[i];
       try {
@@ -733,7 +747,7 @@ export const processMultipleUSDCPayments = async (
         if (i < validItems.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error(`❌ Failed ${networkLabel} USDC payment to ${item.producerWallet}:`, error);
         throw error;
       }
@@ -752,7 +766,7 @@ export const processMultipleUSDCPayments = async (
           activeNetwork
         );
         signatures.push(fallbackSignature);
-      } catch (error: any) {
+      } catch (error) {
         console.error(`❌ Failed platform fallback payment:`, error);
         throw error;
       }
@@ -761,10 +775,10 @@ export const processMultipleUSDCPayments = async (
     console.log(`✅ All ${items.length} ${networkLabel} USDC payments completed successfully`);
     return signatures;
 
-  } catch (error: any) {
-    const activeNetwork = network || import.meta.env.VITE_SOLANA_NETWORK || 'devnet';
+  } catch (error) {
+    const activeNetwork = normalizeSolanaNetwork(network);
     const networkLabel = activeNetwork === 'mainnet' || activeNetwork === 'mainnet-beta' ? 'MAINNET' : 'DEVNET';
     console.error(`❌ Error processing multiple ${networkLabel} USDC payments:`, error);
-    throw new Error(error.message || `Failed to process ${networkLabel} USDC payments`);
+    throw new Error(getErrorMessage(error, `Failed to process ${networkLabel} USDC payments`));
   }
 };

@@ -1,34 +1,27 @@
 
-import { TrendingBeats } from "@/components/marketplace/TrendingBeats";
-import { WeeklyPicks } from "@/components/marketplace/WeeklyPicks";
-import { ProducerOfWeek } from "@/components/marketplace/ProducerOfWeek";
-import { RecommendedBeats } from "@/components/marketplace/RecommendedBeats";
-import { TopProducers } from "@/components/marketplace/TopProducers";
-import { FeaturedPlaylists } from "@/components/marketplace/FeaturedPlaylists";
-import { PremiumSection } from "@/components/marketplace/PremiumSection";
-import { MainLayoutWithPlayer } from "@/components/layout/MainLayoutWithPlayer";
-import { NewBeats } from "@/components/marketplace/NewBeats";
 import { FeaturedBeat } from "@/components/marketplace/FeaturedBeat";
-import { GenreQuickLinks } from "@/components/marketplace/GenreQuickLinks";
+import { TrendingBeats } from "@/components/marketplace/TrendingBeats";
+import { TopProducers } from "@/components/marketplace/TopProducers";
+import { WeeklyPicks } from "@/components/marketplace/WeeklyPicks";
+import { NewBeats } from "@/components/marketplace/NewBeats";
+import { RecommendedBeats } from "@/components/marketplace/RecommendedBeats";
 import { GamingBeats } from "@/components/marketplace/GamingBeats";
+import { ProducerOfWeek } from "@/components/marketplace/ProducerOfWeek";
 
 const Home = () => {
   return (
-    <MainLayoutWithPlayer activeTab="home">
-      <div className="w-full max-w-7xl mx-auto px-2 xs:px-4 sm:px-6 py-6 space-y-12">
+    <div className="container py-8 md:py-12 px-4 md:px-6">
+      <div className="flex flex-col gap-8 md:gap-12 pb-12">
         <FeaturedBeat />
-        <GenreQuickLinks />
         <TrendingBeats />
         <TopProducers />
         <WeeklyPicks />
         <NewBeats />
-        <FeaturedPlaylists />
         <RecommendedBeats />
         <GamingBeats />
         <ProducerOfWeek />
-        <PremiumSection />
       </div>
-    </MainLayoutWithPlayer>
+    </div>
   );
 };
 

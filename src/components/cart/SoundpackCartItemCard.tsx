@@ -1,7 +1,7 @@
-import React, { memo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Package, Trash2 } from 'lucide-react';
+import React, { memo } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Package, Trash2, Layers3 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface SoundpackCartItemCardProps {
@@ -27,21 +27,21 @@ interface SoundpackCartItemCardProps {
   onRemove: (itemId: string) => void;
 }
 
-const SoundpackCartItemCard = memo(({ item, price, onRemove }: SoundpackCartItemCardProps) => {
+const SoundpackCartItemCard = memo(({ item, onRemove }: SoundpackCartItemCardProps) => {
   const { currency } = useAuth();
 
   const getCorrectPrice = () => {
     const licenseType = item.licenseType;
     const soundpack = item.soundpack;
 
-    if (currency === 'NGN') {
-      if (licenseType === 'basic') return soundpack.basic_license_price_local || 0;
-      if (licenseType === 'premium') return soundpack.premium_license_price_local || 0;
-      if (licenseType === 'exclusive') return soundpack.exclusive_license_price_local || 0;
+    if (currency === "NGN") {
+      if (licenseType === "basic") return soundpack.basic_license_price_local || 0;
+      if (licenseType === "premium") return soundpack.premium_license_price_local || 0;
+      if (licenseType === "exclusive") return soundpack.exclusive_license_price_local || 0;
     } else {
-      if (licenseType === 'basic') return soundpack.basic_license_price_diaspora || 0;
-      if (licenseType === 'premium') return soundpack.premium_license_price_diaspora || 0;
-      if (licenseType === 'exclusive') return soundpack.exclusive_license_price_diaspora || 0;
+      if (licenseType === "basic") return soundpack.basic_license_price_diaspora || 0;
+      if (licenseType === "premium") return soundpack.premium_license_price_diaspora || 0;
+      if (licenseType === "exclusive") return soundpack.exclusive_license_price_diaspora || 0;
     }
 
     return 0;
@@ -50,59 +50,65 @@ const SoundpackCartItemCard = memo(({ item, price, onRemove }: SoundpackCartItem
   const displayPrice = getCorrectPrice();
 
   return (
-    <div className="border rounded-xl bg-card/50 backdrop-blur-sm shadow-sm p-3 flex gap-3">
-      <div className="flex-shrink-0 w-16 h-16">
-        <div className="relative w-16 h-16 rounded-md overflow-hidden">
+    <div className="panel overflow-hidden p-3 sm:p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="relative h-24 w-full overflow-hidden rounded-[1.2rem] border border-white/10 sm:h-24 sm:w-24">
           <img
             src={item.soundpack.cover_art_url || "/placeholder.svg"}
             alt={item.soundpack.title || "Soundpack"}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = "/placeholder.svg";
             }}
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#090b16] via-transparent to-transparent" />
           {item.soundpack.file_count && (
-            <Badge className="absolute bottom-1 left-1 h-5 px-1.5 text-[10px] bg-primary/90">
+            <Badge className="absolute bottom-2 left-2 bg-[#0a0d18]/85 text-white">
               <Package size={10} className="mr-1" />
               {item.soundpack.file_count}
             </Badge>
           )}
         </div>
-      </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-y-3 sm:gap-y-0">
-          <div className="flex-1 min-w-0 sm:mr-3">
-            <h3 className="font-semibold truncate">{item.soundpack.title || 'Unknown Soundpack'}</h3>
-            <p className="text-xs text-muted-foreground">{item.soundpack.producer_name || 'Unknown Producer'}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <h3 className="truncate text-lg font-semibold tracking-[-0.04em] text-white">
+                {item.soundpack.title || "Unknown Soundpack"}
+              </h3>
+              <p className="text-sm text-muted-foreground">{item.soundpack.producer_name || "Unknown Producer"}</p>
 
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <Badge variant="outline" className="text-xs py-0 px-1.5">
-                <Package size={10} className="mr-1" />
-                Soundpack
-              </Badge>
-
-              <Badge variant="secondary" className="text-xs py-0 px-1.5 capitalize">
-                {item.licenseType} License
-              </Badge>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="bg-white/[0.04] text-white">
+                  <Layers3 size={10} className="mr-1" />
+                  Soundpack
+                </Badge>
+                <Badge variant="secondary" className="capitalize">
+                  {item.licenseType} license
+                </Badge>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto flex-shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/50 sm:border-transparent mt-1 sm:mt-0">
-            <span className="font-semibold text-sm order-1 sm:order-none">
-              {currency === 'NGN' ? '₦' : '$'}
-              {Math.round(displayPrice).toLocaleString()}
-            </span>
+            <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
+              <div className="text-right">
+                <div className="text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">Price</div>
+                <div className="mt-1 text-lg font-semibold text-white">
+                  {currency === "NGN" ? "₦" : "$"}
+                  {Math.round(displayPrice).toLocaleString()}
+                </div>
+              </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive -ml-2 sm:ml-0 order-2 sm:order-none sm:mt-1"
-              onClick={() => onRemove(item.itemId)}
-            >
-              <Trash2 size={16} />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                rounded="full"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => onRemove(item.itemId)}
+              >
+                <Trash2 size={16} />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -110,6 +116,6 @@ const SoundpackCartItemCard = memo(({ item, price, onRemove }: SoundpackCartItem
   );
 });
 
-SoundpackCartItemCard.displayName = 'SoundpackCartItemCard';
+SoundpackCartItemCard.displayName = "SoundpackCartItemCard";
 
 export default SoundpackCartItemCard;

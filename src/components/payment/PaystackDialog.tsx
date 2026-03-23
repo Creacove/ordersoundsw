@@ -1,9 +1,7 @@
 
-import { RefreshCw, Loader2, X, Info, CreditCard } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { RefreshCw, Loader2, X, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useEffect } from 'react';
 
@@ -32,150 +30,109 @@ export function PaystackDialog({
   forceCancel,
   paymentStarted
 }: PaystackDialogProps) {
-  // Auto-close dialog when payment window opens to prevent interference
   useEffect(() => {
     if (paymentStarted) {
-      // Small delay to ensure Paystack window is fully loaded
       const timer = setTimeout(() => {
-        // Don't call onClose() as it might interfere with payment flow
-        // Just let the Paystack window take full control
+        // Paystack window takes full control
       }, 100);
-      
       return () => clearTimeout(timer);
     }
   }, [paymentStarted]);
 
-  // Don't render the dialog at all when payment has started to prevent any interference
   if (paymentStarted) {
     return null;
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md p-0 max-h-[90vh] overflow-y-auto border-primary/20 shadow-xl backdrop-blur-sm bg-background/95">
-        <DialogHeader className="px-6 pt-6 pb-4 bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-primary/10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <CreditCard className="h-5 w-5 text-primary" />
+      <DialogContent className="sm:max-w-sm p-0 border-white/10 bg-[#030407] rounded-[2rem] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="relative p-[1px] rounded-[2rem]">
+          <div className="p-8 pb-6 space-y-1">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-[#9A3BDC]/10 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-[#9A3BDC]" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9A3BDC]">Secure Checkout</p>
+                <h2 className="text-xl font-black text-white italic tracking-tighter uppercase">Complete Purchase</h2>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-xl font-semibold text-foreground">Complete Your Purchase</DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground mt-1">
-                You'll be redirected to Paystack's secure payment platform to complete this transaction.
-              </DialogDescription>
+
+            {/* Order Total */}
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/30 italic">Order Total</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-black text-white italic tracking-tighter">
+                  ₦{totalAmount.toLocaleString()}
+                </span>
+                <span className="text-sm text-white/30">.00</span>
+              </div>
+              <div className="flex items-center gap-1.5 pt-1">
+                <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/70">Secured by Paystack</p>
+              </div>
             </div>
           </div>
-        </DialogHeader>
-        
-        <div className="p-6 space-y-5">
-          {/* Order Summary Card */}
-          <div className="p-5 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-xl border border-primary/10 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-foreground">Order Total</h3>
-              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                Live Payment
-              </Badge>
-            </div>
-            
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-primary">₦{totalAmount.toLocaleString()}</span>
-              <span className="text-sm text-muted-foreground">.00</span>
-            </div>
-            
-            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              <Info className="h-3 w-3" />
-              Secure payment powered by Paystack
-            </p>
-          </div>
-          
+        </div>
+
+        <div className="px-8 pb-8 space-y-4">
           {/* Validation Error */}
           {validationError && (
-            <div className="p-4 border border-destructive/20 bg-destructive/5 rounded-lg">
-              <div className="flex items-start gap-3">
-                <X className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-destructive mb-2">{validationError}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full border-destructive/30 hover:border-destructive/50 hover:bg-destructive/10 transition-colors"
-                    onClick={onRefreshCart}
-                    disabled={isValidating}
-                  >
-                    {isValidating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Refreshing...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4" /> 
-                        Refresh Cart
-                      </>
-                    )}
-                  </Button>
-                </div>
+            <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-medium text-red-400">{validationError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-9 rounded-xl border-red-500/20 hover:bg-red-500/10 text-red-400 font-bold text-xs uppercase italic tracking-widest"
+                  onClick={onRefreshCart}
+                  disabled={isValidating}
+                >
+                  {isValidating ? (
+                    <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> Refreshing...</>
+                  ) : (
+                    <><RefreshCw className="mr-2 h-3 w-3" /> Refresh Cart</>
+                  )}
+                </Button>
               </div>
             </div>
           )}
-          
-          {/* Live Payment Information */}
-          <Alert className="bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/40">
-            <Info className="h-4 w-4 text-green-500 dark:text-green-400" />
-            <AlertDescription className="text-sm text-green-700 dark:text-green-300">
-              <div className="space-y-2">
-                <p className="font-medium">Live Payment Processing</p>
-                <p className="text-xs">You will be charged the full amount. Please use your actual payment details.</p>
-              </div>
-            </AlertDescription>
-          </Alert>
-          
-          <Separator className="my-4" />
-          
+
+          <Separator className="bg-white/5" />
+
           {/* Action Buttons */}
-          <div className="flex flex-col gap-3">
-            <Button 
+          <div className="space-y-3">
+            <Button
               onClick={onPaymentStart}
               disabled={isProcessing || isValidating || validationError !== null}
-              className="w-full py-6 text-base shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-              size="lg"
+              className="w-full h-14 rounded-2xl bg-white text-black font-black uppercase italic tracking-tighter text-base hover:bg-white/90 transition-all disabled:opacity-40"
             >
               {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Opening Payment Window...
-                </>
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening Payment Window...</>
               ) : isValidating ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Validating Cart...
-                </>
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Validating Cart...</>
               ) : (
-                <>
-                  <CreditCard className="mr-2 h-5 w-5" />
-                  Proceed to Payment
-                </>
+                <><CreditCard className="mr-2 h-5 w-5" /> Pay ₦{totalAmount.toLocaleString()}</>
               )}
             </Button>
-            
+
             {isProcessing && forceCancel && (
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="outline"
                 onClick={forceCancel}
-                className="w-full py-3 text-sm hover:bg-destructive/90 transition-colors"
-                size="sm"
+                className="w-full h-10 rounded-xl border-red-500/20 text-red-400 hover:bg-red-500/10 font-bold text-xs uppercase italic tracking-widest"
               >
-                <X size={16} className="mr-2" />
-                Cancel Payment
+                <X size={14} className="mr-2" /> Cancel Payment
               </Button>
             )}
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="ghost"
               onClick={onClose}
               disabled={isProcessing && !forceCancel}
-              className="w-full py-5 text-base border-border hover:bg-accent/50 transition-all shadow-sm hover:shadow"
-              size="lg"
+              className="w-full h-11 rounded-xl text-white/30 font-bold uppercase italic tracking-widest text-xs hover:text-white transition-colors"
             >
               Back to Cart
             </Button>

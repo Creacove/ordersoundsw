@@ -70,28 +70,33 @@ export function ProducerWalletDetailsForm({ producerId, walletAddress, onSuccess
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
           control={form.control}
           name="walletAddress"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Solana Wallet Address</FormLabel>
+            <FormItem className="space-y-4">
+              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-white/40 italic ml-1">Solana Payout Node / Wallet Address</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Enter your Solana wallet address"
+                  placeholder="Enter your Solana (SPL) address"
+                  className="h-14 rounded-2xl bg-white/[0.02] border-white/5 text-white placeholder:text-white/10 italic font-bold focus:ring-[#9A3BDC]/50 transition-all px-6"
                   {...field}
                 />
               </FormControl>
-              <FormDescription>
-                This is the Solana wallet address where you'll receive payments for your beat sales.
+              <FormDescription className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic leading-relaxed">
+                Primary settlement address for USDC-SPL distributions. Ensure this corresponds to a secure hardware or verified software vault.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : 'Save Wallet Address'}
+        <Button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="h-14 rounded-2xl bg-white text-black font-black uppercase italic tracking-tighter px-10 hover:bg-white/90 disabled:opacity-50 transition-all w-full md:w-auto"
+        >
+          {isSubmitting ? 'Syncing Address...' : 'Commit Wallet Address'}
         </Button>
       </form>
     </Form>

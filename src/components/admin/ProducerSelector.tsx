@@ -74,11 +74,11 @@ export function ProducerSelector({ onSelectProducer, isLoading, currentProducer 
 
           {/* Current Producer Display */}
           {currentProducer && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm font-medium text-blue-900 mb-1">
+            <div className="mb-4 p-3 -purple- border -purple- rounded-lg">
+              <p className="text-sm font-medium -purple- mb-1">
                 Current Producer of the Week:
               </p>
-              <p className="text-blue-800">
+              <p className="-purple-">
                 {currentProducer.stageName || currentProducer.name}
               </p>
             </div>
@@ -128,7 +128,7 @@ export function ProducerSelector({ onSelectProducer, isLoading, currentProducer 
                         {producer.stage_name || producer.full_name}
                       </h3>
                       {currentProducer?.id === producer.id && (
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        <Badge variant="secondary" className="-purple- -purple-">
                           Current
                         </Badge>
                       )}

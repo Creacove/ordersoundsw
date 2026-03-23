@@ -2,8 +2,12 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { RoleSelectionDialog } from '@/components/auth/RoleSelectionDialog';
 import { Logo } from '@/components/ui/Logo';
+import { ensureUserProfile } from '@/features/auth/profileService';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -35,23 +39,10 @@ export default function AuthCallback() {
           localStorage.removeItem('oauth_mode');
           
           try {
-            // Get user data from the database to check role
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('role')
-              .eq('id', data.session.user.id)
-              .single();
-            
-            if (userError) {
-              console.error("Error fetching user role:", userError);
-              clearTimeout(timeoutId);
-              navigate('/');
-              return;
-            }
-            
-            // Navigate based on role
+            const userProfile = await ensureUserProfile(data.session.user);
+
             clearTimeout(timeoutId);
-            if (userData?.role === 'producer') {
+            if (userProfile.role === 'producer') {
               console.log("Auth callback: Producer user, navigating to dashboard");
               navigate('/producer/dashboard');
             } else {
@@ -68,8 +59,9 @@ export default function AuthCallback() {
           clearTimeout(timeoutId);
           navigate('/login');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Auth callback exception:', error);
+        console.error('Auth callback exception message:', getErrorMessage(error, 'Unknown callback error'));
         clearTimeout(timeoutId);
         navigate('/login');
       }
@@ -80,7 +72,6 @@ export default function AuthCallback() {
 
   return (
     <MainLayout hideSidebar>
-      <RoleSelectionDialog open={false} onOpenChange={() => {}} />
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="flex justify-center mb-8">
           <Logo size="mobile" />

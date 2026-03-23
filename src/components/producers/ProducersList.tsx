@@ -70,76 +70,76 @@ export function ProducersList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {producers.map((producer) => (
         <Link 
           to={`/producer/${producer.id}`}
           key={producer.id} 
-          className="flex items-center p-4 bg-[#121212] rounded-xl hover:bg-[#1a1a1a] transition-colors"
+          className="group relative flex items-center p-4 sm:p-6 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:bg-white/[0.06] hover:border-white/10 transition-all duration-300 overflow-hidden"
         >
-          <Avatar className="h-14 w-14 sm:h-16 sm:w-16 mr-4">
-            <AvatarImage 
-              src={producer.profile_picture || `https://api.dicebear.com/7.x/initials/svg?seed=${producer.full_name}`}
-              alt={producer.stage_name || producer.full_name} 
-            />
-            <AvatarFallback>
-              {(producer.stage_name || producer.full_name || 'P').charAt(0)}
-            </AvatarFallback>
-          </Avatar>
+          {/* Subtle background glow on hover */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#9A3BDC]/5 blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none" />
           
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center flex-wrap gap-2">
-              <h3 className="font-medium text-base sm:text-lg text-white truncate">
-                {producer.stage_name || producer.full_name}
-              </h3>
-
-              {/* Activity indicators based on beat count */}
-              {producer.beatCount > 20 && (
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  Very Active
-                </Badge>
-              )}
-              {producer.beatCount > 10 && producer.beatCount <= 20 && (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs flex items-center gap-1">
-                  <Zap className="h-3 w-3" />
-                  Active
-                </Badge>
-              )}
-              {producer.beatCount > 0 && producer.beatCount <= 10 && (
-                <Badge variant="outline" className="text-xs">
-                  Getting Started
-                </Badge>
-              )}
-
-              {searchQuery && (producer.stage_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              producer.full_name?.toLowerCase().includes(searchQuery.toLowerCase())) && (
-                <Badge variant="secondary" className="bg-purple-700/30 text-purple-300 text-xs">Match</Badge>
+          <div className="relative z-10 flex items-center w-full">
+            <div className="relative shrink-0 mr-5">
+              <div className="absolute inset-0 bg-[#9A3BDC]/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-2 border-white/5 group-hover:border-[#9A3BDC]/30 transition-colors">
+                <AvatarImage 
+                  src={producer.profile_picture || `https://api.dicebear.com/7.x/initials/svg?seed=${producer.full_name}`}
+                  alt={producer.stage_name || producer.full_name} 
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-[#1A1B1E] text-white font-black italic tracking-tighter text-xl">
+                  {(producer.stage_name || producer.full_name || 'P').charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Active Indicator Overlay */}
+              {producer.beatCount > 10 && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-[#9A3BDC] border-2 border-[#030407] flex items-center justify-center shadow-lg">
+                  <Zap size={10} className="text-white fill-white" />
+                </div>
               )}
             </div>
-            <div className="text-xs sm:text-sm text-gray-400 flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
-              <span className="flex items-center gap-1">
-                <Music className="h-3 w-3" />
-                {producer.beatCount} {producer.beatCount === 1 ? 'beat' : 'beats'}
-              </span>
-              <span className="hidden xs:inline-block">•</span>
-              <FollowerCount 
-                count={producer.follower_count || 0} 
-                className="text-xs sm:text-sm text-gray-400"
+            
+            <div className="flex-1 min-w-0 pr-1">
+              <div className="flex items-center flex-wrap gap-2 mb-1">
+                <h3 className="font-extrabold text-[11px] sm:text-xl text-white italic uppercase tracking-tighter leading-none group-hover:text-[#9A3BDC] transition-colors truncate">
+                  {producer.stage_name || producer.full_name}
+                </h3>
+
+                {producer.beatCount > 20 && (
+                   <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 italic">Top Producer</span>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-3 mt-2 mb-3">
+                <div className="flex items-center gap-1.5 text-[10px] font-black text-white/40 uppercase italic tracking-widest">
+                  <Music className="h-3 w-3 text-[#9A3BDC]" />
+                  <span>{producer.beatCount} Beats</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-white/10" />
+                <FollowerCount 
+                  count={producer.follower_count || 0} 
+                  className="text-[10px] text-white/40 font-black uppercase italic tracking-widest"
+                />
+              </div>
+
+              {producer.bio && (
+                <p className="text-white/20 text-xs italic font-medium line-clamp-1 group-hover:text-white/40 transition-colors uppercase tracking-tight">
+                  "{producer.bio}"
+                </p>
+              )}
+            </div>
+            
+            <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+              <FollowButton 
+                producerId={producer.id}
+                size="sm"
+                variant="outline"
+                className="rounded-xl h-10 px-3 sm:px-5 bg-white/5 border-white/5 text-[10px] font-black uppercase italic tracking-widest hover:bg-white/10 hover:border-white/20 transition-all"
               />
             </div>
-            {producer.bio && (
-              <p className="text-gray-400 text-xs sm:text-sm mt-1 line-clamp-1">{producer.bio}</p>
-            )}
-          </div>
-          
-          <div onClick={(e) => e.stopPropagation()} className="ml-2 sm:ml-4">
-            <FollowButton 
-              producerId={producer.id}
-              size={isMobile ? "sm" : "default"}
-              variant="outline"
-              className="bg-transparent hover:bg-[#323232] text-sm data-[following=true]:bg-purple-700 data-[following=true]:hover:bg-purple-800 border-gray-700"
-            />
           </div>
         </Link>
       ))}

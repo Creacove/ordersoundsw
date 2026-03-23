@@ -1,14 +1,7 @@
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { ProducerWalletDetailsForm } from "@/components/payment/ProducerWalletDetailsForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Info, CheckCircle } from "lucide-react";
+import { Info, CheckCircle, Wallet } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface WalletDetailsCardProps {
@@ -41,31 +34,34 @@ export function WalletDetailsCard({
   }, [justUpdated]);
 
   const handleWalletUpdate = () => {
-    // Show success feedback
     setJustUpdated(true);
-    
-    // Call parent success handler
     onSuccess();
   };
 
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle>Set Up Payment Address</CardTitle>
-        <CardDescription>
-          Enter your Solana Wallet details to receive automatic payments for your beat
-          sales. You will receive 90% of each sale directly to your Wallet
-          account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="h-full flex flex-col">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+            <Wallet size={16} className="text-primary" />
+          </div>
+          <h3 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">
+            Solana <span className="text-primary">Vault</span>
+          </h3>
+        </div>
+        <p className="text-[11px] text-white/40 italic leading-relaxed">
+          Initialize your digital wallet to receive cross-border revenue. 
+          90% of global sales are settled instantly in USDC/SOL.
+        </p>
+      </div>
+
+      <div className="flex-1">
         {!hasWalletAddress && (
-          <Alert className="mb-4 bg-amber-50 border-amber-200">
-            <Info className="h-4 w-4 text-amber-500" />
-            <AlertTitle>Wallet address required</AlertTitle>
-            <AlertDescription>
-              You need to set up your Solana wallet address to receive payments for your beats.
-              Buyers won't be able to purchase your beats with USD until you complete this step.
+          <Alert className="mb-6 bg-primary/5 border-primary/10 rounded-2xl py-3 px-4">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest text-primary italic">Initialization Required</AlertTitle>
+            <AlertDescription className="text-[10px] text-white/40 italic uppercase tracking-wider">
+              Activate your vault to enable global marketplace transactions.
             </AlertDescription>
           </Alert>
         )}
@@ -77,25 +73,25 @@ export function WalletDetailsCard({
         />
         
         {(hasWalletAddress && !justUpdated) && (
-          <Alert className="mt-4 bg-green-50 border-green-200">
-            <Info className="h-4 w-4 text-green-500" />
-            <AlertTitle>Wallet address configured</AlertTitle>
-            <AlertDescription>
-              Your wallet address is set up. You will receive payments directly to this address when customers purchase your beats with USD.
+          <Alert className="mt-6 bg-emerald-500/5 border-emerald-500/10 rounded-2xl py-3 px-4">
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Vault Active</AlertTitle>
+            <AlertDescription className="text-[10px] text-white/40 italic uppercase tracking-wider">
+              Global revenue routing operational.
             </AlertDescription>
           </Alert>
         )}
         
         {justUpdated && (
-          <Alert className="mt-4 bg-green-50 border-green-200">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <AlertTitle>Wallet address updated!</AlertTitle>
-            <AlertDescription>
-              Your wallet address has been successfully updated. All future payments will be sent to this address.
+          <Alert className="mt-6 bg-emerald-500/5 border-emerald-500/10 rounded-2xl py-3 px-4">
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest text-emerald-500 italic">Vault Reconfigured</AlertTitle>
+            <AlertDescription className="text-[10px] text-white/40 italic uppercase tracking-wider">
+              Protocol updated successfully.
             </AlertDescription>
           </Alert>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

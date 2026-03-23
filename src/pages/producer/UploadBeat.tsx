@@ -1,9 +1,8 @@
+
 import { useState, useEffect } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, Info, ChevronRight, ChevronLeft, Save, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -19,10 +18,11 @@ import { useBeatUpload } from "@/hooks/useBeatUpload";
 import { ScrollToTop } from "@/components/utils/ScrollToTop";
 import { uploadImage } from "@/lib/imageStorage";
 import { supabase } from "@/integrations/supabase/client";
-import { isBeatPublished } from "@/services/beats";
 import { useUploadBeatTabs } from "@/hooks/useUploadBeatTabs";
 import { validateCurrentTab } from "@/utils/uploadBeatValidation";
 import { useOnboardingTracker } from "@/hooks/useOnboardingTracker";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { cn } from "@/lib/utils";
 
 export default function UploadBeat() {
   const tabOrder = ["details", "licensing", "files", "pricing", "royalties"];
@@ -78,6 +78,8 @@ export default function UploadBeat() {
       setIsEditMode(true);
       loadBeatDetails(editBeatId);
     }
+    
+    document.title = editBeatId ? "Edit Beat | OrderSOUNDS" : "Upload New Beat | OrderSOUNDS";
   }, [location]);
 
   const loadBeatDetails = async (id: string) => {
@@ -98,10 +100,7 @@ export default function UploadBeat() {
         .eq('id', id)
         .single();
       
-      if (error) {
-        throw error;
-      }
-      
+      if (error) throw error;
       if (!beatData) {
         toast.error("Beat not found");
         navigate('/producer/beats');
@@ -122,7 +121,7 @@ export default function UploadBeat() {
         trackType: beatData.track_type || '',
         bpm: beatData.bpm || 0,
         key: beatData.key || '',
-        priceLocal: 10000, // Default values
+        priceLocal: 10000, 
         priceDiaspora: 25,
         status: beatData.status as "draft" | "published" || 'draft',
         licenseType: beatData.license_type?.split(',')[0] || 'basic',
@@ -138,23 +137,12 @@ export default function UploadBeat() {
         category: beatData.category || 'Music Beat',
       });
       
-      if (beatData.tags && Array.isArray(beatData.tags)) {
-        setTags(beatData.tags);
-      }
-      
-      if (beatData.license_type) {
-        const licenseTypes = beatData.license_type.split(',');
-        setSelectedLicenseTypes(licenseTypes);
-      }
-      
+      if (beatData.tags && Array.isArray(beatData.tags)) setTags(beatData.tags);
+      if (beatData.license_type) setSelectedLicenseTypes(beatData.license_type.split(','));
       if (beatData.audio_file) {
         setPreviewUrl(beatData.audio_preview || null);
-        
-        if (setUploadedFile) {
-          setUploadedFile({ url: beatData.audio_file });
-        }
+        if (setUploadedFile) setUploadedFile({ url: beatData.audio_file });
       }
-      
       if (beatData.cover_image) {
         setImagePreview(beatData.cover_image);
         setImageFile({ url: beatData.cover_image });
@@ -173,16 +161,11 @@ export default function UploadBeat() {
           email: royalty.party_email || '',
           percentage: royalty.percentage || 0
         }));
-        
-        if (mappedCollaborators.length > 0) {
-          setCollaborators(mappedCollaborators);
-        }
+        if (mappedCollaborators.length > 0) setCollaborators(mappedCollaborators);
       }
-      
-      toast.success("Beat details loaded successfully");
     } catch (error) {
       console.error('Error loading beat details:', error);
-      toast.error("Failed to load beat details");
+      toast.error("Failed to load beat data");
     } finally {
       setIsLoading(false);
     }
@@ -212,12 +195,9 @@ export default function UploadBeat() {
 
   const handlePublish = async () => {
     if (!validateForm()) return;
-    
     setIsSubmitting(true);
     
     try {
-      console.log('Publishing with license types:', selectedLicenseTypes);
-      
       if (!imageFile) {
         toast.error("Cover image is required");
         setActiveTab("files");
@@ -225,27 +205,14 @@ export default function UploadBeat() {
       }
 
       const isSoundpack = beatDetails.category === 'Soundpack';
-      
-      // Soundpack validation
-      if (isSoundpack) {
-        if (soundpackFiles.length === 0) {
-          toast.error("At least one sound file is required for soundpacks");
-          setActiveTab("files");
-          return;
-        }
-      } else {
-        // Beat validation
-        if (!uploadedFile && !uploadedFileUrl) {
-          toast.error("Full track file is required");
-          setActiveTab("files");
-          return;
-        }
-        
-        if (!previewFile && !previewUrl) {
-          toast.error("Preview track is required");
-          setActiveTab("files");
-          return;
-        }
+      if (isSoundpack && soundpackFiles.length === 0) {
+        toast.error("Soundpack requires at least one file");
+        setActiveTab("files");
+        return;
+      } else if (!isSoundpack && !uploadedFile && !uploadedFileUrl) {
+        toast.error("Audio file is required");
+        setActiveTab("files");
+        return;
       }
 
       const producerInfo = {
@@ -258,31 +225,18 @@ export default function UploadBeat() {
         collaborators[0].email = user.email || '';
       }
       
-      toast.loading(
-        isEditMode 
-          ? `Updating your ${isSoundpack ? 'soundpack' : 'beat'}...` 
-          : `Publishing your ${isSoundpack ? 'soundpack' : 'beat'}...`, 
-        { id: "publishing-beat" }
-      );
+      toast.loading(isEditMode ? "Updating beat..." : "Publishing beat...", { id: "publishing-beat" });
       
       let coverImageUrl = '';
       if (imageFile) {
         if (!isFile(imageFile) && 'url' in imageFile) {
           coverImageUrl = imageFile.url;
-          console.log("Using directly provided image URL:", coverImageUrl);
         } else if (isFile(imageFile)) {
           coverImageUrl = await uploadImage(imageFile, 'covers');
         }
       }
 
-      // Handle soundpack creation
       if (isSoundpack) {
-        // Validate soundpack has at least one file
-        if (!soundpackFiles || soundpackFiles.length === 0) {
-          toast.error("Cannot publish soundpack: At least one audio file is required", { id: "publishing-beat" });
-          return;
-        }
-        
         const soundpackData = await createSoundpack({
           title: beatDetails.title,
           description: beatDetails.description || '',
@@ -302,23 +256,10 @@ export default function UploadBeat() {
           licenseTerms: beatDetails.licenseTerms || ''
         });
 
-        // Upload all soundpack files
-            await uploadSoundpackFiles(
-              soundpackData.id,
-              producerInfo.id,
-              soundpackFiles,
-              soundpackMeta,
-              coverImageUrl,
-              'published'
-            );
+        await uploadSoundpackFiles(soundpackData.id, producerInfo.id, soundpackFiles, soundpackMeta, coverImageUrl, 'published');
+        await supabase.from('soundpacks').update({ published: true }).eq('id', soundpackData.id);
 
-        // Publish the soundpack
-        await supabase
-          .from('soundpacks')
-          .update({ published: true })
-          .eq('id', soundpackData.id);
-
-        toast.success("Soundpack published successfully!", { id: "publishing-beat" });
+        toast.success("Soundpack published successfully", { id: "publishing-beat" });
         navigate("/producer/beats");
         return;
       }
@@ -347,45 +288,16 @@ export default function UploadBeat() {
       };
       
       const fullTrackFileOrUrl: FileOrUrl = uploadedFile || { url: uploadedFileUrl };
-      
-      // Check if we already have a stems URL, if not and stems is a file, set to null to avoid re-upload
       const stemsFile = (stems && isFile(stems) && !stemsUrl) ? stems : null;
-      
-      let finalPreviewFile: File | null = null;
-      if (previewFile && isFile(previewFile)) {
-        finalPreviewFile = previewFile;
-      }
-      
-      const previewUrlForUpload = previewUrl || 
-        (previewFile && !isFile(previewFile) && 'url' in previewFile ? previewFile.url : '');
+      let finalPreviewFile: File | null = (previewFile && isFile(previewFile)) ? previewFile : null;
+      const previewUrlForUpload = previewUrl || (previewFile && !isFile(previewFile) && 'url' in previewFile ? previewFile.url : '');
       
       let result;
-      
       if (isEditMode && beatId) {
-        beatData.status = "published";
-        
-        // Include the stems URL if available
-        if (stemsUrl) {
-          beatData['stems_url'] = stemsUrl;
-        }
-        
-        const { data: updatedBeat, error: updateError } = await supabase
-          .from('beats')
-          .update(beatData)
-          .eq('id', beatId)
-          .select()
-          .single();
-          
-        if (updateError) {
-          throw new Error(updateError.message);
-        }
-        
+        const { error: updateError } = await supabase.from('beats').update(beatData).eq('id', beatId);
+        if (updateError) throw new Error(updateError.message);
         if (collaborators.length > 0) {
-          await supabase
-            .from('royalty_splits')
-            .delete()
-            .eq('beat_id', beatId);
-          
+          await supabase.from('royalty_splits').delete().eq('beat_id', beatId);
           const collaboratorInserts = collaborators.map(c => ({
             beat_id: beatId,
             party_id: c.id.toString().includes('-') ? c.id.toString() : producerInfo.id,
@@ -394,48 +306,23 @@ export default function UploadBeat() {
             party_role: c.role || 'Producer',
             percentage: c.percentage
           }));
-          
-          const { error: collabError } = await supabase
-            .from('royalty_splits')
-            .insert(collaboratorInserts);
-            
-          if (collabError) {
-            console.error('Error updating collaborators:', collabError);
-          }
+          await supabase.from('royalty_splits').insert(collaboratorInserts);
         }
-        
-        result = { success: true, beatId };
+        result = { success: true };
       } else {
-        result = await uploadBeat(
-          beatData,
-          fullTrackFileOrUrl,
-          finalPreviewFile,
-          null,
-          stemsFile,
-          producerInfo.id,
-          producerInfo.name,
-          collaborators,
-          selectedLicenseTypes,
-          previewUrlForUpload,
-          stemsUrl
-        );
+        result = await uploadBeat(beatData, fullTrackFileOrUrl, finalPreviewFile, null, stemsFile, producerInfo.id, producerInfo.name, collaborators, selectedLicenseTypes, previewUrlForUpload, stemsUrl);
       }
       
       if (result.success) {
-        toast.success(isEditMode ? "Beat updated successfully!" : "Beat published successfully!", { id: "publishing-beat" });
-        
-        // Check onboarding completion after successful upload
-        if (!isEditMode) {
-          checkAndCompleteOnboarding();
-        }
-        
+        toast.success(isEditMode ? "Beat updated successfully" : "Beat published successfully", { id: "publishing-beat" });
+        if (!isEditMode) checkAndCompleteOnboarding();
         navigate("/producer/beats");
       } else {
-        throw new Error(result.error || "Failed to upload beat");
+        throw new Error(result.error || "Upload failed");
       }
     } catch (error) {
       console.error("Error publishing beat:", error);
-      toast.error(error instanceof Error ? error.message : "Error publishing beat", { id: "publishing-beat" });
+      toast.error(error instanceof Error ? error.message : "Upload failed", { id: "publishing-beat" });
     } finally {
       setIsSubmitting(false);
     }
@@ -443,52 +330,32 @@ export default function UploadBeat() {
 
   const handleSaveDraft = async () => {
     if (!validateForm()) return;
-    
     setIsSubmitting(true);
     
     try {
       if (!imageFile) {
-        toast.error("Cover image is required");
+        toast.error("Cover image is required to save a draft");
         setActiveTab("files");
         return;
       }
 
       const isSoundpack = beatDetails.category === 'Soundpack';
-      
-      // Soundpack draft validation
       if (isSoundpack && soundpackFiles.length === 0) {
-        toast.error("At least one sound file is required for soundpacks");
+        toast.error("Soundpack requires at least one file to save a draft");
         setActiveTab("files");
-        setIsSubmitting(false);
         return;
       }
       
-      const producerInfo = {
-        id: user?.id || 'anonymous-producer',
-        name: user?.name || 'Anonymous Producer'
-      };
-      
-      toast.loading(`Saving ${isSoundpack ? 'soundpack' : 'beat'} as draft...`, { id: "saving-draft" });
+      const producerInfo = { id: user?.id || 'anonymous-producer', name: user?.name || 'Anonymous Producer' };
+      toast.loading(`Saving draft...`, { id: "saving-draft" });
       
       let coverImageUrl = '';
       if (imageFile) {
-        if (!isFile(imageFile) && 'url' in imageFile) {
-          coverImageUrl = imageFile.url;
-          console.log("Using directly provided image URL for draft:", coverImageUrl);
-        } else if (isFile(imageFile)) {
-          coverImageUrl = await uploadImage(imageFile, 'covers');
-          console.log("Uploaded cover image for draft:", coverImageUrl);
-        }
+        if (!isFile(imageFile) && 'url' in imageFile) coverImageUrl = imageFile.url;
+        else if (isFile(imageFile)) coverImageUrl = await uploadImage(imageFile, 'covers');
       }
 
-      // Handle soundpack draft
       if (isSoundpack) {
-        // Validate soundpack has at least one file
-        if (!soundpackFiles || soundpackFiles.length === 0) {
-          toast.error("Cannot save soundpack: At least one audio file is required", { id: "saving-draft" });
-          return;
-        }
-        
         const soundpackData = await createSoundpack({
           title: beatDetails.title,
           description: beatDetails.description || '',
@@ -508,16 +375,8 @@ export default function UploadBeat() {
           licenseTerms: beatDetails.licenseTerms || ''
         });
 
-          await uploadSoundpackFiles(
-            soundpackData.id,
-            producerInfo.id,
-            soundpackFiles,
-            soundpackMeta,
-            coverImageUrl,
-            'draft'
-          );
-
-        toast.success("Soundpack saved as draft!", { id: "saving-draft" });
+        await uploadSoundpackFiles(soundpackData.id, producerInfo.id, soundpackFiles, soundpackMeta, coverImageUrl, 'draft');
+        toast.success("Draft saved successfully", { id: "saving-draft" });
         navigate("/producer/beats");
         return;
       }
@@ -546,45 +405,15 @@ export default function UploadBeat() {
       };
       
       const fullTrackFileOrUrl: FileOrUrl = uploadedFile || { url: uploadedFileUrl };
-      
-      // Check if we already have a stems URL, if not and stems is a file, set to null to avoid re-upload
       const stemsFile = (stems && isFile(stems) && !stemsUrl) ? stems : null;
-      
-      let finalPreviewFile: File | null = null;
-      if (previewFile && isFile(previewFile)) {
-        finalPreviewFile = previewFile;
-      }
-      
-      const previewUrlForUpload = previewUrl || 
-        (previewFile && !isFile(previewFile) && 'url' in previewFile ? previewFile.url : '');
+      let finalPreviewFile: File | null = (previewFile && isFile(previewFile)) ? previewFile : null;
+      const previewUrlForUpload = previewUrl || (previewFile && !isFile(previewFile) && 'url' in previewFile ? previewFile.url : '');
       
       let result;
-      
       if (isEditMode && beatId) {
-        beatData.status = "draft";
-        
-        // Include the stems URL if available
-        if (stemsUrl) {
-          beatData['stems_url'] = stemsUrl;
-        }
-        
-        const { data: updatedBeat, error: updateError } = await supabase
-          .from('beats')
-          .update(beatData)
-          .eq('id', beatId)
-          .select()
-          .single();
-          
-        if (updateError) {
-          throw new Error(updateError.message);
-        }
-        
+        await supabase.from('beats').update(beatData).eq('id', beatId);
         if (collaborators.length > 0) {
-          await supabase
-            .from('royalty_splits')
-            .delete()
-            .eq('beat_id', beatId);
-          
+          await supabase.from('royalty_splits').delete().eq('beat_id', beatId);
           const collaboratorInserts = collaborators.map(c => ({
             beat_id: beatId,
             party_id: c.id.toString().includes('-') ? c.id.toString() : producerInfo.id,
@@ -593,269 +422,217 @@ export default function UploadBeat() {
             party_role: c.role || 'Producer',
             percentage: c.percentage
           }));
-          
-          const { error: collabError } = await supabase
-            .from('royalty_splits')
-            .insert(collaboratorInserts);
-            
-          if (collabError) {
-            console.error('Error updating collaborators:', collabError);
-          }
+          await supabase.from('royalty_splits').insert(collaboratorInserts);
         }
-        
-        result = { success: true, beatId };
+        result = { success: true };
       } else {
-        result = await uploadBeat(
-          beatData,
-          fullTrackFileOrUrl,
-          finalPreviewFile,
-          null,
-          stemsFile,
-          producerInfo.id,
-          producerInfo.name,
-          collaborators,
-          selectedLicenseTypes,
-          previewUrlForUpload,
-          stemsUrl
-        );
+        result = await uploadBeat(beatData, fullTrackFileOrUrl, finalPreviewFile, null, stemsFile, producerInfo.id, producerInfo.name, collaborators, selectedLicenseTypes, previewUrlForUpload, stemsUrl);
       }
       
       if (result.success) {
-        toast.success(isEditMode ? "Beat draft updated" : "Beat saved as draft");
+        toast.success("Draft saved", { id: "saving-draft" });
         navigate("/producer/beats");
       } else {
-        throw new Error(result.error || "Failed to save beat");
+        throw new Error(result.error || "Save failed");
       }
     } catch (error) {
-      console.error("Error saving beat draft:", error);
-      toast.error(error instanceof Error ? error.message : "Error saving beat");
+      console.error("Error saving draft:", error);
+      toast.error("Save failed", { id: "saving-draft" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   useEffect(() => {
-    if (validationErrors.title) {
-      setActiveTab("details");
-    } else if (validationErrors.licenseType || validationErrors.licenseTerms) {
-      setActiveTab("licensing");
-    } else if (validationErrors.coverImage || validationErrors.fullTrack) {
-      setActiveTab("files");
-    } else if (validationErrors.basicPrice || validationErrors.premiumPrice || 
-              validationErrors.exclusivePrice || validationErrors.customPrice) {
-      setActiveTab("pricing");
-    } else if (validationErrors.royalties || Object.keys(validationErrors).some(key => key.startsWith("collaborator_"))) {
-      setActiveTab("royalties");
-    }
+    if (validationErrors.title) setActiveTab("details");
+    else if (validationErrors.licenseType || validationErrors.licenseTerms) setActiveTab("licensing");
+    else if (validationErrors.coverImage || validationErrors.fullTrack) setActiveTab("files");
+    else if (validationErrors.basicPrice || validationErrors.premiumPrice || validationErrors.exclusivePrice || validationErrors.customPrice) setActiveTab("pricing");
+    else if (validationErrors.royalties || Object.keys(validationErrors).some(key => key.startsWith("collaborator_"))) setActiveTab("royalties");
   }, [validationErrors]);
 
-  return (
-    <MainLayout>
-      <ScrollToTop />
-      <div className="container py-4 sm:py-8 max-w-full sm:max-w-4xl px-2 sm:px-6">
-        <Card className="overflow-hidden">
-          <CardHeader className="bg-card p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl">{isEditMode ? 'Edit Beat' : 'Upload a New Beat'}</CardTitle>
-            <CardDescription className="text-sm">
-              {isEditMode 
-                ? 'Update your beat details and settings' 
-                : 'Fill in the details below to upload your beat to the marketplace'}
-            </CardDescription>
-          </CardHeader>
+  if (!user || user.role !== "producer") return null;
 
+  return (
+    <div className="container py-6 md:py-12 px-3 md:px-6 max-w-7xl pb-32">
+      <ScrollToTop />
+      
+      <div className="mb-12">
+        <SectionTitle 
+          title={isEditMode ? "Edit Beat" : "Upload New Beat"} 
+          icon={<Upload className="h-6 w-6" />}
+        />
+        <p className="text-white/40 italic mt-2 text-lg">Provide detailed information and upload files for your track.</p>
+      </div>
+
+      <div className="relative p-[1px] rounded-[2rem] md:rounded-[3rem] bg-gradient-to-br from-white/10 to-transparent">
+        <div className="bg-[#030407] rounded-[1.9rem] md:rounded-[2.9rem] overflow-hidden">
           {isLoading ? (
-            <div className="flex items-center justify-center p-12">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span>Loading beat details...</span>
+            <div className="flex flex-col items-center justify-center py-40 gap-6">
+              <Loader2 className="h-12 w-12 animate-spin text-[#9A3BDC]" />
+              <p className="text-white/40 font-black uppercase italic tracking-widest text-sm animate-pulse">Loading Beat Data...</p>
             </div>
           ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full justify-start p-0 bg-transparent border-b rounded-none overflow-x-auto flex-nowrap">
-                <TabsTrigger 
-                  value="details" 
-                  className="rounded-none flex-1 min-w-[6rem] data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs sm:text-sm"
-                >
-                  1. Details
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="licensing" 
-                  className="rounded-none flex-1 min-w-[6rem] data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs sm:text-sm"
-                >
-                  2. Licensing
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="files" 
-                  className="rounded-none flex-1 min-w-[6rem] data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs sm:text-sm"
-                >
-                  3. Files
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="pricing" 
-                  className="rounded-none flex-1 min-w-[6rem] data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs sm:text-sm"
-                >
-                  4. Pricing
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="royalties" 
-                  className="rounded-none flex-1 min-w-[6rem] data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs sm:text-sm"
-                >
-                  5. Royalties
-                </TabsTrigger>
-              </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="border-b border-white/5 bg-white/[0.01]">
+                {/* Scrollable tab bar for mobile */}
+                <div className="overflow-x-auto scrollbar-none">
+                  <TabsList className="bg-transparent h-16 md:h-20 p-0 flex min-w-max px-4 md:px-12 gap-1 md:gap-0">
+                    {tabOrder.map((tab, idx) => (
+                      <TabsTrigger 
+                        key={tab} 
+                        value={tab} 
+                        className="bg-transparent border-none px-3 md:p-0 font-black uppercase italic tracking-widest text-[10px] md:text-sm data-[state=active]:text-white text-white/20 transition-all gap-1.5 relative h-full flex items-center shrink-0 md:flex-1 justify-center"
+                      >
+                        <span className="opacity-20 hidden md:inline">0{idx + 1}.</span> {tab}
+                        {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#9A3BDC] rounded-t-full shadow-[0_-4px_10px_rgba(154,59,220,0.5)]" />}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+              </div>
 
-              <CardContent className="p-4 sm:p-6">
-                <TabsContent value="details" className="mt-0 animate-fade-in">
-                  <DetailTab 
-                    beatDetails={beatDetails}
-                    handleBeatChange={handleBeatChange}
-                    setBeatDetails={setBeatDetails}
-                    tags={tags}
-                    tagInput={tagInput}
-                    setTagInput={setTagInput}
-                    handleAddTag={handleAddTag}
-                    handleRemoveTag={handleRemoveTag}
-                  />
+              <div className="p-4 md:p-12 min-h-[500px]">
+                <TabsContent value="details" className="mt-0 outline-none animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="max-w-4xl mx-auto">
+                    <DetailTab 
+                      beatDetails={beatDetails}
+                      handleBeatChange={handleBeatChange}
+                      setBeatDetails={setBeatDetails}
+                      tags={tags}
+                      tagInput={tagInput}
+                      setTagInput={setTagInput}
+                      handleAddTag={handleAddTag}
+                      handleRemoveTag={handleRemoveTag}
+                    />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="licensing" className="mt-0 animate-fade-in">
-                  <LicensingTab 
-                    beatDetails={beatDetails}
-                    handleBeatChange={handleBeatChange}
-                    licenseOptions={licenseOptions}
-                    handleLicenseTypeChange={handleLicenseTypeChange}
-                    selectedLicenseTypes={selectedLicenseTypes}
-                  />
+                <TabsContent value="licensing" className="mt-0 outline-none animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="max-w-4xl mx-auto">
+                    <LicensingTab 
+                      beatDetails={beatDetails}
+                      handleBeatChange={handleBeatChange}
+                      licenseOptions={licenseOptions}
+                      handleLicenseTypeChange={handleLicenseTypeChange}
+                      selectedLicenseTypes={selectedLicenseTypes}
+                    />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="files" className="mt-0 animate-fade-in">
-                  <FilesTab 
-                    imagePreview={imagePreview}
-                    handleImageUpload={handleImageUpload}
-                    uploadedFile={uploadedFile}
-                    setUploadedFile={setUploadedFile}
-                    handleFullTrackUpload={handleFullTrackUpload}
-                    previewFile={previewFile}
-                    setPreviewFile={setPreviewFile}
-                    isPlaying={isPlaying}
-                    setIsPlaying={setIsPlaying}
-                    selectedLicenseTypes={selectedLicenseTypes}
-                    stems={stems}
-                    setStems={setStems}
-                    processingFiles={processingFiles}
-                    uploadProgress={uploadProgress}
-                    regeneratePreview={regeneratePreview}
-                    previewUrl={previewUrl}
-                    setPreviewUrl={setPreviewUrl}
-                    handlePreviewUpload={handlePreviewUpload}
-                    handleStemsUpload={handleStemsUpload}
-                    uploadError={uploadError}
-                    stemsUrl={localStemsUrl || stemsUrl}
-                    beatDetails={beatDetails}
-                    soundpackFiles={soundpackFiles}
-                    soundpackMeta={soundpackMeta}
-                    onSoundpackFilesAdd={handleSoundpackFilesAdd}
-                    onSoundpackFileRemove={handleSoundpackFileRemove}
-                    onSoundpackFileRename={handleSoundpackFileRename}
-                    onSoundpackFilesReorder={handleSoundpackFilesReorder}
-                    onSoundpackClearAll={handleSoundpackClearAll}
-                  />
+                <TabsContent value="files" className="mt-0 outline-none animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="max-w-5xl mx-auto">
+                    <FilesTab 
+                      imagePreview={imagePreview}
+                      handleImageUpload={handleImageUpload}
+                      uploadedFile={uploadedFile}
+                      setUploadedFile={setUploadedFile}
+                      handleFullTrackUpload={handleFullTrackUpload}
+                      previewFile={previewFile}
+                      setPreviewFile={setPreviewFile}
+                      isPlaying={isPlaying}
+                      setIsPlaying={setIsPlaying}
+                      selectedLicenseTypes={selectedLicenseTypes}
+                      stems={stems}
+                      setStems={setStems}
+                      processingFiles={processingFiles}
+                      uploadProgress={uploadProgress}
+                      regeneratePreview={regeneratePreview}
+                      previewUrl={previewUrl}
+                      setPreviewUrl={setPreviewUrl}
+                      handlePreviewUpload={handlePreviewUpload}
+                      handleStemsUpload={handleStemsUpload}
+                      uploadError={uploadError}
+                      stemsUrl={localStemsUrl || stemsUrl}
+                      beatDetails={beatDetails}
+                      soundpackFiles={soundpackFiles}
+                      soundpackMeta={soundpackMeta}
+                      onSoundpackFilesAdd={handleSoundpackFilesAdd}
+                      onSoundpackFileRemove={handleSoundpackFileRemove}
+                      onSoundpackFileRename={handleSoundpackFileRename}
+                      onSoundpackFilesReorder={handleSoundpackFilesReorder}
+                      onSoundpackClearAll={handleSoundpackClearAll}
+                    />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="pricing" className="mt-0 animate-fade-in">
-                  <PricingTab 
-                    beatDetails={beatDetails}
-                    setBeatDetails={setBeatDetails}
-                    selectedLicenseTypes={selectedLicenseTypes}
-                  />
+                <TabsContent value="pricing" className="mt-0 outline-none animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="max-w-4xl mx-auto">
+                    <PricingTab 
+                      beatDetails={beatDetails}
+                      setBeatDetails={setBeatDetails}
+                      selectedLicenseTypes={selectedLicenseTypes}
+                    />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="royalties" className="mt-0 animate-fade-in">
-                  <RoyaltiesTab 
-                    collaborators={collaborators}
-                    handleRemoveCollaborator={handleRemoveCollaborator}
-                    handleCollaboratorChange={handleCollaboratorChange}
-                    handleAddCollaborator={handleAddCollaborator}
-                  />
+                <TabsContent value="royalties" className="mt-0 outline-none animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="max-w-4xl mx-auto">
+                    <RoyaltiesTab 
+                      collaborators={collaborators}
+                      handleRemoveCollaborator={handleRemoveCollaborator}
+                      handleCollaboratorChange={handleCollaboratorChange}
+                      handleAddCollaborator={handleAddCollaborator}
+                    />
+                  </div>
                 </TabsContent>
-              </CardContent>
-              
-              <CardFooter className="flex flex-row flex-wrap items-center justify-between p-4 sm:p-6 border-t gap-2 sm:gap-4">
-                {activeTab !== "details" && (
-                  <Button variant="outline" onClick={prevTab}>
-                    Previous
-                  </Button>
-                )}
-                <div className="flex flex-row gap-2 items-center ml-auto">
+              </div>
+
+              <div className="p-4 md:p-8 border-t border-white/5 bg-white/[0.01] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <Button 
+                  variant="ghost" 
+                  onClick={prevTab}
+                  disabled={activeTab === "details"}
+                  className="rounded-2xl border border-white/5 bg-white/5 text-white/40 hover:text-white px-6 h-12 font-black uppercase italic tracking-tighter disabled:opacity-20 w-full sm:w-auto"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+                </Button>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                   {activeTab !== "royalties" ? (
-                    <Button onClick={nextTab}>
-                      Next
+                    <Button 
+                      onClick={nextTab}
+                      className="rounded-2xl bg-white text-black px-10 h-12 font-black uppercase italic tracking-tighter hover:bg-white/90 w-full sm:w-auto"
+                    >
+                      Continue <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   ) : (
                     <>
-                      {!isEditMode && (
-                        <>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={handleSaveDraft}
-                            className="flex items-center"
-                          >
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save as Draft
-                          </Button>
-                          <Button
-                            type="button"
-                            className="bg-primary text-white"
-                            disabled={isSubmitting}
-                            onClick={handlePublish}
-                          >
-                            Publish
-                          </Button>
-                        </>
-                      )}
-
-                      {isEditMode && beatDetails.status === "draft" && (
-                        <>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={handleSaveDraft}
-                            className="flex items-center"
-                          >
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Update as Draft
-                          </Button>
-                          <Button
-                            type="button"
-                            className="bg-primary text-white"
-                            disabled={isSubmitting}
-                            onClick={handlePublish}
-                          >
-                            Publish
-                          </Button>
-                        </>
-                      )}
-
-                      {isEditMode && beatDetails.status === "published" && (
-                        <Button
-                          type="button"
-                          className="bg-primary text-white"
-                          disabled={isSubmitting}
-                          onClick={handlePublish}
-                        >
-                          Update Beat
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={handleSaveDraft}
+                        disabled={isSubmitting}
+                        className="rounded-2xl border border-white/10 bg-white/5 text-white px-6 h-12 font-black uppercase italic tracking-tighter flex gap-2 hover:bg-white/10 w-full sm:w-auto justify-center"
+                      >
+                        <Save className="h-4 w-4" /> {isSubmitting ? "Saving..." : "Save Draft"}
+                      </Button>
+                      <Button
+                        onClick={handlePublish}
+                        disabled={isSubmitting}
+                        className="rounded-2xl bg-[#9A3BDC] text-white px-10 h-12 font-black uppercase italic tracking-tighter shadow-[0_0_20px_rgba(154,59,220,0.4)] flex gap-2 hover:bg-[#9A3BDC]/90 w-full sm:w-auto justify-center"
+                      >
+                        <Globe className="h-4 w-4" /> {isSubmitting ? "Publishing..." : "Publish Beat"}
+                      </Button>
                     </>
                   )}
                 </div>
-              </CardFooter>
+              </div>
             </Tabs>
           )}
-        </Card>
+        </div>
       </div>
-    </MainLayout>
+
+      <div className="mt-8 p-6 md:p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 border-dashed max-w-4xl mx-auto hidden sm:block">
+        <div className="flex items-start gap-4">
+           <Info className="h-5 w-5 text-[#9A3BDC] mt-1 shrink-0" />
+           <div>
+             <h4 className="font-black text-white italic tracking-tighter uppercase mb-2">Tips for a successful upload</h4>
+             <p className="text-sm text-white/30 italic leading-relaxed">
+               Ensure your audio files are high-quality (WAV or 320kbps MP3). Provide clear metadata and tags to help buyers find your work. Royalties are calculated automatically based on your split settings.
+             </p>
+           </div>
+        </div>
+      </div>
+    </div>
   );
 }

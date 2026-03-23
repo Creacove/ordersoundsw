@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Package, ShoppingBag, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { formatCurrency, cn } from "@/lib/utils";
+import { ShoppingCart, Package, Trash2, ArrowUpRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useCartLightweight } from "@/hooks/useCartLightweight";
-import { LicenseSelector } from "@/components/marketplace/LicenseSelector";
 import { Badge } from "@/components/ui/badge";
+import { PriceTag } from "@/components/ui/PriceTag";
+import { toast } from "sonner";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface Soundpack {
   id: string;
@@ -42,7 +43,7 @@ interface SoundpackCardProps {
 
 export function SoundpackCard({ 
   soundpack, 
-  isInCart, 
+  isInCart: initialIsInCart, 
   onAddToCart, 
   showLicenseSelector = true,
   featured = false,
@@ -51,9 +52,10 @@ export function SoundpackCard({
 }: SoundpackCardProps) {
   const { currency } = useAuth();
   const { addToCart, removeFromCart, isInCart: checkIsInCart } = useCartLightweight();
-  const [selectedLicense, setSelectedLicense] = useState<'basic' | 'premium' | 'exclusive' | 'custom'>('basic');
+  const navigate = useNavigate();
+  const [addToCartNotified, setAddToCartNotified] = useState(false);
   
-  const itemInCart = isInCart || checkIsInCart(soundpack.id, 'soundpack');
+  const itemInCart = initialIsInCart || checkIsInCart(soundpack.id, 'soundpack');
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -63,154 +65,123 @@ export function SoundpackCard({
       onAddToCart();
     } else if (itemInCart) {
       removeFromCart(soundpack.id, 'soundpack');
-    } else {
-      addToCart(soundpack.id, selectedLicense, 'soundpack');
+      toast.info(`Removed ${soundpack.title} from cart`);
+    } else if (!addToCartNotified) {
+      addToCart(soundpack.id, 'basic', 'soundpack');
+      toast.success(`Added ${soundpack.title} to cart`);
+      setAddToCartNotified(true);
+      setTimeout(() => setAddToCartNotified(false), 2000);
     }
   };
 
-  const getPriceForLicense = () => {
-    if (currency === 'NGN') {
-      switch (selectedLicense) {
-        case 'basic':
-          return soundpack.basic_license_price_local;
-        case 'premium':
-          return soundpack.premium_license_price_local;
-        case 'exclusive':
-          return soundpack.exclusive_license_price_local;
-        case 'custom':
-          return soundpack.custom_license_price_local;
-        default:
-          return soundpack.basic_license_price_local;
-      }
-    } else {
-      switch (selectedLicense) {
-        case 'basic':
-          return soundpack.basic_license_price_diaspora;
-        case 'premium':
-          return soundpack.premium_license_price_diaspora;
-        case 'exclusive':
-          return soundpack.exclusive_license_price_diaspora;
-        case 'custom':
-          return soundpack.custom_license_price_diaspora;
-        default:
-          return soundpack.basic_license_price_diaspora;
-      }
-    }
+  const prices = {
+    local: soundpack.basic_license_price_local,
+    diaspora: soundpack.basic_license_price_diaspora
   };
-  
-  const price = getPriceForLicense();
 
   return (
-    <Link to={`/soundpack/${soundpack.id}`} className="block h-full">
-      <Card className={cn(
-        "group overflow-hidden h-full flex flex-col",
-        "transition-all duration-200",
-        "hover:shadow-lg hover:border-primary/50",
-        featured && "border-primary/50 bg-primary/5"
-      )}>
-        {/* Cover Image - Stacked Design */}
-        <div className="relative overflow-visible bg-transparent pt-3 px-3">
-          {/* Stacked layers effect - 3 layers behind main image */}
-          <div className="relative w-full" style={{ paddingBottom: '66%' }}>
-            {/* Layer 3 - Bottom */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg transform -rotate-3 translate-y-2 translate-x-1 shadow-sm" />
+    <Link 
+      to={`/soundpack/${soundpack.id}`} 
+      className={cn(
+        "group relative block h-full overflow-hidden rounded-[1.6rem] border bg-[#0d101b]/76 p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-[#111425]",
+        featured
+          ? "border-[#9A3BDC] shadow-[0_0_25px_rgba(154,59,220,0.25)] ring-1 ring-[#9A3BDC]/50"
+          : "border-white/10 hover:border-white/18 shadow-[0_24px_70px_rgba(4,6,20,0.22)]"
+      )}
+    >
+      <div className="relative overflow-hidden rounded-[1.25rem]">
+        <AspectRatio ratio={1}>
+          <div className="relative w-full h-full p-2">
+            {/* Stacked layers effect - Signifies a collection */}
+            <div className="absolute inset-x-4 top-0 h-[92%] bg-white/5 rounded-[1.25rem] border border-white/5 transform -translate-y-1 scale-[0.96] origin-bottom transition-transform duration-500 group-hover:-translate-y-2" />
+            <div className="absolute inset-x-3 top-1 h-[94%] bg-white/10 rounded-[1.25rem] border border-white/10 transform -translate-y-0.5 scale-[0.98] origin-bottom transition-transform duration-500 group-hover:-translate-y-1" />
             
-            {/* Layer 2 - Middle */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-primary/15 rounded-lg transform -rotate-1.5 translate-y-1 translate-x-0.5 shadow-md" />
-            
-            {/* Layer 1 - Top visible layer behind main */}
-            <div className="absolute inset-0 bg-muted/50 rounded-lg transform rotate-0.5 shadow-lg" />
-            
-            {/* Main Image - Front */}
-            <div className="absolute inset-0 rounded-lg overflow-hidden shadow-xl border-2 border-background transform transition-transform duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1">
+            <div className="relative h-full w-full overflow-hidden rounded-[1.1rem] border border-white/10 shadow-2xl">
               <img
                 src={soundpack.cover_art_url || "/placeholder.svg"}
                 alt={soundpack.title}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              
-              {/* Overlay gradient for better badge visibility */}
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
-              
-              {/* Top Badges - Minimal */}
-              <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2 z-10">
-                <Badge className="bg-primary text-primary-foreground shadow-lg flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm border border-primary-foreground/20">
-                  <Package size={10} />
-                  SOUNDPACK
-                </Badge>
-                
-                <div className="flex gap-1">
-                  {soundpack.published === false && (
-                    <Badge variant="outline" className="bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] shadow-lg">
-                      DRAFT
-                    </Badge>
-                  )}
-                  
-                  {isProducerOwned && onDelete && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 bg-background/90 hover:bg-destructive hover:text-destructive-foreground backdrop-blur-sm shadow-lg"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onDelete();
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              
-              {/* File count indicator at bottom of image */}
-              <div className="absolute bottom-2 right-2 z-10">
-                <div className="bg-background/80 backdrop-blur-md rounded-full px-2 py-1 shadow-lg border border-border/50 flex items-center gap-1">
-                  <Package size={10} className="text-primary" />
-                  <span className="text-[10px] font-semibold">{soundpack.file_count || 0}</span>
-                </div>
-              </div>
             </div>
           </div>
+        </AspectRatio>
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#090b16]/90 via-[#090b16]/20 to-transparent" />
+
+        {/* Top badges - Refined */}
+        <div className="absolute left-3 top-3 flex items-center gap-2 z-10">
+          <Badge variant="outline" className="bg-black/30 text-white backdrop-blur-sm border-white/20 text-[10px] font-bold tracking-wider uppercase">
+            <Package size={10} className="mr-1 mt-[-1px]" />
+            SOUNDPACK
+          </Badge>
+          {soundpack.published === false && (
+            <Badge variant="outline" className="bg-amber-500/20 text-amber-500 border-amber-500/20 text-[10px] font-bold">
+              DRAFT
+            </Badge>
+          )}
         </div>
-        
-        {/* Content - Ultra Compact */}
-        <CardContent className="flex-1 flex flex-col p-3 pt-2 gap-2">
-          {/* Title & Producer */}
-          <div>
-            <h3 className="font-semibold text-sm line-clamp-1 mb-0.5 group-hover:text-primary transition-colors">
+
+        {/* Delete button for producers */}
+        {isProducerOwned && onDelete && (
+          <div className="absolute right-3 top-3 z-20">
+            <Button
+              size="icon"
+              variant="destructive"
+              className="h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        )}
+
+        {/* File count indicator */}
+        <div className="absolute bottom-3 left-3 z-10 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-md border border-white/10 flex items-center gap-1.5">
+          <Package size={10} className="text-[#9A3BDC]" />
+          <span className="text-[10px] font-black text-white/90">{soundpack.file_count || 0} Assets</span>
+        </div>
+
+        {/* Bottom action area */}
+        <div
+          className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-end gap-3 transition-all duration-300 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
+        >
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="secondary"
+              rounded="full"
+              className="h-11 w-11 border-white/10 bg-white/10 text-white hover:bg-white/16"
+              onClick={handleAddToCart}
+            >
+              <ShoppingCart className={cn("h-4 w-4", itemInCart && "text-[#9A3BDC] fill-[#9A3BDC]")} />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-1 pb-1 pt-3 sm:pt-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1.5 sm:gap-3">
+          <div className="min-w-0 w-full text-left">
+            <h3 className="truncate text-sm sm:text-base font-semibold tracking-[-0.03em] text-white">
               {soundpack.title}
             </h3>
-            <p className="text-xs text-muted-foreground line-clamp-1">
+            <p className="truncate text-xs sm:text-sm text-muted-foreground italic">
               by {soundpack.producer_name || 'Unknown Producer'}
             </p>
           </div>
-          
-          {/* License Selector - Compact */}
-          {showLicenseSelector && (
-            <div>
-              <LicenseSelector onChange={setSelectedLicense} />
-            </div>
-          )}
-          
-          {/* Price & Action - Clean layout */}
-          <div className="flex items-center justify-between gap-2 mt-auto">
-            <p className="font-bold text-lg truncate">
-              {formatCurrency(price || 0, currency)}
-            </p>
-            <Button 
-              onClick={handleAddToCart}
-              size="sm"
-              variant={itemInCart ? "secondary" : "default"}
-              className="flex-shrink-0 h-8 px-3 text-xs"
-            >
-              <ShoppingCart className="w-3 h-3 mr-1" />
-              {itemInCart ? "In Cart" : "Add"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <PriceTag
+            localPrice={prices.local}
+            diasporaPrice={prices.diaspora || prices.local}
+            size="sm"
+            className="shrink-0 self-start sm:self-auto bg-white/[0.08] text-white"
+          />
+        </div>
+      </div>
     </Link>
   );
 }

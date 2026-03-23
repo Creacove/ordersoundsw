@@ -14,69 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      auth_logs: {
-        Row: {
-          created_at: string
-          details: Json | null
-          event_type: string
-          id: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          details?: Json | null
-          event_type: string
-          id?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          details?: Json | null
-          event_type?: string
-          id?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      auth_sessions: {
-        Row: {
-          access_token: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          metadata: Json | null
-          provider: string
-          refresh_token: string | null
-          updated_at: string
-          user_id: string | null
-          version: string | null
-        }
-        Insert: {
-          access_token?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          metadata?: Json | null
-          provider: string
-          refresh_token?: string | null
-          updated_at?: string
-          user_id?: string | null
-          version?: string | null
-        }
-        Update: {
-          access_token?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          metadata?: Json | null
-          provider?: string
-          refresh_token?: string | null
-          updated_at?: string
-          user_id?: string | null
-          version?: string | null
-        }
-        Relationships: []
-      }
       beats: {
         Row: {
           audio_file: string | null
@@ -445,27 +382,36 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          license_type: string | null
           order_id: string
           price: number
+          producer_id: string | null
           product_id: string
+          product_type: string | null
           quantity: number
           title: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          license_type?: string | null
           order_id: string
           price: number
+          producer_id?: string | null
           product_id: string
+          product_type?: string | null
           quantity?: number
           title: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          license_type?: string | null
           order_id?: string
           price?: number
+          producer_id?: string | null
           product_id?: string
+          product_type?: string | null
           quantity?: number
           title?: string
         }
@@ -475,6 +421,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1318,25 +1271,12 @@ export type Database = {
         Returns: boolean
       }
       producer_owns_beat: { Args: { beat_id: string }; Returns: boolean }
-      refresh_auth_token: {
-        Args: {
-          p_new_access_token: string
-          p_new_refresh_token?: string
-          p_refresh_token: string
-          p_user_id: string
-        }
-        Returns: boolean
-      }
       remove_favorite: {
         Args: { beat_id_param: string; user_id_param: string }
         Returns: undefined
       }
       unfollow_producer: {
         Args: { p_followee_id: string; p_follower_id: string }
-        Returns: undefined
-      }
-      update_session_version: {
-        Args: { p_user_id: string; p_version: string }
         Returns: undefined
       }
       user_owns_order: { Args: { order_id: string }; Returns: boolean }

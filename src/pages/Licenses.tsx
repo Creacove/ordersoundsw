@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { MainLayoutWithPlayer } from '@/components/layout/MainLayoutWithPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -28,47 +27,53 @@ const Licenses = () => {
     features: Array<{ label: string; allowed: boolean; details?: string }>;
     description: string;
   }) => (
-    <Card className="relative">
-      {badge && (
-        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs py-1 px-3 rounded-bl-lg rounded-tr-lg">
-          {badge}
-        </div>
-      )}
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-primary" />
-          {title}
-        </CardTitle>
-        <div className="flex gap-2">
-          <Badge variant="secondary">{fileDelivery}</Badge>
-          <Badge variant="outline">{licenseType}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-2">
-          {features.map((feature, index) => (
-            <div key={index} className="flex items-start gap-2 text-sm">
-              {feature.allowed ? (
-                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-              ) : (
-                <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-              )}
-              <div>
-                <span className={feature.allowed ? "text-foreground" : "text-muted-foreground"}>
-                  {feature.label}
-                </span>
-                {feature.details && (
-                  <span className="text-muted-foreground"> - {feature.details}</span>
+    <div className="relative p-[1px] rounded-3xl bg-gradient-to-br from-white/10 to-transparent">
+      <Card className="relative bg-[#030407] border-0 rounded-[1.7rem] h-full flex flex-col overflow-hidden">
+        {badge && (
+          <div className="absolute top-4 right-4 bg-white text-black text-[10px] font-black uppercase italic py-1 px-3 rounded-full">
+            {badge}
+          </div>
+        )}
+        <CardHeader className="pt-8 px-8">
+          <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center mb-4">
+            <Icon className="h-6 w-6 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-white italic tracking-tight mb-2">
+            {title}
+          </CardTitle>
+          <div className="flex gap-2">
+            <Badge variant="outline" className="rounded-full border-white/10 bg-white/[0.03] text-white/50">{fileDelivery}</Badge>
+            <Badge variant="outline" className="rounded-full border-white/10 bg-white/[0.03] text-white/50">{licenseType}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="px-8 pb-8 flex-1 flex flex-col">
+          <div className="space-y-3 mb-8">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-start gap-3 text-sm">
+                {feature.allowed ? (
+                  <CheckCircle className="h-4 w-4 text-[#9A3BDC] mt-0.5 flex-shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-white/20 mt-0.5 flex-shrink-0" />
                 )}
+                <div>
+                  <span className={`font-medium ${feature.allowed ? "text-white/90" : "text-white/30"}`}>
+                    {feature.label}
+                  </span>
+                  {feature.details && (
+                    <span className="text-white/40 block text-xs mt-0.5">{feature.details}</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-sm text-muted-foreground border-t pt-4">
-          {description}
-        </p>
-      </CardContent>
-    </Card>
+            ))}
+          </div>
+          <div className="mt-auto pt-6 border-t border-white/5">
+            <p className="text-xs text-white/40 leading-relaxed italic">
+              {description}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 
   const basicFeatures = [
@@ -116,134 +121,95 @@ const Licenses = () => {
   ];
 
   return (
-    <MainLayoutWithPlayer>
-      <div className="container max-w-6xl py-8 px-4">
+    <div className="container py-8 md:py-20 px-4 md:px-6">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-4">License Details</h1>
-          <p className="text-muted-foreground max-w-3xl mx-auto">
-            At OrderSounds, we offer multiple licensing options to suit your creative and commercial needs. 
-            Each license grants you specific rights to use the beat in your projects. Please review the license 
-            terms carefully before purchasing.
+        <div className="text-center mb-16">
+          <h1 className="text-2xl md:text-6xl font-black text-white tracking-tighter uppercase italic mb-4">License Blueprint</h1>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto italic">
+            Precision licensing for the modern creator. Choose the tier that matches your vision.
           </p>
         </div>
 
         {/* License Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
           <LicenseCard
-            title="Basic License"
+            title="Basic"
             icon={Music}
             fileDelivery="MP3"
             licenseType="Non-Exclusive"
             features={basicFeatures}
-            description="The Basic License is ideal for demo releases, small-scale projects, or independent creators testing their sound. You are not granted exclusive rights, and the beat may be licensed to other users."
+            description="Perfect for testing the waters and small-scale digital content."
           />
 
           <LicenseCard
-            title="Premium License"
+            title="Premium"
             badge="Popular"
             icon={Download}
             fileDelivery="WAV"
             licenseType="Non-Exclusive"
             features={premiumFeatures}
-            description="The Premium License offers higher-quality audio and extended usage rights, including full monetization and distribution flexibility. You still do not own the beat, and it may be licensed to others."
+            description="The choice for serious artists and growing platforms."
           />
 
           <LicenseCard
-            title="Exclusive License"
+            title="Exclusive"
             icon={Crown}
             fileDelivery="WAV + Stems"
             licenseType="Exclusive"
             features={exclusiveFeatures}
-            description="The Exclusive License grants you full commercial and ownership rights to the beat. Once purchased, the beat will no longer be available for licensing to any other user."
+            description="Total dominance. Own the sound, own the rights."
           />
 
           <LicenseCard
-            title="Custom License"
+            title="Custom"
             icon={Settings}
             fileDelivery="Custom"
-            licenseType="Custom Terms"
+            licenseType="Variable"
             features={customFeatures}
-            description="The Custom License offers buyers the flexibility to request terms that fit their specific needs. Whether you're working on a video game, short film, single release, podcast, or brand content. This license allows you to secure either exclusive or specially negotiated rights directly from the producer."
+            description="Tailor-made terms for enterprise and specialized media."
           />
-        </div>
-
-        {/* Additional Custom License Info */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">
-              <strong>Custom License Note:</strong> It doesn't have to be a large-scale campaign. If you need exclusive rights 
-              for a personal project, or you want to negotiate specific usage terms, the Custom License is for you.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Terms Notice */}
-        <div className="bg-muted/50 rounded-lg p-4 mb-8">
-          <p className="text-sm text-center">
-            All licenses are subject to our <strong>Terms and Conditions</strong>. Please read them carefully before purchasing.
-          </p>
         </div>
 
         {/* FAQ Section */}
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6 text-center">Frequently Asked Questions (FAQ)</h2>
+          <div className="text-center mb-10">
+            <h2 className="text-xl md:text-4xl font-black text-white tracking-tighter uppercase italic mb-2">Frequently Asked Questions</h2>
+            <p className="text-muted-foreground">Common questions answered.</p>
+          </div>
           
-          <Accordion type="single" collapsible className="space-y-2">
-            <AccordionItem value="item-1" className="border rounded-lg px-4">
-              <AccordionTrigger className="text-left">
-                What is the difference between the Basic, Premium, and Exclusive Licenses?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                The Basic License is for small-scale projects and includes an MP3 file with limited distribution 
-                (up to 5,000 streams/sales). The Premium License offers WAV quality and unlimited distribution, 
-                while the Exclusive License provides full ownership transfer and unlimited use for the buyer.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-2" className="border rounded-lg px-4">
-              <AccordionTrigger className="text-left">
-                Can I use a beat purchased with a Basic or Premium License for my music video?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Basic License users are not permitted to use the beat in a music video, while Premium License 
-                users can use it for one music video. The Exclusive License grants full rights for music video use.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-3" className="border rounded-lg px-4">
-              <AccordionTrigger className="text-left">
-                What happens if I purchase an Exclusive License?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Once you purchase an Exclusive License, the beat is removed from the store and will no longer 
-                be available for licensing. You will own full rights to the track for unlimited commercial use.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-4" className="border rounded-lg px-4">
-              <AccordionTrigger className="text-left">
-                Can I resell or redistribute a beat once I have a license?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                No, resale or redistribution is not allowed unless specifically stated in the license agreement. 
-                You are granted usage rights within the terms of the license.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-5" className="border rounded-lg px-4">
-              <AccordionTrigger className="text-left">
-                Can I use a beat purchased with any license for content on YouTube or streaming platforms?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Premium and Exclusive License users are allowed to monetize their YouTube videos and streaming 
-                platforms. Basic License users are not permitted to monetize on these platforms.
-              </AccordionContent>
-            </AccordionItem>
+          <Accordion type="single" collapsible className="space-y-4">
+            {[
+              {
+                q: "What is the core difference between license tiers?",
+                a: "The main differences are audio quality (MP3 vs WAV), distribution limits (capped vs unlimited), and ownership (usage rights vs full transfer)."
+              },
+              {
+                q: "Can I use Basic/Premium for high-budget music videos?",
+                a: "Basic is restricted from video sync. Premium allows for one music video. Exclusive gives you total freedom."
+              },
+              {
+                q: "What happens after an Exclusive purchase?",
+                a: "The beat is removed from the marketplace immediately. No one else will ever be able to purchase it again."
+              },
+              {
+                q: "Is monetization enabled across all tiers?",
+                a: "No. Basic is for non-monetized demos and projects. Premium and Exclusive are fully cleared for revenue generation."
+              }
+            ].map((faq, i) => (
+              <AccordionItem key={i} value={`item-${i}`} className="border-white/5 bg-white/[0.01] rounded-2xl px-6 transition-all hover:bg-white/[0.03]">
+                <AccordionTrigger className="text-left font-bold text-white hover:no-underline py-6">
+                  {faq.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-white/50 pb-6 italic">
+                  {faq.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
           </Accordion>
         </div>
       </div>
-    </MainLayoutWithPlayer>
+    </div>
   );
 };
 

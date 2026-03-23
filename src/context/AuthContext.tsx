@@ -6,6 +6,11 @@ import { toast } from 'sonner';
 import { logSessionEvent } from '@/lib/authLogger';
 import { initiateRecoveryFlow } from '@/lib/authLogger';
 import { supabase } from '@/integrations/supabase/client';
+import { loadAppUser } from '@/features/auth/profileService';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -72,59 +77,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     try {
       console.log(`Forcing refresh of user data for ${user.id}`);
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('role, status, full_name, country, bio, profile_picture, stage_name, wallet_address')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error("Force user data refresh error:", error);
-        console.error("Error details:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        setAuthError(`User data refresh failed: ${error.message}`);
-        await logSessionEvent('user_refresh_failed', { 
-          error: error.message,
-          user_id: user.id
-        });
-        return false;
+      const { data: authData, error: authUserError } = await supabase.auth.getUser();
+
+      if (authUserError || !authData.user) {
+        throw authUserError || new Error('No authenticated user found');
       }
+
+      const refreshedUser = await loadAppUser(authData.user);
+      setUser(refreshedUser);
       
-      if (!userData) {
-        console.error("No user data found during forced refresh");
-        setAuthError("User data refresh failed: No data found");
-        await logSessionEvent('user_refresh_no_data', { user_id: user.id });
-        return false;
-      }
-      
-      // FIX: Ensure wallet_address is properly updated
-      setUser({
-        ...user,
-        role: userData.role as 'buyer' | 'producer' | 'admin',
-        status: userData.status as 'active' | 'inactive',
-        name: userData.full_name || user.name,
-        bio: userData.bio || user.bio || '',
-        country: userData.country || user.country || '',
-        avatar_url: userData.profile_picture || user.avatar_url || '',
-        producer_name: userData.stage_name || user.producer_name || '',
-        wallet_address: userData.wallet_address || ''
-      });
-      
-      console.log('User data refreshed successfully, wallet_address:', userData.wallet_address);
+      console.log('User data refreshed successfully, wallet_address:', refreshedUser.wallet_address);
       
       setAuthError(null);
       setConsecutiveErrors(0);
       await logSessionEvent('user_refresh_success', { user_id: user.id });
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Failed to refresh user data');
       console.error("Exception in forceUserDataRefresh:", error);
-      setAuthError(`Error refreshing user data: ${error.message}`);
+      setAuthError(`Error refreshing user data: ${message}`);
       await logSessionEvent('user_refresh_exception', { 
-        error: error.message,
+        error: message,
         user_id: user.id
       });
       return false;
@@ -167,20 +140,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [authError, user, consecutiveErrors]);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      if (!isLoading && !user) {
-        try {
-          await refreshSession();
-        } catch (error) {
-          console.log('Silent session refresh attempt failed');
-        }
-      }
-    };
-    
-    initAuth();
-  }, []);
-
   return (
     <AuthContext.Provider
       value={{
@@ -205,6 +164,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

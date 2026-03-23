@@ -1,4 +1,4 @@
-
 project_id = "uoezlwkxhbzajdivrlby"
-name = "verify-paystack-payment"
-version = "1"
+
+[functions.verify-paystack-payment]
+verify_jwt = true

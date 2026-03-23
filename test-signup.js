@@ -6,29 +6,39 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 
-// Load environment variables
-const envContent = readFileSync('.env', 'utf8');
-const envVars = {};
-
-envContent.split('\n').forEach(line => {
-  if (line.includes('=') && !line.startsWith('#')) {
-    const [key, ...valueParts] = line.split('=');
-    const value = valueParts.join('=').replace(/"/g, '');
-    envVars[key.trim()] = value.trim();
+function parseDotEnvFile(filePath) {
+  if (!existsSync(filePath)) {
+    return {};
   }
-});
 
-const supabaseUrl = envVars.VITE_SUPABASE_URL;
-const supabaseKey = envVars.VITE_SUPABASE_KEY;
+  const envContent = readFileSync(filePath, 'utf8');
+  const envVars = {};
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials in .env file');
+  envContent.split('\n').forEach((line) => {
+    if (line.includes('=') && !line.startsWith('#')) {
+      const [key, ...valueParts] = line.split('=');
+      const value = valueParts.join('=').replace(/"/g, '');
+      envVars[key.trim()] = value.trim();
+    }
+  });
+
+  return envVars;
+}
+
+const localEnv = parseDotEnvFile('.env');
+const readEnv = (name) => process.env[name] || localEnv[name];
+
+const supabaseUrl = readEnv('VITE_SUPABASE_URL');
+const supabasePublishableKey = readEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+
+if (!supabaseUrl || !supabasePublishableKey) {
+  console.error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 // Generate a unique test email
 const timestamp = Date.now();

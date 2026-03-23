@@ -118,8 +118,7 @@ export default function IndexPage() {
   }, [playlists]);
 
   return (
-    <MainLayoutWithPlayer>
-      <div className="container mx-auto px-2 xs:px-4 sm:px-6 pb-8">
+      <div className="container py-4 md:py-8 px-4 md:px-6">
         <div className="mb-8">
           <form onSubmit={handleSearch} className="relative">
             <div className="flex items-center">
@@ -223,13 +222,13 @@ export default function IndexPage() {
           </div>
         </section>
 
-        <section className="mb-6">
+        <section className="mb-10">
           <SectionTitle 
             title="Weekly Picks" 
             icon={<Calendar className="h-5 w-5" />}
             badge="Updated Weekly"
           />
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
             {weeklyPicks.slice(0, 6).map((beat) => (
               <BeatCardCompact key={beat.id} beat={beat} />
             ))}
@@ -239,17 +238,51 @@ export default function IndexPage() {
           </div>
         </section>
 
-        <section className="mb-6">
+        <section className="mb-10">
+          <SectionTitle 
+            title="Gaming & Soundtrack" 
+            icon={<Music className="h-5 w-5" />}
+            badge="Cinematic"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+            {beats.filter(b => 
+              b.genre?.toLowerCase().includes('gaming') || 
+              b.genre?.toLowerCase().includes('soundtrack') ||
+              b.tags?.some(tag => ['gaming', 'soundtrack', 'cinematic'].includes(tag.toLowerCase()))
+            ).slice(0, 3).map((beat) => (
+              <BeatCard key={beat.id} beat={beat} />
+            ))}
+            {beats.filter(b => 
+              b.genre?.toLowerCase().includes('gaming') || 
+              b.genre?.toLowerCase().includes('soundtrack') ||
+              b.tags?.some(tag => ['gaming', 'soundtrack', 'cinematic'].includes(tag.toLowerCase()))
+            ).length === 0 && (
+              <div className="col-span-full p-12 rounded-2xl border border-dashed border-white/5 bg-white/[0.01] flex flex-col items-center justify-center text-center">
+                <Music className="h-8 w-8 text-white/10 mb-3" />
+                <p className="text-sm text-muted-foreground italic">New gaming beats dropping soon</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 flex justify-center">
+            <Button variant="outline" size="sm" asChild className="rounded-full px-6 border-white/10 hover:bg-white/[0.05]">
+              <Link to="/gaming-soundtrack">
+                Explore Gaming Universe <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+
+        <section className="mb-10">
           <SectionTitle 
             title="New Releases" 
             icon={<Flame className="h-5 w-5" />}
           />
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
             {newBeats.slice(0, 6).map((beat) => (
               <BeatCardCompact key={beat.id} beat={beat} />
             ))}
           </div>
-          <div className="mt-3 flex justify-end">
+          <div className="mt-6 flex justify-end">
             <Button variant="ghost" size="sm" asChild>
               <Link to="/new">
                 View all new releases <ArrowRight className="ml-1 h-4 w-4" />
@@ -258,15 +291,14 @@ export default function IndexPage() {
           </div>
         </section>
 
-        <section className="mb-6">
+        <section className="mb-10">
           <SectionTitle title="Featured Playlists" icon={<ListMusic className="h-5 w-5" />} />
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
             {featuredPlaylists.map((playlist) => (
               <PlaylistCard key={playlist.id} playlist={playlist} />
             ))}
           </div>
         </section>
       </div>
-    </MainLayoutWithPlayer>
   );
 }

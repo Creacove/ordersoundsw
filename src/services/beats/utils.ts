@@ -43,6 +43,7 @@ export const mapSupabaseBeatToBeat = (beat: SupabaseBeat): Beat => {
     is_featured: beat.is_featured || false,
     is_trending: beat.is_trending || false,
     is_weekly_pick: beat.is_weekly_pick || false,
+    producer_profile_picture: userData?.profile_picture || '',
   };
 };
 

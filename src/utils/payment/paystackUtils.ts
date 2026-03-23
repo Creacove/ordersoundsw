@@ -1,15 +1,55 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { createPendingOrder } from '@/features/checkout/orderService';
 import { toast } from 'sonner';
 
 interface OrderItem {
-  beat_id: string;
-  title: string;
-  price: number;
+  item_type: 'beat' | 'soundpack';
   license: string;
+  license_type?: string;
+  price: number;
+  producer_id?: string;
+  product_id: string;
+  title: string;
 }
 
-export const validateCartItems = async (user: any, cartItems: any[]) => {
+interface CartValidationUser {
+  id: string;
+}
+
+interface CheckoutCartItem {
+  itemId: string;
+  itemType: 'beat' | 'soundpack';
+}
+
+interface OrderCreationItem {
+  license_type?: string;
+  item_type?: 'beat' | 'soundpack';
+  item_id?: string;
+  price: number;
+  producer_id?: string;
+  product_id?: string;
+  soundpack_id?: string;
+  title?: string;
+}
+
+interface FunctionErrorLike {
+  code?: string;
+  details?: string;
+  hint?: string;
+  message: string;
+}
+
+interface VerifyPaystackResponse {
+  message?: string;
+  verified?: boolean;
+}
+
+function getErrorMessage(error: unknown, fallback = 'Unknown error') {
+  return error instanceof Error ? error.message : fallback;
+}
+
+export const validateCartItems = async (user: CartValidationUser | null, cartItems: CheckoutCartItem[]) => {
   try {
     if (!user) {
       throw new Error('You must be logged in to complete this purchase.');
@@ -20,12 +60,12 @@ export const validateCartItems = async (user: any, cartItems: any[]) => {
     }
 
     // Separate beats and soundpacks
-    const beatItems = cartItems.filter((item: any) => item.itemType === 'beat');
-    const soundpackItems = cartItems.filter((item: any) => item.itemType === 'soundpack');
+    const beatItems = cartItems.filter((item) => item.itemType === 'beat');
+    const soundpackItems = cartItems.filter((item) => item.itemType === 'soundpack');
 
     // Validate beats
     if (beatItems.length > 0) {
-      const beatIds = beatItems.map((item: any) => item.itemId);
+      const beatIds = beatItems.map((item) => item.itemId);
 
       const { data: beatsExist, error: beatCheckError } = await supabase
         .from('beats')
@@ -48,7 +88,7 @@ export const validateCartItems = async (user: any, cartItems: any[]) => {
 
     // Validate soundpacks
     if (soundpackItems.length > 0) {
-      const soundpackIds = soundpackItems.map((item: any) => item.itemId);
+      const soundpackIds = soundpackItems.map((item) => item.itemId);
 
       const { data: soundpacksExist, error: soundpackCheckError } = await supabase
         .from('soundpacks')
@@ -73,88 +113,39 @@ export const validateCartItems = async (user: any, cartItems: any[]) => {
     return true;
   } catch (error) {
     console.error('Cart validation error:', error);
-    return { error: error.message };
+    return { error: getErrorMessage(error) };
   }
 };
 
-export const createOrder = async (user: any, totalAmount: number, orderItemsData: any[]) => {
+export const createOrder = async (
+  user: CartValidationUser | null,
+  totalAmount: number,
+  orderItemsData: OrderCreationItem[],
+) => {
   try {
-    console.log('Creating order with items:', orderItemsData);
-
     if (!user || !user.id) {
       throw new Error('User not authenticated. Please sign in.');
     }
 
-    console.log('Creating order for user ID:', user.id);
-
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-    if (sessionError || !sessionData.session) {
-      console.error('Session validation failed:', sessionError);
-      throw new Error('Authentication session expired. Please refresh and try again.');
-    }
-
-    console.log('Session validated, user authenticated:', sessionData.session.user.id);
-
-    const orderData = {
-      buyer_id: user.id,
-      total_price: totalAmount,
-      payment_method: 'Paystack',
-      status: 'pending',
-      currency_used: 'NGN'
-    };
-
-    console.log('Inserting order with data:', orderData);
-
-    const { data: insertedOrder, error: orderError } = await supabase
-      .from('orders')
-      .insert(orderData)
-      .select('id')
-      .single();
-
-    if (orderError) {
-      console.error('Order creation error:', orderError);
-      console.error('Error details:', {
-        message: orderError.message,
-        details: orderError.details,
-        hint: orderError.hint,
-        code: orderError.code
-      });
-      throw new Error(`Order creation failed: ${orderError.message}`);
-    }
-
-    if (!insertedOrder || !insertedOrder.id) {
-      throw new Error('Failed to create order: No order ID returned');
-    }
-
-    console.log('Order created with ID:', insertedOrder.id);
-
-    // Insert items into order_items (Unified model)
-    if (orderItemsData.length > 0) {
-      const items = orderItemsData.map(item => ({
-        order_id: insertedOrder.id,
-        product_id: item.beat_id || item.item_id || item.soundpack_id,
-        title: item.title || 'Product',
+    const { orderId } = await createPendingOrder({
+      currencyUsed: 'NGN',
+      items: orderItemsData.map(item => ({
+        licenseType: item.license_type ?? 'basic',
         price: item.price,
+        producerId: item.producer_id || '',
+        productId: item.product_id || item.item_id || item.soundpack_id,
+        productType: item.item_type || 'beat',
         quantity: 1,
-      }));
+        title: item.title || 'Product',
+      })),
+      paymentMethod: 'Paystack',
+      totalPrice: totalAmount,
+    });
 
-      const { error: itemError } = await supabase
-        .from('order_items')
-        .insert(items);
-
-      if (itemError) {
-        console.error('Order items creation error:', itemError);
-        throw new Error(`Order items creation failed: ${itemError.message}`);
-      }
-
-      console.log('Order items created successfully');
-    }
-
-    return { orderId: insertedOrder.id };
+    return { orderId };
   } catch (error) {
     console.error('Order creation error:', error);
-    return { error: error.message };
+    return { error: getErrorMessage(error) };
   }
 };
 
@@ -187,20 +178,18 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
       return { success: false, error: 'Invalid payment data' };
     }
 
-    const { data, error } = await supabase.functions.invoke('verify-paystack-payment', {
+    const { data, error } = await supabase.functions.invoke<VerifyPaystackResponse>('verify-paystack-payment', {
       body: requestPayload
     });
 
     if (error) {
+      const functionError = error as FunctionErrorLike;
       console.error('Verification error from edge function:', error);
       console.error('Full error details:', {
-        message: error.message,
-        // @ts-ignore
-        details: error.details,
-        // @ts-ignore
-        hint: error.hint,
-        // @ts-ignore
-        code: error.code
+        message: functionError.message,
+        details: functionError.details,
+        hint: functionError.hint,
+        code: functionError.code
       });
       return { success: false, error: error.message };
     }
@@ -215,8 +204,8 @@ export const verifyPaystackPayment = async (paymentReference: string, orderId: s
       console.error('Payment verification failed:', errorMsg);
       return { success: false, error: errorMsg };
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Payment verification exception:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: getErrorMessage(error) };
   }
 };

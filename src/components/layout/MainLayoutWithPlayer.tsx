@@ -1,12 +1,12 @@
-
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { PersistentPlayer } from "@/components/player/PersistentPlayer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlayer } from "@/context/PlayerContext";
-import { useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useAnnouncementVisible } from "@/hooks/useAnnouncement";
 
 interface MainLayoutWithPlayerProps {
@@ -16,52 +16,68 @@ interface MainLayoutWithPlayerProps {
   hideSidebar?: boolean;
 }
 
-export function MainLayoutWithPlayer({ children, activeTab, currentPath, hideSidebar }: MainLayoutWithPlayerProps) {
+export function MainLayoutWithPlayer({
+  children,
+  activeTab,
+  currentPath,
+  hideSidebar,
+}: MainLayoutWithPlayerProps) {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const { currentBeat } = usePlayer();
   const location = useLocation();
-  const hasPlayer = !!currentBeat;
   const isAnnouncementVisible = useAnnouncementVisible();
-  
-  // Check if the current path is an auth page
-  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
+  const hasPlayer = !!currentBeat;
+  const resolvedPath = currentPath || location.pathname;
+  const isAuthPage = resolvedPath === "/login" || resolvedPath === "/signup";
 
-  // Listen for sidebar open/close events
   useEffect(() => {
-    const handleSidebarChange = (event: CustomEvent) => {
-      setSidebarVisible(event.detail.isOpen);
+    const handleSidebarChange: EventListener = (event) => {
+      const sidebarEvent = event as CustomEvent<{ isOpen?: boolean }>;
+      setSidebarVisible(Boolean(sidebarEvent.detail?.isOpen));
     };
 
-    window.addEventListener('sidebarChange' as any, handleSidebarChange);
+    window.addEventListener("sidebarChange", handleSidebarChange);
     return () => {
-      window.removeEventListener('sidebarChange' as any, handleSidebarChange);
+      window.removeEventListener("sidebarChange", handleSidebarChange);
     };
   }, []);
 
   return (
     <>
       <AnnouncementBanner />
-      <div className={`flex min-h-screen w-full transition-[padding] duration-300 ${isAnnouncementVisible ? 'pt-10' : 'pt-0'}`}>
-        {!hideSidebar && (
-          <Sidebar 
-            activeTab={activeTab} 
-            currentPath={currentPath} 
-            onCollapsedChange={setIsCollapsed}
-          />
-        )}
-        <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${!isMobile && !hideSidebar ? (isCollapsed ? "md:ml-[80px]" : "md:ml-[240px]") : ""}`}>
-          {/* Only show topbar if not explicitly hidden or if it's not an auth page with hideSidebar */}
-          {!(isAuthPage && hideSidebar) && (
-            <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+      <div className={cn("relative min-h-screen w-full overflow-clip", isAnnouncementVisible && "pt-10")}>
+        <div className="canvas-orb left-[-8rem] top-[-6rem] h-64 w-64 bg-brand-blue/20 md:h-80 md:w-80" />
+        <div className="canvas-orb bottom-[8%] right-[-8rem] h-72 w-72 bg-brand-violet/20 md:h-96 md:w-96" />
+
+        <div className="relative flex min-h-screen w-full">
+          {!hideSidebar && (
+            <Sidebar
+              activeTab={activeTab}
+              currentPath={currentPath}
+              onCollapsedChange={setIsCollapsed}
+            />
           )}
-          <main className={`flex-1 w-full overflow-x-hidden ${hasPlayer ? (isMobile ? 'pb-36' : 'pb-28') : (isMobile ? 'pb-20' : 'pb-8')}`}>
-            <div className="w-full max-w-full flex flex-col">
-              {children}
-            </div>
-          </main>
-          <PersistentPlayer />
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ease-out",
+              !isMobile && !hideSidebar && (isCollapsed ? "lg:ml-[96px]" : "lg:ml-[272px]")
+            )}
+          >
+            {!(isAuthPage && hideSidebar) && (
+              <Topbar sidebarVisible={!isMobile && sidebarVisible && !hideSidebar} />
+            )}
+            <main
+              className={cn(
+                "flex-1 w-full overflow-x-hidden",
+                hasPlayer ? (isMobile ? "pb-52" : "pb-44") : isMobile ? "pb-28" : "pb-14"
+              )}
+            >
+              <div className="w-full max-w-full flex flex-col">{children}</div>
+            </main>
+            <PersistentPlayer isCollapsed={isCollapsed} hideSidebar={hideSidebar} />
+          </div>
         </div>
       </div>
     </>

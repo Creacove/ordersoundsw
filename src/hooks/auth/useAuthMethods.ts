@@ -3,9 +3,18 @@ import { User } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { mapSupabaseUser } from '@/lib/supabase';
 import { uniqueToast } from '@/lib/toast';
 import { logSessionEvent } from '@/lib/authLogger';
+import {
+  ensureUserProfile,
+  loadAppUser,
+  toAppUser,
+  updateUserProfileRecord,
+} from '@/features/auth/profileService';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
 
 interface AuthMethodsProps {
   setUser: (user: User | null) => void;
@@ -29,19 +38,19 @@ export const useAuthMethods = ({
   appVersion 
 }: AuthMethodsProps) => {
   const navigate = useNavigate();
-  const [tokenRefreshAttempted, setTokenRefreshAttempted] = useState(false);
+  const [isRefreshingSession, setIsRefreshingSession] = useState(false);
 
   const refreshSession = async (): Promise<boolean> => {
     try {
       setIsLoading(true);
       setAuthError(null);
       
-      if (tokenRefreshAttempted) {
-        console.log('Token refresh already attempted, skipping to prevent loop');
+      if (isRefreshingSession) {
+        console.log('Session refresh already in progress, skipping duplicate call');
         return false;
       }
 
-      setTokenRefreshAttempted(true);
+      setIsRefreshingSession(true);
       console.log('Attempting to refresh session...');
       
       const { data, error } = await supabase.auth.refreshSession();
@@ -62,9 +71,9 @@ export const useAuthMethods = ({
       if (data?.session && data?.user) {
         console.log('Session refreshed successfully');
         await logSessionEvent('refresh_success', { user_id: data.user.id });
-        
-        const mappedUser = mapSupabaseUser(data.user);
-        setUser(mappedUser);
+
+        const refreshedUser = await loadAppUser(data.user);
+        setUser(refreshedUser);
         
         setConsecutiveErrors(0);
         
@@ -75,13 +84,15 @@ export const useAuthMethods = ({
         await logSessionEvent('refresh_no_data');
         return false;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Failed to refresh session');
       console.error('Error refreshing session:', error);
-      setAuthError(`[silent] Error in refresh session: ${error.message}`);
-      await logSessionEvent('refresh_exception', { error: error.message });
+      setAuthError(`[silent] Error in refresh session: ${message}`);
+      await logSessionEvent('refresh_exception', { error: message });
       return false;
     } finally {
       setIsLoading(false);
+      setIsRefreshingSession(false);
     }
   };
 
@@ -117,9 +128,9 @@ export const useAuthMethods = ({
       
       uniqueToast.error("Failed to login. Please try again.");
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      uniqueToast.error(error.message || 'Failed to log in');
+      uniqueToast.error(getErrorMessage(error, 'Failed to log in'));
     } finally {
       setIsLoading(false);
     }
@@ -158,57 +169,26 @@ export const useAuthMethods = ({
       console.log("Auth signup successful:", data);
       
       if (data?.user) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
+        if (data.session?.user) {
+          const appUser = await loadAppUser(data.user, {
             full_name: name,
-            email: email,
-            role: role,
-            status: 'active'
+            role,
+            status: 'active',
+            country: 'Nigeria',
           });
 
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-          
-          if (!profileError.message.includes('duplicate key')) {
-            toast.error('Could not complete profile setup, but auth account was created');
-          }
-        } else {
-          console.log("User profile created successfully");
+          setUser(appUser);
           toast.success('Account created successfully!');
-          
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (signInError) {
-            console.log("Couldn't auto-login, redirecting to login page");
-            toast.info("Please check your email to verify your account, then log in");
-            navigate('/login');
-            return;
-          }
-          
-          if (signInData?.user) {
-            console.log("Auto-login successful, redirecting to home");
-            const mappedUser = mapSupabaseUser(signInData.user);
-            setUser({
-              ...mappedUser,
-              status: 'active'
-            });
-            
-            navigate('/');
-            return;
-          }
+          navigate('/auth/callback');
+          return;
         }
-        
-        toast.info("Account created! Please log in to continue.");
+
+        toast.success('Account created successfully. Please verify your email, then log in.');
         navigate('/login');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Signup error:', error);
-      toast.error(error.message || 'Failed to create account');
+      toast.error(getErrorMessage(error, 'Failed to create account'));
     } finally {
       setIsLoading(false);
     }
@@ -226,9 +206,9 @@ export const useAuthMethods = ({
       setUser(null);
       toast.success('Logged out successfully');
       navigate('/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Logout error:', error);
-      toast.error(error.message || 'Failed to logout');
+      toast.error(getErrorMessage(error, 'Failed to logout'));
     } finally {
       setIsLoading(false);
     }
@@ -258,69 +238,27 @@ export const useAuthMethods = ({
         throw userError || new Error('No user found');
       }
 
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', userData.user.id)
-        .maybeSingle();
+      await ensureUserProfile(userData.user);
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
-      }
+      const profile = await updateUserProfileRecord(userData.user, {
+        full_name: data.name,
+        stage_name: data.producer_name,
+        bio: data.bio,
+        country: data.country,
+        profile_picture: data.avatar_url,
+        role: data.role,
+      });
 
-      if (existingUser) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .update({
-            full_name: data.name,
-            stage_name: data.producer_name,
-            bio: data.bio,
-            country: data.country,
-            profile_picture: data.avatar_url,
-            role: data.role,
-          })
-          .eq('id', userData.user.id);
-
-        if (profileError) {
-          throw profileError;
-        }
-      } else {
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: userData.user.id,
-              full_name: data.name || userData.user.user_metadata?.full_name || '',
-              email: userData.user.email || '',
-              role: data.role || 'buyer',
-              profile_picture: data.avatar_url || userData.user.user_metadata?.avatar_url || '',
-              bio: data.bio || userData.user.user_metadata?.bio || '',
-              country: data.country || userData.user.user_metadata?.country || 'Nigeria',
-              stage_name: data.producer_name || userData.user.user_metadata?.stage_name || '',
-            }
-          ]);
-
-        if (insertError) {
-          throw insertError;
-        }
-      }
-
-      const { data: updatedUserData, error: updatedUserError } = await supabase.auth.getUser();
-      if (updatedUserError || !updatedUserData.user) {
-        throw updatedUserError || new Error('Failed to get updated user data');
-      }
-
-      const mappedUser = mapSupabaseUser(updatedUserData.user);
-      setUser(mappedUser);
+      setUser(toAppUser(userData.user, profile));
       
       if (data.default_currency) {
         setCurrency(data.default_currency);
       }
       
       toast.success('Profile updated successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Profile update error:', error);
-      toast.error(error.message || 'Failed to update profile');
+      toast.error(getErrorMessage(error, 'Failed to update profile'));
     } finally {
       setIsLoading(false);
     }

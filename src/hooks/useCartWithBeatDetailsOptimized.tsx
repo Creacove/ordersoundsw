@@ -6,13 +6,31 @@ import { Beat } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
-interface CartItemWithDetails {
+export interface CartSoundpack {
+  id: string;
+  producer_id: string;
+  title: string;
+  producer_name: string;
+  cover_art_url?: string;
+  file_count?: number;
+  basic_license_price_local?: number;
+  basic_license_price_diaspora?: number;
+  premium_license_price_local?: number;
+  premium_license_price_diaspora?: number;
+  exclusive_license_price_local?: number;
+  exclusive_license_price_diaspora?: number;
+  custom_license_price_local?: number;
+  custom_license_price_diaspora?: number;
+  producer_wallet?: string | null;
+}
+
+export interface CartItemWithDetails {
   itemId: string;
   itemType: 'beat' | 'soundpack';
   licenseType: string;
   addedAt: string;
   beat?: Beat;
-  soundpack?: any;
+  soundpack?: CartSoundpack;
 }
 
 interface CachedBeatData {
@@ -177,6 +195,8 @@ export function useCartWithBeatDetailsOptimized() {
                 premium_license_price_diaspora,
                 exclusive_license_price_local,
                 exclusive_license_price_diaspora,
+                custom_license_price_local,
+                custom_license_price_diaspora,
                 genre,
                 users!beats_producer_id_fkey (
                   wallet_address,
@@ -224,6 +244,8 @@ export function useCartWithBeatDetailsOptimized() {
                   premium_license_price_diaspora: beat.premium_license_price_diaspora || 0,
                   exclusive_license_price_local: beat.exclusive_license_price_local || 0,
                   exclusive_license_price_diaspora: beat.exclusive_license_price_diaspora || 0,
+                  custom_license_price_local: beat.custom_license_price_local || 0,
+                  custom_license_price_diaspora: beat.custom_license_price_diaspora || 0,
                   selected_license: lightweightItem.licenseType,
                   producer_wallet_address: userData?.wallet_address
                 };
@@ -242,7 +264,7 @@ export function useCartWithBeatDetailsOptimized() {
 
               // Ghost Item Cleanup for Beats
               const foundBeatIds = beats.map(b => b.id);
-              const missingBeatIds = beatsToFetch.filter(id => !foundBeatIds.includes(id));
+              missingBeatIds = beatsToFetch.filter(id => !foundBeatIds.includes(id));
 
               if (missingBeatIds.length > 0 && !hasFetchError) {
                 console.log('Creating cleanup for missing beats:', missingBeatIds);
@@ -272,7 +294,10 @@ export function useCartWithBeatDetailsOptimized() {
                 premium_license_price_diaspora,
                 exclusive_license_price_local,
                 exclusive_license_price_diaspora,
+                custom_license_price_local,
+                custom_license_price_diaspora,
                 users!soundpacks_producer_id_fkey (
+                  wallet_address,
                   stage_name,
                   full_name
                 )
@@ -301,7 +326,8 @@ export function useCartWithBeatDetailsOptimized() {
                   addedAt: lightweightItem.addedAt,
                   soundpack: {
                     ...soundpack,
-                    producer_name: producerName
+                    producer_name: producerName,
+                    producer_wallet: userData?.wallet_address || null
                   }
                 });
               });
@@ -340,7 +366,7 @@ export function useCartWithBeatDetailsOptimized() {
     };
 
     fetchBeatDetails();
-  }, [lightweightItems]);
+  }, [lightweightItems, removeFromCart]);
 
   return {
     cartItems: cartItemsWithDetails,

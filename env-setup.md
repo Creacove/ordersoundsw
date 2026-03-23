@@ -3,38 +3,63 @@
 
 ## Local Development
 
-1. Create a `.env` file in the project root (it is already excluded from git)
-2. Copy the contents from `.env.example` into your `.env` file
-3. Replace the placeholder values with your actual credentials
+1. Create a local `.env` file in the project root. It is ignored by git and must stay local-only.
+2. Copy the contents from `.env.example`.
+3. Replace placeholders with values for the environment you are working against.
 
 Example `.env` file:
+
+```dotenv
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+VITE_PAYSTACK_PUBLIC_KEY=pk_test_replace_me
+VITE_SOLANA_NETWORK=devnet
+VITE_SOLANA_PLATFORM_FEE_BPS=2000
 ```
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_KEY=your-anon-key-here
-```
+
+## Browser vs Server Configuration
+
+Only `VITE_*` variables belong in the browser bundle. That includes the Paystack public key.
+
+Browser-visible variables:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_PAYSTACK_PUBLIC_KEY`
+- `VITE_SOLANA_NETWORK`
+- `VITE_SOLANA_PLATFORM_FEE_BPS`
+- `VITE_DEVNET_RPC_ENDPOINT`
+- `VITE_MAINNET_RPC_ENDPOINT`
+- `VITE_PLATFORM_WALLET`
+- `VITE_PLATFORM_WALLET_MAINNET`
+
+Server-only secrets must not be stored in `.env.example` or committed files:
+
+- `PAYSTACK_SECRET_KEY_LIVE`
+- `PAYSTACK_PLATFORM_FEE_BPS`
+- `SOLANA_PLATFORM_FEE_BPS`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SOLANA_RPC_URL`
 
 ## Edge Function Secrets
 
-For sensitive API keys used in Edge Functions (like Paystack), set them as secrets in the Supabase dashboard:
+Set server-only secrets in Supabase, not in the Vite client env file:
 
 ```bash
-# Install Supabase CLI if you haven't already
-npm install -g supabase
-
-# Login to Supabase
 supabase login
-
-# Set secrets for your project
-supabase secrets set PAYSTACK_SECRET_KEY=your_actual_secret_key --project-ref your-project-ref
+supabase secrets set PAYSTACK_SECRET_KEY_LIVE=your_actual_secret_key --project-ref your-project-ref
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key --project-ref your-project-ref
 ```
 
-Or set them through the Supabase Dashboard:
-1. Go to your project in the Supabase Dashboard
-2. Navigate to Settings > API > Edge Functions
-3. Add your secrets under "Edge Function Secrets"
+Or through the Supabase Dashboard:
+
+1. Open your Supabase project.
+2. Go to Settings > Edge Functions.
+3. Add the required secrets.
 
 ## Important Security Notes
 
-- Never commit `.env` files or any file containing actual credentials to version control
-- Use environment variables for all sensitive configuration
-- For production, set environment variables through your hosting platform
+- Never commit `.env` or any file containing non-public credentials.
+- Treat `VITE_*` values as public client configuration.
+- Rotate secrets immediately if they were ever committed or shared.
+- Set production env values in the hosting platform and Supabase secret store, not in source control.
