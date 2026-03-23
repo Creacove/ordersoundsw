@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePaystackSplit } from "@/hooks/payment/usePaystackSplit";
 import { fetchSupportedBanks } from "@/utils/payment/paystackSplitUtils";
 import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
 
 import {
   Form,

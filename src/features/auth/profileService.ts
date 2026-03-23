@@ -92,7 +92,7 @@ const selectUserProfile = async (userId: string): Promise<UserProfileRow | null>
     throw error;
   }
 
-  return data;
+  return data as UserProfileRow | null;
 };
 
 export const buildUserProfileInsert = (
@@ -131,7 +131,7 @@ export const ensureUserProfile = async (
     .single();
 
   if (!error) {
-    return data;
+    return data as UserProfileRow;
   }
 
   if (error.code === '23505' || error.message.toLowerCase().includes('duplicate key')) {
@@ -161,7 +161,7 @@ export const updateUserProfileRecord = async (
     throw error;
   }
 
-  return data;
+  return data as UserProfileRow;
 };
 
 const mapJsonArray = <T>(value: unknown): T[] | undefined => {

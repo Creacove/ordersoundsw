@@ -13,7 +13,7 @@ interface SoundpackCartItemCardProps {
       id: string;
       title: string;
       producer_name: string;
-      cover_art_url: string;
+      cover_art_url?: string;
       file_count?: number;
       basic_license_price_local?: number;
       basic_license_price_diaspora?: number;
