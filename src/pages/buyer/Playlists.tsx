@@ -530,6 +530,7 @@ export default function Playlists() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>
     );
   }
 
