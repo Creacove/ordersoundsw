@@ -78,23 +78,23 @@ export default function Signup() {
 
   return (
     <MainLayout hideSidebar>
-      <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-[#030407]">
+      <div className="h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-[#030407]">
         {/* Background Aesthetics */}
         <div className="absolute top-0 right-0 w-[50vw] h-[50vh] bg-primary/10 blur-[150px] translate-x-1/2 -translate-y-1/2 rounded-full" />
         <div className="absolute bottom-0 left-0 w-[40vw] h-[40vh] bg-indigo-600/5 blur-[120px] -translate-x-1/4 translate-y-1/4 rounded-full" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
 
-        <div className="w-full max-w-[480px] relative z-10 space-y-8 animate-in fade-in zoom-in-95 duration-500 my-8">
-          <div className="flex flex-col items-center text-center space-y-4">
+        <div className="w-full max-w-[480px] relative z-10 space-y-4 animate-in fade-in zoom-in-95 duration-500">
+          <div className="flex flex-col items-center text-center space-y-2">
             <div className="relative group">
               <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               <Logo size="desktop" />
             </div>
-            <div className="space-y-2">
-              <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
                 Join the <span className="text-primary">Studio</span>
               </h1>
-              <p className="text-white/40 italic text-lg tracking-tight">
+              <p className="text-white/40 italic text-base tracking-tight">
                 Create your account to start your journey
               </p>
             </div>
