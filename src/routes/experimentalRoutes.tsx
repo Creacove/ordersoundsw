@@ -15,9 +15,6 @@ export function getExperimentalRoutes() {
       <Route
         path="/proposal-mocks"
         element={renderLazyRoute(ProposalMocksLayout)}
-          message: "Loading Proposal Mocks...",
-          variant: "inline",
-        })}
       />
     </>
   );
