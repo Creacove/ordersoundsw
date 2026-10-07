@@ -1,0 +1,19 @@
+---
+import '../styles/global.css';
+const { title = 'Desk by OrderSounds', description = 'Your operating manager for everything around the music.' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f5f0ea" />
+    <link rel="preload" href="/hero/hero-environment.avif" as="image" type="image/avif" fetchpriority="high" />
+    <link rel="preload" href="/hero/hero-poster.avif" as="image" type="image/avif" fetchpriority="high" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
