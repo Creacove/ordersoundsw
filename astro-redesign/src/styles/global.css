@@ -114,3 +114,12 @@ a:focus-visible,button:focus-visible{outline:3px solid #8055b7;outline-offset:5p
 }
 @media(max-width:1000px){.hero__copy{--detail-top:153px;--cta-top:255px}}
 @media(max-width:600px){.hero__copy{--detail-top:116px;--cta-top:185px}.hero h2.hero__bridge{font-size:18px}}
+.sleeve-face--back{padding:43px 56px 0}
+.sleeve-heading{letter-spacing:.12em;margin-bottom:24px}
+.desk-rows li{min-height:93px;grid-template-columns:80px 1fr}
+.desk-rows strong{font-size:18px;letter-spacing:-.015em}
+.desk-rows li>div>span,.row-swap span{font-size:15px}
+.row-swap{display:block;min-height:24px;margin-top:4px!important}
+.row-swap span{margin-top:0}
+.sleeve-face--front>.sound-mark{top:30px}
+.sleeve-brand{bottom:30px}

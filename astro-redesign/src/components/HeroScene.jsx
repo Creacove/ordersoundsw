@@ -50,8 +50,8 @@ function Record() {
       if (cancelled) return;
       const frontFace = hero.querySelector('[data-sleeve-front]');
       const backFace = hero.querySelector('[data-sleeve-back]');
-      const before = [...hero.querySelectorAll('[data-before]')];
-      const after = [...hero.querySelectorAll('[data-after]')];
+      const before = backFace.querySelector('[data-before]');
+      const after = backFace.querySelector('[data-after]');
       const frontLines = [...frontTitle.querySelectorAll('[data-copy-line]')];
       const backRows = [...backFace.querySelectorAll('.sleeve-heading, .desk-rows li')];
       const largeSize = () => parseFloat(getComputedStyle(frontTitle).fontSize) * (innerWidth > 1000 ? .91 : 1);
@@ -67,9 +67,9 @@ function Record() {
         backVinyl.current.uniforms.uTurn.value = angle;
         invalidate();
       };
-      gsap.set(after, { autoAlpha: 0 });
       gsap.set(support, { autoAlpha: 0, y: 18 });
       gsap.set(backRows, { y: 11, opacity: 0 });
+      gsap.set(after, { autoAlpha: 0, y: 8 });
       // Keep the authored seconds under low frame rates and software WebGL.
       gsap.ticker.lagSmoothing(0);
       timeline = gsap.timeline({ paused: true, onUpdate: update, onComplete: () => { hero.dataset.settled = 'true'; } });
@@ -92,11 +92,10 @@ function Record() {
         .to(contactShadow, { x: 36, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .fromTo(studioLight, { xPercent: -3, opacity: 1 }, { xPercent: 4, opacity: .72, duration: 1.18, ease: 'power2.inOut' }, 2.55)
         .to(support, { autoAlpha: 1, y: 0, duration: .52, ease: 'power2.out' }, 3.49)
-        .to(backRows, { y: 0, opacity: 1, duration: .44, stagger: .085, ease: 'power2.out' }, 3.69)
-        .to(before, { opacity: .22, duration: .17 }, 6.55)
-        .to(before, { autoAlpha: 0, y: -7, duration: .30 }, 6.72)
-        .fromTo(after, { autoAlpha: 0, y: 7 }, { autoAlpha: 1, y: 0, duration: .36 }, 6.72)
-        .to({}, { duration: .92 }, 7.08);
+        .to(backRows, { y: 0, opacity: 1, duration: .48, stagger: .10, ease: 'power2.out' }, 3.69)
+        .to(before, { autoAlpha: 0, y: -7, duration: .27, ease: 'power2.in' }, 6.72)
+        .to(after, { autoAlpha: 1, y: 0, duration: .36, ease: 'power2.out' }, 6.84)
+        .to({}, { duration: .80 }, 7.2);
       const syncAccessibility = () => {
         const isBack = timeline.time() >= 3.02;
         frontTitle.inert = isBack;

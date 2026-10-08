@@ -7,24 +7,14 @@ export default function SleeveContent({ face }) {
     <SoundMark />
     <span className="sleeve-brand">OrderSounds</span>
   </div>;
-  return <div className="sleeve-face sleeve-face--back" data-sleeve-back aria-label="Desk today">
-    <div className="sleeve-heading">DESK / TODAY</div>
+  return <div className="sleeve-face sleeve-face--back" data-sleeve-back aria-label="Desk, the other side">
+    <div className="sleeve-heading">DESK / THE OTHER SIDE</div>
     <ol className="desk-rows">
-      <li>
-        <span className="row-index">01 <span>/</span></span>
-        <div><strong>YOUR MOVE</strong>
-          <div className="row-swap"><span data-before>Record the next Odaeshi story</span><span data-after>Repeat the personal story</span></div>
-        </div>
-      </li>
-      <li><span className="row-index">02 <span>/</span></span><div><strong>DESK IS HANDLING</strong><span>Research · planning · follow-through</span></div></li>
-      <li>
-        <span className="row-index">03 <span>/</span></span>
-        <div className="row-swap row-swap--result">
-          <div data-before><strong>DESK IS WATCHING</strong><span>Audience response · Lagos</span></div>
-          <div data-after><strong>RESULT</strong><span>Personal story is leading</span></div>
-        </div>
-      </li>
-      <li><span className="row-index">04 <span>/</span></span><div><strong>NEEDS YOU</strong><span>Approve split confirmations</span></div></li>
+      <li><span className="row-index">01 <span>/</span></span><div><strong>RELEASES</strong><span>Plan · pitch · coordinate</span></div></li>
+      <li><span className="row-index">02 <span>/</span></span><div><strong>MARKETING</strong><span>Content · creators · playlists</span></div></li>
+      <li><span className="row-index">03 <span>/</span></span><div><strong>BUSINESS</strong><span>Splits · rights · budgets</span></div></li>
+      <li><span className="row-index">04 <span>/</span></span><div><strong>OPPORTUNITIES</strong><span>Collaborations · shows · partnerships</span></div></li>
+      <li><span className="row-index">05 <span>/</span></span><div><strong>NEXT MOVE</strong><span className="row-swap"><span data-before>What matters now · what comes next</span><span data-after>Pitch the single before Friday</span></span></div></li>
     </ol>
   </div>;
 }
