@@ -1,18 +1,15 @@
 # OrderSounds Astro redesign — start here
 
 Branch: `codex/astro-hero-parity`
-
-Issue: #7  
+Issue: #7
 Draft PR: #8
 
-Before coding, read:
+Read:
 - `astro-redesign/CODEX_HANDOFF.md`
 - `astro-redesign/AGENTS.md`
+- `astro-redesign/docs/PARITY_CHECKLIST.md`
 
-The handoff document includes exact ChatGPT Library file IDs for:
-- the two approved source-of-truth images,
-- the Astro project zip,
-- the production asset zip,
-- the current browser proof images.
+The binary files are now committed directly to this branch in:
+`astro-redesign/hero-assets-repo-ready.zip`
 
-Materialize those files first. Do not ask the user to resend them.
+Unzip that file and continue. Do not ask the user for ChatGPT Library access or attachments.
