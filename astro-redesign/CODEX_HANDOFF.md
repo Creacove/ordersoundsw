@@ -3,36 +3,28 @@
 ## Start here
 Work only on branch `codex/astro-hero-parity`.
 
-The actual project/assets/reference files are in the user's ChatGPT Library folder:
-`/OrderSounds/MarketingRedesign/`
+**The task is now self-contained in GitHub. Do not ask the user for ChatGPT Library files.**
 
-Use Files/Library tools to materialize these exact files by filename or file_id:
+The binary asset bundle is committed at:
+`astro-redesign/hero-assets-repo-ready.zip`
 
-- `SOURCE_OF_TRUTH_FRONT.jpeg`
-  - file_id: `file_0000000089c482438cb5c9fa52b32903`
-  - library_file_id: `libfile_1091f38d77c48191a0288afbbf56abc9`
-- `SOURCE_OF_TRUTH_BACK.jpeg`
-  - file_id: `file_00000000d784824394ef4fc3844964b1`
-  - library_file_id: `libfile_00fc8ed47b80819186796fd54cc2e2f3`
-- `ordersounds-astro-hero-v01.zip`
-  - file_id: `file_00000000e08082109415d3c4bb5945a5`
-  - library_file_id: `libfile_9aea6fe36f8c8191ab953f438c51a3ae`
-- `ordersounds-hero-assets-v2.zip`
-  - file_id: `file_000000002e6081f49a1987fb51d0afe3`
-  - library_file_id: `libfile_d0f8c743cee881918b8ba99d7082f654`
-- `ordersounds-codex-handoff.zip`
-  - file_id: `file_00000000ec5081f4a533dd41a61c225c`
-  - library_file_id: `libfile_684195424b5c8191822e52ccefe0b135`
-- Current implementation proofs:
-  - `proof-front.jpg` file_id `file_00000000d57c8243ae830fa30e268575`
-  - `proof-turn.jpg` file_id `file_000000002dc88210b46649f41ef8dad9`
-  - `proof-back.jpg` file_id `file_00000000da4082108587a3ab7a7d87dc`
-  - `proof-final.jpg` file_id `file_0000000018788210ade4d293eec651d5`
+Unzip it before visual work:
+```bash
+cd astro-redesign
+rm -rf .hero-assets
+mkdir -p .hero-assets
+unzip -o hero-assets-repo-ready.zip -d .hero-assets
+```
 
-**The two SOURCE_OF_TRUTH images are the visual authority.**  
-The proof images are only WIP browser outputs and must never override the source-of-truth frames.
+Inside the archive:
+- `.hero-assets/codex_min_assets/SOURCE_OF_TRUTH_FRONT.jpg`
+- `.hero-assets/codex_min_assets/SOURCE_OF_TRUTH_BACK.jpg`
+- `.hero-assets/codex_min_assets/hero_environment.avif`
+- `.hero-assets/codex_min_assets/hero_poster.avif`
+- `.hero-assets/codex_min_assets/sleeve_front.webp`
+- `.hero-assets/codex_min_assets/sleeve_back.webp`
 
-Materialize `ordersounds-astro-hero-v01.zip` into `astro-redesign/` and use `ordersounds-hero-assets-v2.zip` when a higher-quality/raw asset is needed.
+The two SOURCE_OF_TRUTH images are the visual authority. The smaller copies are intentionally optimized for Codex visual QA; do not redesign from them.
 
 ## Goal
 Finish the new OrderSounds marketing hero as a standalone Astro project and match the approved reference frames with near-photographic parity. Do not redesign it.
@@ -87,17 +79,32 @@ One turn only:
 
 Vinyl stays largely stationary behind the sleeve.
 
-## Required workflow
-1. Materialize the exact Library files above.
-2. Unzip the Astro project into `astro-redesign/`.
-3. Install dependencies and get `npm run build` green.
-4. Create deterministic Playwright screenshots at 1536×864.
-5. Compare screenshots directly to `SOURCE_OF_TRUTH_FRONT.jpeg` and `SOURCE_OF_TRUTH_BACK.jpeg`; tune instead of redesigning.
-6. Desktop parity first. Only then make tablet 4:5 and mobile 9:16 compositions.
-7. Productionize loading/performance and document results.
+## Important implementation correction
+Do **not** block on the previous GLB. The hero geometry is deliberately simple and should be created directly in React Three Fiber:
+- sleeve body: thin box with subtle bevel
+- front plane: separate textured plane
+- back plane: separate textured plane
+- vinyl: thin cylinder
+- center label: thin cylinder
+- center hole: small dark cylinder
 
-## First technical issue to fix
-The current sleeve-back text is a flat DOM overlay. It must be physically registered to the back of the sleeve. Prefer a CanvasTexture/dynamic texture attached to the `Sleeve_Back` material. Do not leave text floating over the 3D object.
+Use the supplied front/back sleeve textures from the ZIP. Build the vinyl material procedurally with dark base, radial groove normal/roughness, and restrained iridescence. This is more controllable for parity than the earlier generated GLB.
+
+## Required workflow
+1. Unzip the repo asset bundle above.
+2. Copy the environment/poster/textures into `public/hero/` or load from a build-safe location.
+3. Replace the old GLB dependency with R3F primitive geometry.
+4. Get `npm run build` green.
+5. Create deterministic Playwright screenshots at 1536×864.
+6. Compare directly to the two SOURCE_OF_TRUTH images; tune instead of redesigning.
+7. Desktop parity first. Only then make tablet 4:5 and mobile 9:16 compositions.
+8. Productionize loading/performance and document results.
+
+## First visual/technical issues to fix
+- The sleeve-back operational typography must be physically registered to the rotating sleeve. Prefer CanvasTexture attached to the back material.
+- Poster/live scene must occupy the exact same registration.
+- Environment exposure and crop must remain bright and warm.
+- Do not make the vinyl or purple reflection more dramatic than the reference.
 
 ## Visual QA
 Tune until the following match:
@@ -117,7 +124,6 @@ Tune until the following match:
 - invisible poster→WebGL handoff
 - lazy-load WebGL
 - KTX2/Basis for GPU textures after parity is locked
-- do not use lossy WebP for normal/roughness maps
 - honor prefers-reduced-motion
 - stop continuous rendering after the final state if possible
 - zero CLS
