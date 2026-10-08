@@ -18,7 +18,7 @@ function Record() {
   const body = useRef();
   const frontVinyl = useRef();
   const backVinyl = useRef();
-  const { invalidate, gl } = useThree();
+  const { invalidate, gl, camera } = useThree();
   const [front, back] = useTexture(['/hero/sleeve-front.webp', '/hero/sleeve-back.webp']);
   const normal = useMemo(paperNormalTexture, []);
   useLayoutEffect(() => {
@@ -127,6 +127,15 @@ function Record() {
       if (import.meta.env.DEV) window.__deskHero = {
         seek: t => { timeline.pause().seek(t); update(); syncAccessibility(); },
         info: () => ({ time: timeline.time(), rotation: assembly.current.rotation.y, running: timeline.isActive() }),
+        sleeveBounds: () => {
+          body.current.updateWorldMatrix(true, false);
+          const canvas = gl.domElement.getBoundingClientRect();
+          const points = [[-1.87,1.87],[1.87,1.87],[-1.87,-1.87],[1.87,-1.87]].map(([x,y]) => {
+            const p = body.current.localToWorld(new THREE.Vector3(x,y,0)).project(camera);
+            return { x: canvas.left + (p.x + 1) * canvas.width / 2, y: canvas.top + (1 - p.y) * canvas.height / 2 };
+          });
+          return { left: Math.min(...points.map(p => p.x)), right: Math.max(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), bottom: Math.max(...points.map(p => p.y)) };
+        },
       };
       cleanupButton = () => button.removeEventListener('click', turn);
       invalidate();
@@ -167,7 +176,8 @@ function ResponsiveCamera() {
   useLayoutEffect(() => {
     // Stable world-space framing across independently laid out stage containers.
     camera.position.set(0,.025,12);
-    camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(2.10 / 12));
+    const narrowFraming = window.innerWidth <= 360 ? 1.25 : 1;
+    camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan((2.10 * narrowFraming) / 12));
     camera.updateProjectionMatrix();
     invalidate();
     const frame = requestAnimationFrame(() => invalidate());
