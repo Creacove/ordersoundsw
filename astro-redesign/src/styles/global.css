@@ -92,3 +92,12 @@ a:focus-visible,button:focus-visible{outline:3px solid #8055b7;outline-offset:5p
 .sleeve-face--front>.sound-mark{top:26px}.sleeve-brand{bottom:48px}
 .sleeve-face--back{padding-top:44px}.sleeve-heading{margin-bottom:14px}.desk-rows li{min-height:108px}
 @media(max-width:1000px){.hero__copy,.hero__copy--back{top:15%}}@media(max-width:600px){.hero__copy,.hero__copy--back{top:14%}}
+.copy-mask{display:block;overflow:hidden;padding-block:.08em;margin-block:-.08em}
+.copy-mask>[data-copy-line]{display:block;will-change:transform,opacity}
+[data-copy-detail],[data-copy-cta]{will-change:transform,opacity}
+.sleeve-heading,.desk-rows li{will-change:transform,opacity}
+.studio__light{will-change:transform,opacity}
+.studio{background:#e9dfd7 url('/hero/studio-environment.avif') center center / cover no-repeat}
+.studio__floor,.studio__leaves{display:none}
+.studio__light{inset:0;background:linear-gradient(108deg,rgba(255,252,244,.10),transparent 52%,rgba(255,249,241,.08));filter:none;pointer-events:none}
+.studio__light::after{display:none}

@@ -30,6 +30,7 @@ export const vinylVertex = `
 `;
 export const vinylFragment = `
   varying vec2 vUv;
+  uniform float uTurn;
   const float PI = 3.14159265359;
   float lobe(float a, float center, float width) {
     float d = atan(sin(a-center), cos(a-center));
@@ -41,20 +42,20 @@ export const vinylFragment = `
   void main() {
     vec2 p = (vUv-.5)*2.;
     float r = length(p);
-    float a = atan(p.y,p.x);
-    float grooves = sin(r*760.);
-    float fine = 0.;
+    float a = atan(p.y,p.x) - uTurn*.16;
+    float grooves = sin(r*900. + sin(a*11.)*.28);
+    float fine = pow(.5+.5*sin(r*2900.), 9.)*.002;
     float specular = lobe(a,.55,.19) + lobe(a,-.59,.21);
     float diffuse = lobe(a,2.2,.9)*.015 + lobe(a,-1.8,.5)*.012;
     vec3 color = vec3(.003,.0025,.0035) + diffuse*.25;
     color += vec3(.004) * pow(.5+.5*grooves, 4.) + fine;
     float radial = smoothstep(.32,.58,r) * (1.-smoothstep(.975,1.,r));
     float bands = a*2.2 + r*.22;
-    vec3 rainbow = mix(vec3(.55), spectrum(bands), .82);
+    vec3 rainbow = mix(vec3(.48), spectrum(bands), .68);
     float hot = lobe(a,.51,.058) + lobe(a,-.66,.065);
     float radialLight = .3 + .7*smoothstep(.55,.95,r);
-    color += rainbow * specular * radial * .42 * (.69 + .31*grooves);
-    color += vec3(.8,.57,.40)*hot*radialLight*radial*.4;
+    color += rainbow * specular * radial * .31 * (.76 + .24*grooves);
+    color += vec3(.72,.52,.38)*hot*radialLight*radial*.35;
     // The sleeve occludes illumination near the inner exposed rim.
     color *= smoothstep(-.06,.10,p.x);
     color += vec3(.09,.075,.07) * pow(specular*.48, 4.) * radial;

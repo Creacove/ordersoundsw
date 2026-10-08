@@ -16,6 +16,8 @@ function Record() {
   const assembly = useRef();
   const disc = useRef();
   const body = useRef();
+  const frontVinyl = useRef();
+  const backVinyl = useRef();
   const { invalidate, gl } = useThree();
   const [front, back] = useTexture(['/hero/sleeve-front.webp', '/hero/sleeve-back.webp']);
   const normal = useMemo(paperNormalTexture, []);
@@ -32,7 +34,8 @@ function Record() {
     const hero = document.querySelector('[data-hero]');
     const frontCopy = hero.querySelector('[data-front-copy]');
     const backCopy = hero.querySelector('[data-back-copy]');
-      const contactShadow = hero.querySelector('.object-shadow');
+    const contactShadow = hero.querySelector('.object-shadow');
+    const studioLight = hero.querySelector('.studio__light');
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let timeline;
     let cancelled = false;
@@ -47,6 +50,11 @@ function Record() {
       const backFace = hero.querySelector('[data-sleeve-back]');
       const before = [...hero.querySelectorAll('[data-before]')];
       const after = [...hero.querySelectorAll('[data-after]')];
+      const frontLines = [...frontCopy.querySelectorAll('[data-copy-line]')];
+      const backLines = [...backCopy.querySelectorAll('[data-copy-line]')];
+      const frontDetails = [...frontCopy.querySelectorAll('[data-copy-detail], [data-copy-cta]')];
+      const backDetails = [...backCopy.querySelectorAll('[data-copy-detail], [data-copy-cta]')];
+      const backRows = [...backFace.querySelectorAll('.sleeve-heading, .desk-rows li')];
       hero.dataset.ready = 'true';
       const update = () => {
         const angle = assembly.current.rotation.y;
@@ -55,27 +63,36 @@ function Record() {
         frontFace.inert = angle >= Math.PI / 2;
         backFace.inert = angle < Math.PI / 2;
         hero.dataset.angle = angle.toFixed(5);
+        frontVinyl.current.uniforms.uTurn.value = angle;
+        backVinyl.current.uniforms.uTurn.value = angle;
         invalidate();
       };
       gsap.set([backCopy, ...after], { autoAlpha: 0 });
-      gsap.set(backFace, { opacity: 0 });
+      gsap.set(backLines, { yPercent: 105, opacity: 0 });
+      gsap.set(backDetails, { y: 16, opacity: 0 });
+      gsap.set(backRows, { y: 11, opacity: 0 });
       // Keep the authored seconds under low frame rates and software WebGL.
       gsap.ticker.lagSmoothing(0);
       timeline = gsap.timeline({ paused: true, onUpdate: update, onComplete: () => { hero.dataset.settled = 'true'; } });
-      timeline.to(frontCopy, { autoAlpha: 0, y: -7, duration: .32 }, 2.45)
+      timeline.to(frontDetails.slice().reverse(), { y: -12, opacity: 0, duration: .32, stagger: .045, ease: 'power2.in' }, 2.60)
+        .to(frontLines.slice().reverse(), { yPercent: -105, duration: .50, stagger: .08, ease: 'power3.inOut' }, 2.65)
+        .set(frontCopy, { autoAlpha: 0 }, 3.24)
         .to(assembly.current.rotation, { y: Math.PI, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(disc.current.position, { z: 1.2, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(disc.current.scale, { x: 1.1, y: 1.1, z: 1.1, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(assembly.current.position, { x: .10, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(contactShadow, { x: 36, duration: 1.18, ease: 'power3.inOut' }, 2.55)
-        .to(backCopy, { autoAlpha: 1, duration: .42 }, 3.55)
-        .to(backFace, { opacity: 1, duration: .25 }, 3.65)
+        .fromTo(studioLight, { xPercent: -3, opacity: 1 }, { xPercent: 4, opacity: .72, duration: 1.18, ease: 'power2.inOut' }, 2.55)
+        .set(backCopy, { autoAlpha: 1 }, 3.02)
+        .to(backLines, { yPercent: 0, opacity: 1, duration: .62, stagger: .085, ease: 'power3.out' }, 3.04)
+        .to(backDetails, { y: 0, opacity: 1, duration: .48, stagger: .09, ease: 'power2.out' }, 3.34)
+        .to(backRows, { y: 0, opacity: 1, duration: .44, stagger: .085, ease: 'power2.out' }, 3.69)
         .to(before, { opacity: .22, duration: .17 }, 6.55)
         .to(before, { autoAlpha: 0, y: -7, duration: .30 }, 6.72)
         .fromTo(after, { autoAlpha: 0, y: 7 }, { autoAlpha: 1, y: 0, duration: .36 }, 6.72)
         .to({}, { duration: .92 }, 7.08);
       const syncAccessibility = () => {
-        const isBack = timeline.time() >= 3.55;
+        const isBack = timeline.time() >= 3.02;
         frontCopy.inert = isBack;
         backCopy.inert = !isBack;
         frontCopy.setAttribute('aria-hidden', String(isBack));
@@ -117,25 +134,25 @@ function Record() {
   return <group ref={assembly} position={[-.12,-.12,0]}>
     <group ref={disc} position={[1.14,-.01,-.10]} rotation={[0,-.08,0]}>
       <mesh rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[1.87,1.87,.035,192]} /><meshStandardMaterial color="#0c0b0e" roughness={.3} metalness={.28} /></mesh>
-      <mesh position={[0,0,.021]}><circleGeometry args={[1.862,192]} /><shaderMaterial vertexShader={vinylVertex} fragmentShader={vinylFragment} /></mesh>
+      <mesh position={[0,0,.021]}><circleGeometry args={[1.862,192]} /><shaderMaterial ref={frontVinyl} uniforms={{ uTurn: { value: 0 } }} vertexShader={vinylVertex} fragmentShader={vinylFragment} /></mesh>
       <mesh position={[0,0,.026]}><circleGeometry args={[.62,96]} /><meshStandardMaterial color="#d7cbc0" roughness={.85} normalMap={normal} normalScale={[.15,.15]} /></mesh>
       <mesh position={[0,0,.030]}><circleGeometry args={[.049,32]} /><meshBasicMaterial color="#070609" /></mesh>
-      <mesh position={[0,0,-.030]} rotation={[0,Math.PI,0]}><circleGeometry args={[1.862,192]} /><shaderMaterial vertexShader={vinylVertex} fragmentShader={vinylBack} /></mesh>
+      <mesh position={[0,0,-.030]} rotation={[0,Math.PI,0]}><circleGeometry args={[1.862,192]} /><shaderMaterial ref={backVinyl} uniforms={{ uTurn: { value: 0 } }} vertexShader={vinylVertex} fragmentShader={vinylBack} /></mesh>
       <mesh position={[0,0,-.034]} rotation={[0,Math.PI,0]}><circleGeometry args={[.62,96]} /><meshStandardMaterial color="#d7cbc0" roughness={.85} normalMap={normal} normalScale={[.15,.15]} /></mesh>
       <mesh position={[0,0,-.039]} rotation={[0,Math.PI,0]}><circleGeometry args={[.049,32]} /><meshBasicMaterial color="#070609" /></mesh>
     </group>
     <group position={[-.73,0,.14]} rotation={[0,BASE_YAW,0]}>
-      <RoundedBox ref={body} args={[3.74,3.74,.043]} radius={.006} smoothness={2}>
-        <meshStandardMaterial color="#e4dbcf" roughness={.91} normalMap={normal} normalScale={[.15,.15]} />
+      <RoundedBox ref={body} args={[3.74,3.74,.068]} radius={.008} smoothness={2}>
+        <meshStandardMaterial color="#d3c5b8" roughness={.88} normalMap={normal} normalScale={[.15,.15]} />
       </RoundedBox>
-      <mesh position={[0,0,.023]}><planeGeometry args={[3.724,3.724]} />
+      <mesh position={[0,0,.035]}><planeGeometry args={[3.724,3.724]} />
         <meshStandardMaterial map={front} color="#f5f1f5" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={softenPaper} />
       </mesh>
-      <mesh position={[0,0,-.023]} rotation={[0,Math.PI,0]}><planeGeometry args={[3.724,3.724]} />
+      <mesh position={[0,0,-.035]} rotation={[0,Math.PI,0]}><planeGeometry args={[3.724,3.724]} />
         <meshStandardMaterial map={back} color="#f5f1f5" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={softenPaper} />
       </mesh>
-      <Html transform position={[0,0,.027]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="front" /></Html>
-      <Html transform position={[0,0,-.027]} rotation={[0,Math.PI,0]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="back" /></Html>
+      <Html transform position={[0,0,.039]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="front" /></Html>
+      <Html transform position={[0,0,-.039]} rotation={[0,Math.PI,0]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="back" /></Html>
     </group>
   </group>;
 }
