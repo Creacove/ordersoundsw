@@ -32,8 +32,10 @@ function Record() {
 
   useEffect(() => {
     const hero = document.querySelector('[data-hero]');
-    const frontCopy = hero.querySelector('[data-front-copy]');
-    const backCopy = hero.querySelector('[data-back-copy]');
+    const copy = hero.querySelector('[data-hero-copy]');
+    const frontTitle = copy.querySelector('h1');
+    const bridge = copy.querySelector('[data-bridge]');
+    const support = copy.querySelector('[data-back-support]');
     const contactShadow = hero.querySelector('.object-shadow');
     const studioLight = hero.querySelector('.studio__light');
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -50,11 +52,9 @@ function Record() {
       const backFace = hero.querySelector('[data-sleeve-back]');
       const before = [...hero.querySelectorAll('[data-before]')];
       const after = [...hero.querySelectorAll('[data-after]')];
-      const frontLines = [...frontCopy.querySelectorAll('[data-copy-line]')];
-      const backLines = [...backCopy.querySelectorAll('[data-copy-line]')];
-      const frontDetails = [...frontCopy.querySelectorAll('[data-copy-detail], [data-copy-cta]')];
-      const backDetails = [...backCopy.querySelectorAll('[data-copy-detail], [data-copy-cta]')];
+      const frontLines = [...frontTitle.querySelectorAll('[data-copy-line]')];
       const backRows = [...backFace.querySelectorAll('.sleeve-heading, .desk-rows li')];
+      const largeSize = () => parseFloat(getComputedStyle(frontTitle).fontSize) * (innerWidth > 1000 ? .91 : 1);
       hero.dataset.ready = 'true';
       const update = () => {
         const angle = assembly.current.rotation.y;
@@ -67,25 +67,31 @@ function Record() {
         backVinyl.current.uniforms.uTurn.value = angle;
         invalidate();
       };
-      gsap.set([backCopy, ...after], { autoAlpha: 0 });
-      gsap.set(backLines, { yPercent: 105, opacity: 0 });
-      gsap.set(backDetails, { y: 16, opacity: 0 });
+      gsap.set(after, { autoAlpha: 0 });
+      gsap.set(support, { autoAlpha: 0, y: 18 });
       gsap.set(backRows, { y: 11, opacity: 0 });
       // Keep the authored seconds under low frame rates and software WebGL.
       gsap.ticker.lagSmoothing(0);
       timeline = gsap.timeline({ paused: true, onUpdate: update, onComplete: () => { hero.dataset.settled = 'true'; } });
-      timeline.to(frontDetails.slice().reverse(), { y: -12, opacity: 0, duration: .32, stagger: .045, ease: 'power2.in' }, 2.60)
-        .to(frontLines.slice().reverse(), { yPercent: -105, duration: .50, stagger: .08, ease: 'power3.inOut' }, 2.65)
-        .set(frontCopy, { autoAlpha: 0 }, 3.24)
+      timeline.to(frontLines.slice().reverse(), { yPercent: -105, duration: .54, stagger: .08, ease: 'power3.inOut' }, 2.59)
+        .set(frontTitle, { autoAlpha: 0 }, 3.23)
+        .to(bridge, {
+          top: 0,
+          fontSize: () => `${largeSize()}px`,
+          lineHeight: () => `${largeSize() * .96}px`,
+          letterSpacing: () => `${largeSize() * -.055}px`,
+          fontWeight: 560,
+          color: '#171519',
+          duration: 1.08,
+          ease: 'power3.inOut',
+        }, 2.60)
         .to(assembly.current.rotation, { y: Math.PI, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(disc.current.position, { z: 1.2, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(disc.current.scale, { x: 1.1, y: 1.1, z: 1.1, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(assembly.current.position, { x: .10, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .to(contactShadow, { x: 36, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .fromTo(studioLight, { xPercent: -3, opacity: 1 }, { xPercent: 4, opacity: .72, duration: 1.18, ease: 'power2.inOut' }, 2.55)
-        .set(backCopy, { autoAlpha: 1 }, 3.02)
-        .to(backLines, { yPercent: 0, opacity: 1, duration: .62, stagger: .085, ease: 'power3.out' }, 3.04)
-        .to(backDetails, { y: 0, opacity: 1, duration: .48, stagger: .09, ease: 'power2.out' }, 3.34)
+        .to(support, { autoAlpha: 1, y: 0, duration: .52, ease: 'power2.out' }, 3.49)
         .to(backRows, { y: 0, opacity: 1, duration: .44, stagger: .085, ease: 'power2.out' }, 3.69)
         .to(before, { opacity: .22, duration: .17 }, 6.55)
         .to(before, { autoAlpha: 0, y: -7, duration: .30 }, 6.72)
@@ -93,10 +99,10 @@ function Record() {
         .to({}, { duration: .92 }, 7.08);
       const syncAccessibility = () => {
         const isBack = timeline.time() >= 3.02;
-        frontCopy.inert = isBack;
-        backCopy.inert = !isBack;
-        frontCopy.setAttribute('aria-hidden', String(isBack));
-        backCopy.setAttribute('aria-hidden', String(!isBack));
+        frontTitle.inert = isBack;
+        support.inert = !isBack;
+        frontTitle.setAttribute('aria-hidden', String(isBack));
+        support.setAttribute('aria-hidden', String(!isBack));
       };
       timeline.eventCallback('onUpdate', () => { update(); syncAccessibility(); });
       update();

@@ -14,16 +14,11 @@ const deskUrl = import.meta.env.PUBLIC_DESK_URL || '/login';
     <a class="top-cta" href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
   </header>
 
-  <div class="hero__copy" data-front-copy>
+  <div class="hero__copy" data-hero-copy>
     <h1><span class="copy-mask"><span data-copy-line>Make the</span></span><span class="copy-mask"><span data-copy-line>music.</span></span></h1>
-    <p data-copy-detail>Your operating manager for<br class="desktop-only" /> everything around it.</p>
-    <a class="primary-cta" data-copy-cta href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
-  </div>
-
-  <div class="hero__copy hero__copy--back" data-back-copy aria-hidden="true" inert>
-    <h2><span class="copy-mask"><span data-copy-line>Desk handles</span></span><span class="copy-mask"><span data-copy-line>the other side.</span></span></h2>
-    <p data-copy-detail>The work that keeps your<br class="desktop-only" /> career moving.</p>
-    <a class="primary-cta" data-copy-cta href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
+    <h2 class="hero__bridge" data-bridge>Desk handles<br />the other side.</h2>
+    <p class="hero__support" data-back-support aria-hidden="true" inert>All the work that keeps your<br class="desktop-only" /> career moving.</p>
+    <a class="primary-cta" href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
   </div>
 
   <div class="hero__stage">
