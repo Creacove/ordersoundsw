@@ -133,3 +133,33 @@ a:focus-visible,button:focus-visible{outline:3px solid #8055b7;outline-offset:5p
  .turn-control{bottom:2%;right:6%}
 }
 @media(max-width:360px){.hero__stage{right:5%;width:88%;height:32%}.turn-control{bottom:1.5%}}
+.hero__standin{position:absolute;inset:0;z-index:1;pointer-events:none;transition:opacity .22s ease,visibility .22s}
+.hero[data-ready="true"] .hero__standin{opacity:0;visibility:hidden}
+.hero__standin-sleeve{position:absolute;top:6.5%;left:10%;height:93%;aspect-ratio:1;z-index:2;overflow:hidden;background:#e6dbce;box-shadow:-3px 4px 6px #67574a35,12px 16px 22px #35271b3b;transform-origin:left center}
+.hero__standin-art{display:block;width:100%;height:100%;object-fit:cover}
+.hero__standin-logo{position:absolute;top:7.5%;left:9%;width:4%;height:auto}
+.hero__standin-sleeve span{position:absolute;bottom:6.5%;left:9%;font-size:clamp(7px,1.1vw,16px);letter-spacing:-.055em;color:#494039}
+.hero__standin-disc{position:absolute;top:9%;left:39.5%;height:88%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#cfc0ae 0 22%,transparent 22.5%),conic-gradient(from 18deg,#0d0b0f 0 12%,#403644 14%,#1c453d 18%,#515336 21%,#b87c88 24%,#1b1620 29% 53%,#35574c 60%,#737039 65%,#bd829c 70%,#101014 76% 100%);box-shadow:5px 13px 24px #21181255}
+.hero h2.hero__bridge{white-space:normal}
+@media(max-width:600px){
+ .hero__copy{left:5%;width:90%;text-align:center}
+ .hero__copy h1,.hero h2.hero__bridge,.hero__support{left:0;width:100%}
+ .hero h2.hero__bridge{left:50%;width:min(100%,320px);translate:-50% 0}
+ .hero__support{left:50%;width:250px;max-width:250px;translate:-50% 0}
+ .hero__copy>.primary-cta{left:50%;translate:-50% 0}
+ .desktop-only{display:none}
+ .hero__standin-sleeve{left:6%;top:7%;height:93%}
+ .hero__standin-disc{left:33%;top:8%;height:90%}
+ .hero__standin-sleeve span{font-size:7px}
+}
+@media(max-width:360px){
+ .hero__standin-sleeve{left:0;top:15%;height:74%}
+ .hero__standin-disc{left:35%;top:15%;height:72%}
+}
+
+/* The print and its shadow share the same transformed sleeve plane. */
+.sleeve-face{box-shadow:-5px -2px 9px #67574a33,-4px 5px 7px #67574a45,12px 18px 24px #35271b4d}
+.sleeve-face::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 1px 1px 1px #ffffff80,inset -1px -1px 2px #59463733}
+.sleeve-face--front>.sound-mark{left:54px;top:45px;width:24px;height:auto;transform:none}
+.sleeve-brand{left:54px;bottom:39px;font-size:16px}
+.hero:not([data-ready="true"]) .hero-canvas{visibility:hidden}

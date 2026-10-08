@@ -66,12 +66,12 @@ export const vinylFragment = `
   }
 `;
 
-export function softenPaper(shader) {
+// Preserve the approved print color under broad studio fill while retaining
+// a small lighting response as the paper turns away from the key light.
+export function lightPaper(shader) {
   shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <map_fragment>',
-    `#include <map_fragment>
-    float paperLuma = dot(diffuseColor.rgb, vec3(.2126,.7152,.0722));
-    diffuseColor.rgb = mix(vec3(paperLuma), diffuseColor.rgb, .67);
-    `
+    '#include <opaque_fragment>',
+    `outgoingLight = mix(diffuseColor.rgb, outgoingLight, .16);
+    #include <opaque_fragment>`
   );
 }

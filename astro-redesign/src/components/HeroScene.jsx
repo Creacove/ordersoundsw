@@ -4,9 +4,9 @@ import { Html, useTexture, RoundedBox, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three';
 import gsap from 'gsap';
 import SleeveContent from './SleeveContent';
-import { paperNormalTexture, vinylVertex, vinylFragment, softenPaper } from './recordMaterials';
+import { paperNormalTexture, vinylVertex, vinylFragment, lightPaper } from './recordMaterials';
 
-const BASE_YAW = -.20;
+const BASE_YAW = 0;
 const vinylBack = vinylFragment
   .replace('lobe(a,.55,.19) + lobe(a,-.59,.21)', 'lobe(a,2.59,.19) + lobe(a,-2.55,.21)')
   .replace('lobe(a,.51,.058) + lobe(a,-.66,.065)', 'lobe(a,2.63,.058) + lobe(a,-2.48,.065)')
@@ -16,9 +16,11 @@ function Record() {
   const assembly = useRef();
   const disc = useRef();
   const body = useRef();
+  const sleeve = useRef();
+  const placement = useRef();
   const frontVinyl = useRef();
   const backVinyl = useRef();
-  const { invalidate, gl, camera } = useThree();
+  const { invalidate, gl, camera, size } = useThree();
   const [front, back] = useTexture(['/hero/sleeve-front.webp', '/hero/sleeve-back.webp']);
   const normal = useMemo(paperNormalTexture, []);
   useLayoutEffect(() => {
@@ -29,6 +31,25 @@ function Record() {
     invalidate();
   }, [front, back, gl, invalidate]);
   useEffect(() => () => normal.dispose(), [normal]);
+
+  // The HTML first-paint composition owns layout. Register both real objects
+  // against those same rectangles so hydration and viewport changes cannot jump.
+  useLayoutEffect(() => {
+    const stage = gl.domElement.getBoundingClientRect();
+    const jacket = document.querySelector('.hero__standin-sleeve').getBoundingClientRect();
+    const vinyl = document.querySelector('.hero__standin-disc').getBoundingClientRect();
+    const zoom = camera.zoom;
+    const centerX = (jacket.left + vinyl.right) / 2;
+    const centerY = jacket.top + jacket.height / 2;
+    placement.current.position.set((centerX - stage.left - stage.width / 2) / zoom,
+      (stage.top + stage.height / 2 - centerY) / zoom, 0);
+    sleeve.current.position.x = (jacket.left + jacket.width / 2 - centerX) / zoom;
+    sleeve.current.scale.set(jacket.width / (3.74 * zoom), jacket.height / (3.74 * zoom), 1);
+    disc.current.position.set((vinyl.left + vinyl.width / 2 - centerX) / zoom,
+      (centerY - vinyl.top - vinyl.height / 2) / zoom, -.10);
+    disc.current.scale.setScalar(vinyl.width / (3.74 * zoom));
+    invalidate();
+  }, [size.width, size.height, camera, gl, invalidate]);
 
   useEffect(() => {
     const hero = document.querySelector('[data-hero]');
@@ -55,7 +76,7 @@ function Record() {
       const frontLines = [...frontTitle.querySelectorAll('[data-copy-line]')];
       const backRows = [...backFace.querySelectorAll('.sleeve-heading, .desk-rows li')];
       const largeSize = () => parseFloat(getComputedStyle(frontTitle).fontSize) * (innerWidth > 1000 ? .91 : 1);
-      hero.dataset.ready = 'true';
+
       const update = () => {
         const angle = assembly.current.rotation.y;
         frontFace.style.visibility = angle < Math.PI / 2 ? 'visible' : 'hidden';
@@ -86,9 +107,7 @@ function Record() {
           ease: 'power3.inOut',
         }, 2.60)
         .to(assembly.current.rotation, { y: Math.PI, duration: 1.18, ease: 'power3.inOut' }, 2.55)
-        .to(disc.current.position, { z: 1.2, duration: 1.18, ease: 'power3.inOut' }, 2.55)
-        .to(disc.current.scale, { x: 1.1, y: 1.1, z: 1.1, duration: 1.18, ease: 'power3.inOut' }, 2.55)
-        .to(assembly.current.position, { x: .10, duration: 1.18, ease: 'power3.inOut' }, 2.55)
+        .to(disc.current.position, { z: .24, duration: .30, ease: 'power2.inOut' }, 2.99)
         .to(contactShadow, { x: 36, duration: 1.18, ease: 'power3.inOut' }, 2.55)
         .fromTo(studioLight, { xPercent: -3, opacity: 1 }, { xPercent: 4, opacity: .72, duration: 1.18, ease: 'power2.inOut' }, 2.55)
         .to(support, { autoAlpha: 1, y: 0, duration: .52, ease: 'power2.out' }, 3.49)
@@ -123,7 +142,14 @@ function Record() {
         update();
         syncAccessibility();
       }
-      else if (!motion.matches) timeline.play();
+      // Wait for the canvas AND transformed HTML to paint before revealing them.
+      for (let frame = 0; frame < 3 && !cancelled; frame++) {
+        invalidate();
+        await new Promise(requestAnimationFrame);
+      }
+      if (cancelled) return;
+      hero.dataset.ready = 'true';
+      if (time === null && !motion.matches) timeline.play();
       if (import.meta.env.DEV) window.__deskHero = {
         seek: t => { timeline.pause().seek(t); update(); syncAccessibility(); },
         info: () => ({ time: timeline.time(), rotation: assembly.current.rotation.y, running: timeline.isActive() }),
@@ -145,8 +171,8 @@ function Record() {
     return () => { cancelled = true; timeline?.kill(); cleanupButton(); delete window.__deskHero; };
   }, [invalidate]);
 
-  return <group ref={assembly} position={[-.12,-.12,0]}>
-    <group ref={disc} position={[1.14,-.01,-.10]} rotation={[0,-.08,0]}>
+  return <group ref={placement}><group ref={assembly}>
+    <group ref={disc} position={[1.14,-.01,-.10]} rotation={[0,0,0]}>
       <mesh rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[1.87,1.87,.035,192]} /><meshStandardMaterial color="#0c0b0e" roughness={.3} metalness={.28} /></mesh>
       <mesh position={[0,0,.021]}><circleGeometry args={[1.862,192]} /><shaderMaterial ref={frontVinyl} uniforms={{ uTurn: { value: 0 } }} vertexShader={vinylVertex} fragmentShader={vinylFragment} /></mesh>
       <mesh position={[0,0,.026]}><circleGeometry args={[.62,96]} /><meshStandardMaterial color="#d7cbc0" roughness={.85} normalMap={normal} normalScale={[.15,.15]} /></mesh>
@@ -155,29 +181,28 @@ function Record() {
       <mesh position={[0,0,-.034]} rotation={[0,Math.PI,0]}><circleGeometry args={[.62,96]} /><meshStandardMaterial color="#d7cbc0" roughness={.85} normalMap={normal} normalScale={[.15,.15]} /></mesh>
       <mesh position={[0,0,-.039]} rotation={[0,Math.PI,0]}><circleGeometry args={[.049,32]} /><meshBasicMaterial color="#070609" /></mesh>
     </group>
-    <group position={[-.73,0,.14]} rotation={[0,BASE_YAW,0]}>
+    <group ref={sleeve} position={[-.73,0,.14]} rotation={[0,BASE_YAW,0]}>
       <RoundedBox ref={body} args={[3.74,3.74,.068]} radius={.008} smoothness={2}>
         <meshStandardMaterial color="#d3c5b8" roughness={.88} normalMap={normal} normalScale={[.15,.15]} />
       </RoundedBox>
       <mesh position={[0,0,.035]}><planeGeometry args={[3.724,3.724]} />
-        <meshStandardMaterial map={front} color="#f5f1f5" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={softenPaper} />
+        <meshStandardMaterial map={front} color="#ffffff" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={lightPaper} />
       </mesh>
       <mesh position={[0,0,-.035]} rotation={[0,Math.PI,0]}><planeGeometry args={[3.724,3.724]} />
-        <meshStandardMaterial map={back} color="#f5f1f5" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={softenPaper} />
+        <meshStandardMaterial map={back} color="#ffffff" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={lightPaper} />
       </mesh>
       <Html transform position={[0,0,.039]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="front" /></Html>
       <Html transform position={[0,0,-.039]} rotation={[0,Math.PI,0]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="back" /></Html>
     </group>
-  </group>;
+  </group></group>;
 }
 
 function ResponsiveCamera() {
   const { camera, size, invalidate } = useThree();
   useLayoutEffect(() => {
     // Stable world-space framing across independently laid out stage containers.
-    camera.position.set(0,.025,12);
-    const narrowFraming = window.innerWidth <= 360 ? 1.25 : 1;
-    camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan((2.10 * narrowFraming) / 12));
+    camera.position.set(0,0,12);
+    camera.zoom = size.height / 4.02;
     camera.updateProjectionMatrix();
     invalidate();
     const frame = requestAnimationFrame(() => invalidate());
@@ -187,8 +212,8 @@ function ResponsiveCamera() {
 }
 
 export default function HeroScene() {
-  return <Canvas className="hero-canvas" frameloop="demand" dpr={[1,1.75]}
-    camera={{ position:[0,.025,12], fov:20, near:.1, far:40 }}
+  return <Canvas orthographic className="hero-canvas" frameloop="demand" dpr={[1,1.75]}
+    camera={{ position:[0,0,12], zoom:100, near:.1, far:40 }}
     gl={{ antialias:true, alpha:true, powerPreference:'default' }}
     onCreated={({ gl }) => { gl.outputColorSpace=THREE.SRGBColorSpace; gl.toneMapping=THREE.NoToneMapping; }}>
     <ResponsiveCamera />

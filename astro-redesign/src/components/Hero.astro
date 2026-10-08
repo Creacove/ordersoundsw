@@ -16,13 +16,21 @@ const deskUrl = import.meta.env.PUBLIC_DESK_URL || 'https://desk.ordersounds.com
 
   <div class="hero__copy" data-hero-copy>
     <h1><span class="copy-mask"><span data-copy-line>Make the</span></span><span class="copy-mask"><span data-copy-line>music.</span></span></h1>
-    <h2 class="hero__bridge" data-bridge>Desk handles<br />the other side.</h2>
-    <p class="hero__support" data-back-support aria-hidden="true" inert>The work that keeps your<br class="desktop-only" /> career moving.</p>
+    <h2 class="hero__bridge" data-bridge>Desk handles the other side.</h2>
+    <p class="hero__support" data-back-support aria-hidden="true" inert>The work that keeps<br />your career moving.</p>
     <a class="primary-cta" href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
   </div>
 
   <div class="hero__stage">
     <div class="object-shadow" aria-hidden="true"></div>
+    <div class="hero__standin" aria-hidden="true">
+      <div class="hero__standin-disc"></div>
+      <div class="hero__standin-sleeve">
+        <img class="hero__standin-art" src="/hero/sleeve-front.webp" alt="" fetchpriority="high" />
+        <img class="hero__standin-logo" src="/hero/ordersounds-logo.png" alt="" />
+        <span>OrderSounds</span>
+      </div>
+    </div>
     <HeroScene client:only="react" />
   </div>
   <button type="button" class="turn-control" data-turn aria-label="Turn the record sleeve">Turn sleeve <span aria-hidden="true">↻</span></button>
