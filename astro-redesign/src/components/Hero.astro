@@ -1,55 +1,34 @@
 ---
 import HeroScene from './HeroScene.jsx';
+const deskUrl = import.meta.env.PUBLIC_DESK_URL || '/login';
 ---
 <section class="hero" data-hero>
-  <picture class="hero__environment" aria-hidden="true">
-    <source srcset="/hero/hero-environment.avif" type="image/avif" />
-    <img src="/hero/hero-environment.webp" alt="" fetchpriority="high" />
-  </picture>
+  <div class="studio" aria-hidden="true"><div class="studio__light"></div><div class="studio__floor"></div><div class="studio__leaves"></div></div>
 
   <header class="hero__nav">
     <a class="brand" href="/" aria-label="OrderSounds home">
-      <span class="brand__mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-      <strong>OrderSounds</strong>
+      <img class="brand__wordmark" src="/hero/ordersounds-logo.png" alt="" /><strong>OrderSounds</strong>
       <span class="brand__divider"></span>
       <span class="brand__desk">Desk</span>
     </a>
-    <a class="top-cta" href="#enter">Enter Desk <span aria-hidden="true">→</span></a>
+    <a class="top-cta" href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
   </header>
 
   <div class="hero__copy" data-front-copy>
-    <span class="eyebrow">DESK</span>
     <h1>Make the<br />music.</h1>
     <p>Your operating manager for<br class="desktop-only" /> everything around it.</p>
-    <a class="primary-cta" href="#enter">Enter Desk <span aria-hidden="true">→</span></a>
+    <a class="primary-cta" href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
   </div>
 
-  <div class="hero__copy hero__copy--back" data-back-copy aria-hidden="true">
-    <span class="eyebrow">DESK</span>
+  <div class="hero__copy hero__copy--back" data-back-copy aria-hidden="true" inert>
     <h2>Desk handles<br />the other side.</h2>
     <p>The work that keeps your<br class="desktop-only" /> career moving.</p>
-    <a class="primary-cta" href="#enter">Enter Desk <span aria-hidden="true">→</span></a>
+    <a class="primary-cta" href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
   </div>
 
   <div class="hero__stage">
-    <picture class="hero__poster" data-poster aria-hidden="true">
-      <source srcset="/hero/hero-poster.avif" type="image/avif" />
-      <img src="/hero/hero-poster.webp" alt="" />
-    </picture>
+    <div class="object-shadow" aria-hidden="true"></div>
     <HeroScene client:only="react" />
-
-    <div class="back-copy" data-sleeve-copy aria-hidden="true">
-      <div class="back-copy__label">DESK / TODAY</div>
-      <div class="back-row">
-        <span class="back-row__num">01&nbsp;&nbsp;&nbsp;/</span>
-        <div><strong>YOUR MOVE</strong><span class="before">Record the next Odaeshi story</span><span class="after">Repeat the personal story</span></div>
-      </div>
-      <div class="back-row"><span class="back-row__num">02&nbsp;&nbsp;&nbsp;/</span><div><strong>DESK IS HANDLING</strong><span>Research · planning · follow-through</span></div></div>
-      <div class="back-row">
-        <span class="back-row__num">03&nbsp;&nbsp;&nbsp;/</span>
-        <div><strong class="before">DESK IS WATCHING</strong><span class="before">Audience response · Lagos</span><strong class="after">RESULT</strong><span class="after">Personal story is leading</span></div>
-      </div>
-      <div class="back-row"><span class="back-row__num">04&nbsp;&nbsp;&nbsp;/</span><div><strong>NEEDS YOU</strong><span>Approve split confirmations</span></div></div>
-    </div>
   </div>
+  <button type="button" class="turn-control" data-turn aria-label="Turn the record sleeve">Turn sleeve <span aria-hidden="true">↻</span></button>
 </section>

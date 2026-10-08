@@ -9,11 +9,13 @@ const { title = 'Desk by OrderSounds', description = 'Your operating manager for
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f5f0ea" />
-    <link rel="preload" href="/hero/hero-environment.avif" as="image" type="image/avif" fetchpriority="high" />
-    <link rel="preload" href="/hero/hero-poster.avif" as="image" type="image/avif" fetchpriority="high" />
+    <link rel="preload" href="/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
     <title>{title}</title>
   </head>
   <body>
-    <slot />
+    <main><slot /></main>
   </body>
 </html>
