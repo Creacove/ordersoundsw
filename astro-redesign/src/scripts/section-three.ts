@@ -32,21 +32,17 @@ export function setupSectionThree(bundle:{left:number;top:number;width:number}){
    {x:0,y:0,scale:1,rotation:0,opacity:1,duration:.55},.58+i*.14);
  });
  tl.fromTo(find('.s3-lens'),{x:-35,y:20,rotation:-5},{x:30,y:-10,rotation:3,opacity:.42,duration:.65,ease:'power2.inOut'},1.28)
-  .to(lines[0],{opacity:.5,duration:.6},1.28)
   .fromTo('.journey-focus-light',{opacity:0,xPercent:9},{opacity:.8,xPercent:-6,yPercent:-12,duration:1.1,ease:'power2.inOut'},1.28)
   .to('.studio-vignette',{opacity:.7,duration:.55},1.92)
-  .to(find('.section-three__copy>p'),{opacity:.36,duration:.5},1.92)
   .to('.journey-focus-light',{opacity:.2,duration:.4},2.5)
-  .fromTo(root.querySelectorAll('.s3-paper:not(.s3-action) .s3-paper-copy'),{opacity:.5},{opacity:1,duration:.42},1.28)
   .to(find('.s3-stack'),{opacity:.32,duration:.6},1.28)
   .to(find('.s3-stack'),{opacity:.08,duration:.45},1.92)
   .to(find('.s3-lens'),{opacity:.08,duration:.45},1.92)
-  .to(root.querySelectorAll('.s3-paper:not(.s3-action) .s3-paper-copy'),{opacity:.5,duration:.45},1.92)
   .fromTo(find('.s3-decision'),{y:25},{opacity:1,y:0,duration:.55},1.92)
   .fromTo(find('.s3-decision strong'),{y:8,opacity:0},{y:0,opacity:1,duration:.4},2.08)
   .fromTo(find('.s3-action'),{y:40},{opacity:1,y:0,duration:.42},2.48)
   .fromTo(find('.s3-action strong'),{y:6,opacity:0},{y:0,opacity:1,duration:.3},2.6);
- const control=cueChapter(chapter,tl,load,'top 70%',[{at:'top 70%',time:1.25},{at:'top 40%',time:1.9},{at:'top 10%',time:tl.duration()}]);
+ const control=cueChapter(chapter,tl,load,'top 70%',[{at:'top 70%',time:1.25},{at:'top 35%',time:1.9},{at:'top 10%',time:tl.duration()}]);
  if(import.meta.env.DEV){
   const states={handoff:.14,signals:.46,focus:.65,decision:.82,final:1};
   const seek=async(p:number)=>{await control.seek(p);scrollTo(0,chapter.offsetTop);};

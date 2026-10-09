@@ -81,20 +81,25 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
   const r=host.getBoundingClientRect();
   const heroHost=host.parentElement?.classList.contains('chapter--hero');
   const signalHost=host.parentElement?.classList.contains('chapter--signals');
-  const bottom=innerHeight*(mobile?(heroHost?.52:signalHost?.42:.37):tablet?(heroHost?.52:.4):1);
-  host.style.clipPath=`inset(${Math.max(0,90-r.top)}px 0 ${Math.max(0,r.bottom-bottom)}px 0)`;
+  const bottom=innerHeight*(mobile?(heroHost?.52:signalHost?.42:.37):tablet?(heroHost?.52:.4):heroHost?.9:.72);
+  const right=mobile||tablet||heroHost?0:innerWidth*.60;
+  if(mobile||tablet){host.style.clipPath=`inset(${Math.max(0,110-r.top)}px 0 ${Math.max(0,r.bottom-bottom)}px 0)`;host.style.maskImage='';return;}
+  const topFade=Math.max(0,(heroHost?70:110)-r.top);
+  const bottomFade=Math.min(r.height,bottom-r.top);
+  host.style.clipPath=`inset(0 ${right}px 0 0)`;
+  host.style.maskImage=`linear-gradient(to bottom,transparent ${topFade}px,#000 ${topFade+42}px,#000 ${Math.max(topFade+42,bottomFade-42)}px,transparent ${bottomFade}px)`;
  });
  const readingWindow=ScrollTrigger.create({trigger:'.hero-journey',start:'top top',end:'bottom bottom',onUpdate:clipCopy,onRefresh:clipCopy});
  clipCopy();
  // Only this camera is scrubbed. Object/light/copy timelines run on time.
- const camera=gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.chapter--work',start:'top 68%',endTrigger:'.chapter--signals',end:'top top',scrub:.45}})
-  .to('.journey-camera',{scale:1.045,xPercent:-1.2,yPercent:-.4,duration:1})
-  .to('.journey-camera',{scale:1.085,xPercent:-2.2,yPercent:-.9,duration:1});
+ const camera=gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.hero-journey',start:'top top',end:'bottom bottom',scrub:.3}})
+  .fromTo('.journey-camera',{yPercent:0},{yPercent:mobile?-10:-15,duration:1},0)
+  .fromTo('.studio-atmosphere',{yPercent:0},{yPercent:mobile?-14:-22,duration:1},0);
  if(import.meta.env.DEV){
   const states={initial:.22,scattered:.57,gathering:.78,final:1};
   const seek=async(p:number)=>{await control.seek(p);scrollTo(0,chapter.offsetTop);};
   (window as any).__sectionTwo={seek,info:()=>({time:tl.time(),duration:tl.duration(),state:chapter.dataset.state})};
   const state=new URLSearchParams(location.search).get('s2');if(state&&state in states)void seek(states[state as keyof typeof states]);
  }
- return()=>{readingWindow.kill();hosts.forEach(host=>host.style.clipPath='');control.dispose();cleanupThree();camera.scrollTrigger?.kill();camera.kill();hero.removeEventListener('desk:ready',sync);hero.append(copy);section.prepend(workCopy);signals.prepend(signalCopy);hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:0}}));};
+ return()=>{readingWindow.kill();hosts.forEach(host=>{host.style.clipPath='';host.style.maskImage='';});control.dispose();cleanupThree();camera.scrollTrigger?.kill();camera.kill();hero.removeEventListener('desk:ready',sync);hero.append(copy);section.prepend(workCopy);signals.prepend(signalCopy);hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:0}}));};
 });
