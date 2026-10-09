@@ -1,9 +1,14 @@
-# Section 3 handoff
+# Section 3 — production handoff
 
-This folder is the complete design/asset handoff for homepage Section 3.
+This folder is the authoritative handoff for Homepage Section 3.
 
-Start with `SECTION3_IMPLEMENTATION.md`.
+Read:
+1. `SECTION3_IMPLEMENTATION.md`
+2. `asset-manifest.json`
+3. `CODEX_TASK.md`
 
-The production concept is locked: **The whole picture. One clear move.**
+Production images live in `astro-redesign/public/section3/`.
 
-The Section 2 final stack is reused; Section 3 introduces only three signal slips, one optical lens, a decision strip and an action slip. All important copy is rendered as HTML/CSS in the website.
+There is intentionally no storyboard dependency. Codex must compose the section from the individual production assets and judge continuity against the existing live Section 2 final state.
+
+Core concept: **The whole picture. One clear move.**

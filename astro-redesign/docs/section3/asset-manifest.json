@@ -1,46 +1,59 @@
 {
   "section": "homepage-section-3",
+  "status": "production-locked",
   "concept": "The whole picture. One clear move.",
+  "no_storyboard_dependency": true,
   "visible_copy": {
     "eyebrow": "YOUR MANAGER",
     "headline": "The whole picture. One clear move.",
     "support": "Desk looks across your career and decides what deserves your attention now."
   },
-  "signals": [
-    {
-      "source": "Marketing",
-      "value": "Personal stories are leading",
-      "label": "CONTENT RESPONSE"
-    },
-    {
-      "source": "Releases",
-      "value": "4 weeks",
-      "label": "NEXT RELEASE"
-    },
-    {
-      "source": "Business",
-      "value": "₦250k",
-      "label": "WORKING BUDGET"
-    }
-  ],
-  "decision": {
-    "label": "WHAT MATTERS NOW",
-    "value": "Lead with the story.",
-    "support": "Before spending on reach."
-  },
-  "action": {
-    "label": "YOUR MOVE",
-    "value": "Record the story behind the hook.",
-    "support": "20–30 sec · vertical · one take"
+  "reuse": {
+    "handled_stack": "/section2/handled-stack.webp",
+    "exact_logo": "/section2/ordersounds-logo-source.png"
   },
   "assets": {
-    "bound_stack_reuse": "/section2/handled-stack.webp",
+    "stack_unbound": "/section3/stack-unbound.webp",
+    "band_blank": "/section3/band-blank.webp",
     "signal_content": "/section3/signal-content.webp",
     "signal_timing": "/section3/signal-timing.webp",
     "signal_budget": "/section3/signal-budget.webp",
-    "optical_lens": "/section3/optical-lens.png",
-    "decision_strip": "/section3/decision-strip.webp",
-    "action_slip": "/section3/action-slip.webp",
-    "logo_source": "/section2/ordersounds-logo-source.png"
-  }
+    "optical_lens": "/section3/optical-lens.webp",
+    "action_slip": "/section3/action-slip.webp"
+  },
+  "html_copy": {
+    "signals": [
+      {
+        "value": "Personal stories are leading",
+        "label": "CONTENT RESPONSE"
+      },
+      {
+        "value": "4 weeks",
+        "label": "NEXT RELEASE"
+      },
+      {
+        "value": "₦250k",
+        "label": "WORKING BUDGET"
+      }
+    ],
+    "decision": {
+      "label": "WHAT MATTERS NOW",
+      "value": "Lead with the story.",
+      "support": "Before spending on reach."
+    },
+    "action": {
+      "label": "YOUR MOVE",
+      "value": "Record the story behind the hook.",
+      "support": "20–30 sec · vertical · one take"
+    }
+  },
+  "rules": [
+    "All important copy is live HTML/CSS.",
+    "No generated logo may be used. Use the exact Section 2 logo source only.",
+    "No storyboard or composite image is used in production.",
+    "No full app screenshot or fake dashboard.",
+    "Section 3 visually inherits the final Section 2 handled stack and environment.",
+    "Use GSAP/DOM/CSS; no new WebGL scene.",
+    "Do not start Section 4."
+  ]
 }

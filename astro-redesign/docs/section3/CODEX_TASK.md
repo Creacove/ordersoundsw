@@ -1,25 +1,50 @@
-# Codex task — Build Homepage Section 3
+# Codex task — implement Homepage Section 3
 
-Work on branch `codex/astro-hero-parity`.
+Branch: `codex/astro-hero-parity`
 
-Before editing:
-1. Pull latest.
-2. Read `astro-redesign/docs/section3/SECTION3_IMPLEMENTATION.md` in full.
-3. Inspect `astro-redesign/docs/section3/SECTION3_STORYBOARD.jpg` and the four individual storyboard frames.
-4. Inspect the production assets in `astro-redesign/public/section3/`.
-5. Preserve Sections 1–2. Do not redesign them.
+## Start here
+1. Pull latest branch.
+2. Read `astro-redesign/docs/section3/SECTION3_IMPLEMENTATION.md` completely.
+3. Read `astro-redesign/docs/section3/asset-manifest.json`.
+4. Inspect each file in `astro-redesign/public/section3/` individually.
+5. Inspect the existing Section 2 implementation and its final state in the browser.
+6. Do not redesign Sections 1–2.
 
-Implement only Section 3 and its transition from the completed Section 2 state.
+## Build
+Implement Section 3 only.
 
-Core story:
-`handled work → relevant signals → focus → management decision → exact human move`
+The locked story is:
 
-Do not use a dashboard/app screenshot. Do not create a new visual world. Reuse the exact Section 2 handled stack and the same environment.
+`Section 2 handled stack → band unlocks → 3 relevant signals emerge from the same work → optical material focuses them → Desk makes one judgment → one exact human action comes forward`.
 
-Use semantic HTML for every important word/value. The raster assets are physical materials only.
+Visible headline:
+`The whole picture. One clear move.`
 
-Create deterministic dev states (`handoff`, `signals`, `focus`, `decision`) and Playwright screenshots at 1536×864. Iterate visually until the section feels like a continuous authored sequence from Section 2.
+Do not build a dashboard, app screenshot, browser mockup, new paper family, or new visual universe.
 
-Run `npm run build` before stopping.
+Do not use a storyboard/composite image in the page.
 
-Do not start Section 4.
+All important text must be live HTML/CSS.
+
+Use the exact user logo only from:
+`/section2/ordersounds-logo-source.png`
+
+Never regenerate or approximate the logo.
+
+## Implementation requirements
+- Astro/HTML/CSS + GSAP ScrollTrigger.
+- No new WebGL scene for Section 3.
+- Reuse the exact Section 2 final stack for the initial handoff.
+- Crossfade into `stack-unbound.webp + band-blank.webp + exact logo` only after pixel matching.
+- Use the individual assets in `/public/section3/`.
+- Decision strip can be CSS/HTML black material; do not add another raster just for a black rectangle.
+- Add deterministic dev states: `handoff`, `signals`, `focus`, `decision`, `final`.
+- Capture 1536×864 Playwright screenshots for those states.
+- Tune composition by comparing with the actual current Sections 1–2 in the same browser session.
+- Implement tablet/mobile intentionally.
+- Implement prefers-reduced-motion.
+- Keep image quality crisp and preserve alpha.
+- Run `npm run build`.
+- Do not start Section 4.
+
+Do not stop after wiring the files together. Render, inspect, tune, rerender until Section 3 looks like the same creative team built Sections 1–3.
