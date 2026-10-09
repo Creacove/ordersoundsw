@@ -1,0 +1,46 @@
+{
+  "section": "homepage-section-3",
+  "concept": "The whole picture. One clear move.",
+  "visible_copy": {
+    "eyebrow": "YOUR MANAGER",
+    "headline": "The whole picture. One clear move.",
+    "support": "Desk looks across your career and decides what deserves your attention now."
+  },
+  "signals": [
+    {
+      "source": "Marketing",
+      "value": "Personal stories are leading",
+      "label": "CONTENT RESPONSE"
+    },
+    {
+      "source": "Releases",
+      "value": "4 weeks",
+      "label": "NEXT RELEASE"
+    },
+    {
+      "source": "Business",
+      "value": "₦250k",
+      "label": "WORKING BUDGET"
+    }
+  ],
+  "decision": {
+    "label": "WHAT MATTERS NOW",
+    "value": "Lead with the story.",
+    "support": "Before spending on reach."
+  },
+  "action": {
+    "label": "YOUR MOVE",
+    "value": "Record the story behind the hook.",
+    "support": "20–30 sec · vertical · one take"
+  },
+  "assets": {
+    "bound_stack_reuse": "/section2/handled-stack.webp",
+    "signal_content": "/section3/signal-content.webp",
+    "signal_timing": "/section3/signal-timing.webp",
+    "signal_budget": "/section3/signal-budget.webp",
+    "optical_lens": "/section3/optical-lens.png",
+    "decision_strip": "/section3/decision-strip.webp",
+    "action_slip": "/section3/action-slip.webp",
+    "logo_source": "/section2/ordersounds-logo-source.png"
+  }
+}
