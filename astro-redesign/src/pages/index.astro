@@ -2,12 +2,14 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import SectionTwo from '../components/SectionTwo.astro';
+import SectionThree from '../components/SectionThree.astro';
 import StudioLight from '../components/StudioLight.astro';
 ---
 <BaseLayout>
-  <main class="hero-journey"><div class="hero-journey__sticky">
+  <main class="hero-journey"><div class="s3-preload" aria-hidden="true" style="position:absolute;top:175svh;width:1px;height:1px"></div><div class="hero-journey__sticky">
     <StudioLight />
     <Hero />
     <SectionTwo />
+    <SectionThree />
   </div></main>
 </BaseLayout>

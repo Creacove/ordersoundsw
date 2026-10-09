@@ -1,3 +1,4 @@
+import { setupSectionThree } from './section-three';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
@@ -34,7 +35,7 @@ Promise.all(images.map(image => image.decode().catch(() => {}))).then(() => {
   gsap.set(prop('record'),{visibility:'hidden'});
   gsap.set(section.querySelector('.section-two__environment'),{opacity:0});
   gsap.set(section.querySelectorAll('.s2-line,.section-two__eyebrow'),{opacity:0,y:18});
-  const timeline = gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.hero-journey',start:'top top',end:'bottom bottom',scrub:.65,invalidateOnRefresh:true}});
+  const timeline = gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.hero-journey',start:'top top',end:()=>'+='+innerHeight*1.85,scrub:.65,invalidateOnRefresh:true}});
   timeline.to(bridge,{progress:1,duration:1,onUpdate:sync},0)
    .to(copy,{opacity:0,y:-24,duration:.09},.01)
    .to(hero.querySelector('.turn-control'),{autoAlpha:0,duration:.045},0)
@@ -72,6 +73,7 @@ Promise.all(images.map(image => image.decode().catch(() => {}))).then(() => {
    .to(stage,{opacity:0,duration:.09,ease:'power2.inOut'},.82)
    .fromTo(prop('handled'),{opacity:0,y:5},{opacity:1,y:0,duration:.05},.88)
    .to(prop('handled'),{x:()=> {const area=section.getBoundingClientRect();return area.width*(mobile?.5:context.conditions?.tablet?.55:.72)-(stack.left+stack.width*.5);},y:()=>-innerHeight*(mobile?.07:.13),scale:mobile?1.48:1.22,duration:.10,ease:'power2.inOut'},.89);
+  const cleanupThree=setupSectionThree(timeline);
   sync();
   if(import.meta.env.DEV){
    const states = {initial:.17,scattered:.67,gathering:.83,final:1};
@@ -80,6 +82,6 @@ Promise.all(images.map(image => image.decode().catch(() => {}))).then(() => {
    (window as any).__sectionTwo={seek};
    if(state && state in states) seek(states[state as keyof typeof states]);
   }
-  return () => {hero.removeEventListener('desk:ready',sync);hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:0}}));copy.inert=false;section.inert=false;};
+  return () => {cleanupThree();hero.removeEventListener('desk:ready',sync);hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:0}}));copy.inert=false;section.inert=false;};
  });
 });

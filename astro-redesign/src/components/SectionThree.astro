@@ -1,0 +1,73 @@
+---
+const signals = [
+ {id:'timing',value:'4 weeks',label:'NEXT RELEASE'},
+ {id:'content',value:'Personal stories are leading',label:'CONTENT RESPONSE'},
+ {id:'budget',value:'₦250k',label:'WORKING BUDGET'},
+];
+---
+<section class="section-three" aria-labelledby="section-three-title" inert>
+ <div class="section-three__copy">
+  <span class="s3-eyebrow">YOUR MANAGER</span>
+  <h2 id="section-three-title">The whole picture.<br />One clear move.</h2>
+  <p>Desk looks across your career and decides what deserves your attention now.</p>
+ </div>
+ <div class="s3-stage">
+  <div class="s3-stack"><img data-src="/section3/stack-unbound.webp" width="1448" height="1086" alt="" /></div>
+  <div class="s3-band"><img data-src="/section3/band-blank.webp" width="1448" height="1086" alt="" /><img class="s3-logo" data-src="/section2/ordersounds-logo-source.png" width="225" height="225" alt="OrderSounds" /></div>
+  {signals.map(({id,value,label})=><div class={`s3-paper s3-${id}`}><img data-src={`/section3/signal-${id}.webp`} width="1448" height="1086" alt="" /><div class="s3-paper-copy"><strong>{value}</strong><span>{label}</span></div></div>)}
+  <img class="s3-lens" data-src="/section3/optical-lens.webp" width="1448" height="1086" alt="" />
+  <div class="s3-decision"><span>WHAT MATTERS NOW</span><strong>Lead with the story.</strong><p>Before spending on reach.</p></div>
+  <div class="s3-paper s3-action"><img data-src="/section3/action-slip.webp" width="1448" height="1086" alt="" /><div class="s3-paper-copy"><span>YOUR MOVE</span><strong>Record the story<br />behind the hook.</strong><p>20–30 sec · vertical · one take</p></div></div>
+ </div>
+</section>
+<style is:global>
+.hero-journey{height:435svh}
+.section-three{position:absolute;inset:0;pointer-events:none;visibility:hidden;z-index:11}
+.section-three__copy{position:absolute;left:7.7%;top:28%;width:32%;z-index:20}
+.s3-eyebrow{display:block;color:#a044e3;font-size:17px;font-weight:550;margin-bottom:18px}
+.section-three h2{font-size:clamp(42px,4.05vw,70px);line-height:1;letter-spacing:-.058em;font-weight:570;margin:0}
+.section-three__copy>p{font-size:clamp(18px,1.5vw,24px);line-height:1.4;letter-spacing:-.025em;color:#77716c;max-width:360px;margin-top:26px}
+.s3-stage{position:absolute;inset:0}
+.s3-stack,.s3-band,.s3-paper,.s3-lens{position:absolute;aspect-ratio:4/3}
+.s3-stack,.s3-band{left:47%;top:24%;width:48%;filter:drop-shadow(4px 12px 9px #39291e25)}
+.s3-stack{z-index:1}.s3-band{z-index:2}
+.s3-stack>img,.s3-paper>img,.s3-band>img:not(.s3-logo){display:block;width:100%;height:auto}.s3-lens{display:block;height:auto}
+.s3-band .s3-logo{position:absolute;left:46%;top:48%;width:7%;mix-blend-mode:screen;transform:rotate(5deg)}
+.s3-paper{filter:drop-shadow(2px 3px 2px #39291e20) drop-shadow(5px 12px 9px #39291e20)}
+.s3-timing{left:43%;top:16%;width:26%;z-index:3}
+.s3-content{left:63%;top:12%;width:32%;z-index:4}
+.s3-budget{left:73%;top:35%;width:25%;z-index:5}
+.s3-paper-copy{position:absolute;left:24%;top:37%;width:61%;transform:rotate(-9deg)}
+.s3-paper-copy strong{display:block;font-size:clamp(21px,2.05vw,34px);line-height:1.08;font-weight:550;letter-spacing:-.045em}
+.s3-paper-copy span,.s3-decision>span{display:block;font-size:clamp(9px,.7vw,12px);font-weight:550;letter-spacing:.1em;margin-top:12px}
+.s3-content .s3-paper-copy{left:20%;top:36%;width:59%;transform:rotate(8deg)}
+.s3-content strong{font-size:clamp(20px,1.65vw,28px)}
+.s3-budget .s3-paper-copy{left:35%;top:32%;width:42%;transform:rotate(-9deg)}
+.s3-lens{left:46%;top:14%;width:49%;z-index:6;pointer-events:none}
+.s3-decision{position:absolute;left:48%;top:46%;width:38%;padding:24px 32px 27px;background:#1c191d;color:#fff9f2;z-index:7;transform:rotate(-3deg);box-shadow:2px 4px 3px #35251b25,8px 15px 20px #35251b26}
+.s3-decision>span{margin:0 0 12px;color:#d2c4d8}
+.s3-decision strong{font-size:clamp(24px,2.4vw,38px);font-weight:500;letter-spacing:-.04em;line-height:1.05}
+.s3-decision p{font-size:clamp(14px,1.1vw,18px);margin:8px 0 0;color:#d3cbc6}
+.s3-action{left:52%;top:53%;width:40%;z-index:8}
+.s3-action .s3-paper-copy{left:22%;top:32%;width:60%;transform:rotate(10deg)}
+.s3-action .s3-paper-copy span{margin:0 0 10px;color:#6a507a}
+.s3-action strong{font-size:clamp(22px,2vw,34px)}
+.s3-action p{font-size:clamp(12px,.92vw,16px);letter-spacing:-.02em;margin:12px 0 0;white-space:nowrap}
+@media(max-width:1000px){
+ .section-three__copy{left:7%;top:14%;width:86%}.section-three h2{font-size:clamp(38px,6vw,60px)}
+ .section-three__copy>p{font-size:18px;max-width:470px;margin-top:16px}.s3-eyebrow{font-size:13px;margin-bottom:12px}
+ .s3-stage{top:36%;height:62%}.s3-timing{left:8%;top:0;width:48%}.s3-content{left:43%;top:-3%;width:55%}.s3-budget{left:51%;top:29%;width:46%}
+ .s3-lens{left:14%;top:14%;width:78%}.s3-decision{left:12%;top:47%;width:70%;padding:20px 25px}.s3-action{left:16%;top:56%;width:76%}
+ .s3-paper-copy strong{font-size:27px}.s3-content strong{font-size:23px}.s3-paper-copy span,.s3-decision>span{font-size:10px}.s3-action strong{font-size:28px}.s3-action p{font-size:13px}
+}
+@media(max-width:600px){
+ .section-three__copy{top:13%;width:88%}.section-three h2{font-size:clamp(34px,9.1vw,48px)}.section-three__copy>p{font-size:16px;line-height:1.35;max-width:335px;margin-top:14px}
+ .s3-stage{top:38%;height:60%}.s3-timing{left:-5%;top:0;width:69%}.s3-content{left:31%;top:13%;width:76%}.s3-budget{left:0;top:25%;width:68%}
+ .s3-paper-copy strong{font-size:25px}.s3-content strong{font-size:22px}.s3-paper-copy span{font-size:8px;margin-top:8px}
+ .s3-lens{left:0;top:12%;width:100%}.s3-decision{left:7%;top:47%;width:86%;padding:19px 22px;box-sizing:border-box}.s3-decision strong{font-size:28px}.s3-decision p{font-size:14px}
+ .s3-action{left:-7%;top:62%;width:112%}.s3-action strong{font-size:25px}.s3-action p{font-size:12px;margin-top:9px}.s3-action .s3-paper-copy span{margin-bottom:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ .hero-journey{height:auto}.section-three{position:relative;height:100svh;min-height:850px;visibility:visible;background:#eee6dc}.s3-band{display:none}.s3-stack{opacity:.35}.s3-lens{opacity:.18}.s3-paper:not(.s3-action){opacity:1}.s3-paper:not(.s3-action) .s3-paper-copy{opacity:.65}
+}
+</style>
