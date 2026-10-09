@@ -17,6 +17,7 @@ const props = [
     <p class="sr-only">Desk helps manage releases, marketing, business, opportunities and what comes next.</p>
   </div>
   <div class="section-two__stage" aria-hidden="true">
+    <div class="s2-bundle-contact" aria-hidden="true"></div>
     {props.map(([id,file,width,height]) => <div class={`s2-prop s2-${id}`} data-s2={id}>
       <img src={`/section2/${file}.webp`} width={width} height={height} alt="" decoding="async" loading="eager" />
     </div>)}
@@ -46,6 +47,16 @@ const props = [
  .s2-next{left:76%;top:61%;width:28%;z-index:8}
  .s2-handled{left:58%;top:48%;width:40%;z-index:9;opacity:0;filter:drop-shadow(3px 12px 8px #382b2029)}
  .hero-journey .sleeve-brand,.hero-journey .sleeve-face--front .sound-mark{opacity:var(--s2-brand-opacity,1)}
+ .s2-bundle-contact{position:absolute;left:52%;top:83%;width:39%;height:8%;background:radial-gradient(ellipse,#49332538 0%,#4933251a 35%,transparent 72%);opacity:0;z-index:1;transform:scaleX(.7);pointer-events:none}
+ .s2-releases{filter:drop-shadow(3px 6px 5px #3d2d201c)}
+ .s2-marketing{filter:drop-shadow(5px 8px 7px #3d2d201c)}
+ .s2-business{filter:drop-shadow(5px 7px 5px #3d2d2024)}
+ .s2-opportunities{filter:drop-shadow(2px 4px 2px #3d2d2029) drop-shadow(7px 11px 8px #3d2d2017)}
+ .s2-next{filter:drop-shadow(2px 5px 3px #3d2d2024) drop-shadow(6px 10px 8px #3d2d2017)}
+ .s2-handled{filter:drop-shadow(2px 4px 2px #3d2d202e) drop-shadow(7px 12px 8px #3d2d2024)}
+ @media(max-width:1000px){.s2-bundle-contact{left:17%;top:64%;width:72%;height:8%}}
+ @media(max-width:600px){.s2-bundle-contact{left:17%;top:63%;width:66%;height:7%}}
+ @media(prefers-reduced-motion:reduce){.s2-bundle-contact{opacity:.6}}
  .s2-line{display:block}.hero-journey .hero__stage{transform-origin:0 0}.hero-journey .hero__copy{z-index:12}
  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
  @media(max-width:1000px){

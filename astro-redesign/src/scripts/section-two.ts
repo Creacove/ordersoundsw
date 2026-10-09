@@ -41,6 +41,15 @@ Promise.all(images.map(image => image.decode().catch(() => {}))).then(() => {
    .to(stage,{x,y,scale,duration:.20,ease:'power2.inOut'},.01)
    .to(section.querySelector('.section-two__environment'),{opacity:1,duration:.18},.02)
    .to(section.querySelectorAll('.section-two__eyebrow,.s2-line'),{opacity:1,y:0,duration:.08,stagger:.018,ease:'power2.out'},.08);
+  // One light field spans both sections. Broad daylight drifts with the turn;
+  // the floor reflection opens during the spread, then quiets at resolution.
+  timeline.to('.studio-daylight',{xPercent:6,yPercent:-2,rotation:2,duration:.66},0)
+   .to('.studio-shade',{xPercent:4,yPercent:2,opacity:.7,duration:.66},0)
+   .to('.studio-refraction',{opacity:.65,xPercent:5,duration:.28,ease:'power2.out'},.16)
+   .to('.studio-daylight',{xPercent:9,rotation:0,opacity:.8,duration:.23,ease:'power2.inOut'},.72)
+   .to('.studio-shade',{opacity:.42,xPercent:6,duration:.23},.72)
+   .to('.studio-refraction',{opacity:.2,xPercent:9,duration:.23},.72)
+   .to('.s2-bundle-contact',{opacity:.85,scaleX:1,duration:.10,ease:'power2.out'},.89);
   // The same sleeve travels through the scene; only its branding clears.
 
   const angles = [-5,4,3,-6,3];

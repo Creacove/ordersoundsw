@@ -1,0 +1,21 @@
+<div class="studio-atmosphere" aria-hidden="true">
+  <div class="studio-daylight"><div></div></div>
+  <div class="studio-shade"><div></div></div>
+  <div class="studio-refraction"><div></div></div>
+</div>
+<style is:global>
+ .studio-atmosphere{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
+ .studio-daylight,.studio-shade,.studio-refraction{position:absolute;inset:-8%;pointer-events:none}
+ .studio-daylight>div{width:100%;height:100%;background:linear-gradient(126deg,transparent 22%,#fff9e900 28%,#fff9e959 38%,#fffdf045 48%,transparent 58%);opacity:.65;transform:translateX(-3%)}
+ .studio-shade>div{width:100%;height:100%;background:radial-gradient(ellipse 22% 9% at 3% 73%,#54433729,transparent 75%),radial-gradient(ellipse 15% 7% at 13% 84%,#54433724,transparent 75%),linear-gradient(127deg,transparent 16%,#5b493217 22%,transparent 29%);opacity:.55;transform:translate(-2%,1%)}
+ .studio-refraction{inset:54% -10% -12%;opacity:0;transform:translateX(-5%)}
+ .studio-refraction>div{height:100%;background:radial-gradient(ellipse 28% 5% at 66% 54%,#fff9e4a3,transparent 75%),radial-gradient(ellipse 31% 8% at 65% 57%,#baa0df3b,transparent 76%),radial-gradient(ellipse 34% 5% at 62% 62%,#efd2af4a,transparent 76%)}
+ @media(prefers-reduced-motion:no-preference){
+  .studio-daylight>div{animation:studio-day-arrive 8s cubic-bezier(.25,.1,.25,1) both}
+  .studio-shade>div{animation:studio-shade-arrive 8s cubic-bezier(.25,.1,.25,1) both}
+ }
+ @keyframes studio-day-arrive{0%{transform:translateX(-3%);opacity:.55}46%{opacity:.85}100%{transform:translateX(2%);opacity:.65}}
+ @keyframes studio-shade-arrive{from{transform:translate(-2%,1%);opacity:.4}to{transform:translate(1%,0);opacity:.55}}
+ @media(max-width:600px){.studio-atmosphere{opacity:.7}}
+ @media(prefers-reduced-motion:reduce){.studio-daylight>div,.studio-shade>div{animation:none;transform:none}.studio-refraction{display:none}}
+</style>
