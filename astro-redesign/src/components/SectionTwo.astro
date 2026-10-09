@@ -1,0 +1,88 @@
+---
+const logoMarks = {business:[[26.2,10.9,8,8]],marketing:[],opportunities:[[36.5,31,12,-9],[23.5,26,10,15]],next:[[31,18,16,4]],releases:[[17,89,7,-10]],handled:[[33,51,11,14]]};
+const props = [
+  ['releases','releases-booklet',1000,1250],
+  ['marketing','marketing-sheet',1000,1250],
+  ['business','business-sheet',1000,1250],
+  ['opportunities','opportunities-pass',1000,1250],
+  ['next','whats-next-note',1000,1000],
+  ['record','record-sleeve-vinyl',1000,750],
+  ['handled','handled-stack',1000,1250],
+];
+---
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="s2-logo-ink" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .63 0 0 0 0 .16 0 0 0 0 .91 3 0 0 0 -.4" /></filter></defs></svg>
+<section class="section-two" aria-labelledby="section-two-title">
+  <img class="section-two__environment" src="/section2/section2-environment.webp" width="1672" height="941" alt="" />
+  <div class="section-two__copy">
+    <span class="section-two__eyebrow">DESK</span>
+    <h2 id="section-two-title">All the work<br />around the<br />music. Handled.</h2>
+    <p class="sr-only">Desk helps manage releases, marketing, business, opportunities and what comes next.</p>
+  </div>
+  <div class="section-two__stage" aria-hidden="true">
+    {props.map(([id,file,width,height]) => <div class={`s2-prop s2-${id}`} data-s2={id}>
+      <img src={`/section2/${file}.webp`} width={width} height={height} alt="" decoding="async" loading="eager" />
+      {id === "marketing" && <span class="s2-marketing-title">MARKETING</span>}
+      {(logoMarks[id] || []).map(([x,y,w,angle]) => <span class={`s2-logo-patch ${id==='handled'?'s2-logo-patch--dark':''}`} style={`left:${x}%;top:${y}%;width:${w}%;transform:translate(-50%,-50%) rotate(${angle}deg)`}><img src="/section2/ordersounds-logo-source.png" width="225" height="225" alt="" /></span>)}
+    </div>)}
+  </div>
+</section>
+<script>
+  import '../scripts/section-two';
+</script>
+<style is:global>
+ .hero-journey{position:relative;height:285svh}
+ .hero-journey__sticky{position:sticky;top:0;height:100svh;overflow:hidden;isolation:isolate}
+ .hero-journey .hero{overflow:visible}
+ .hero-journey .hero__nav{z-index:60}
+ .section-two{position:absolute;inset:0;pointer-events:none;visibility:hidden;z-index:35;overflow:hidden}
+ .section-two__environment{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+ .section-two__copy{position:absolute;left:7.7%;top:28%;z-index:12;width:38%}
+ .section-two__eyebrow{display:block;color:#a044e3;font-size:17px;font-weight:550;margin-bottom:18px}
+ .section-two h2{margin:0;font-size:clamp(46px,4.35vw,76px);font-weight:570;letter-spacing:-.058em;line-height:.95}
+ .section-two__stage{position:absolute;inset:0}
+ .s2-prop{position:absolute;transform-origin:50% 85%;filter:drop-shadow(2px 8px 6px #382b201c)}
+ .s2-prop>img{display:block;width:100%;height:auto}
+ .s2-record{left:44%;top:32%;width:39%;z-index:5;filter:drop-shadow(1px 9px 6px #382b2029)}
+ .s2-releases{left:34%;top:19%;width:23%;z-index:2}
+ .s2-marketing{left:56%;top:8%;width:25%;z-index:1}
+ .s2-business{left:79%;top:26%;width:22%;z-index:3}
+ .s2-opportunities{left:27%;top:55%;width:19%;z-index:7;filter:drop-shadow(2px 10px 7px #382b2029)}
+ .s2-next{left:81%;top:59%;width:19%;z-index:8}
+ .s2-handled{left:66%;top:39%;width:26%;z-index:9;opacity:0;filter:drop-shadow(3px 12px 8px #382b2029)}
+ .s2-marketing-title{position:absolute;left:18%;top:7%;width:57%;height:14%;background:#ede5d9;transform:rotate(9deg);transform-origin:left top;font-family:Georgia,serif;font-size:clamp(11px,1.3vw,22px);letter-spacing:.10em;padding:4% 0}
+ .s2-logo-patch{position:absolute;aspect-ratio:1;background:#ede5d9;display:block;border-radius:20%}.s2-logo-patch img{width:100%;height:100%;filter:url(#s2-logo-ink)}.s2-logo-patch--dark{background:#242323}
+ .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+ @media(max-width:1000px){
+  .hero-journey .hero{height:100svh;min-height:0;max-height:none}
+  .section-two__copy{top:14%;left:7%;width:85%}
+  .section-two h2{font-size:clamp(48px,7vw,70px)}
+  .section-two__stage{top:33%;height:65%}
+  .s2-record{left:28%;top:30%;width:56%}
+  .s2-releases{left:9%;top:10%;width:34%}
+  .s2-marketing{left:47%;top:0;width:35%}
+  .s2-business{left:76%;top:23%;width:31%}
+  .s2-opportunities{left:4%;top:48%;width:34%}
+  .s2-next{left:75%;top:58%;width:28%}
+  .s2-handled{left:54%;top:40%;width:43%}
+ }
+ @media(max-width:600px){
+  .section-two__copy{top:14%;left:7%;width:90%}
+  .section-two__eyebrow{font-size:13px;margin-bottom:12px}
+  .section-two h2{font-size:clamp(38px,10.7vw,57px)}
+  .section-two__stage{top:38%;height:59%} .s2-marketing-title{font-size:12px}
+  .s2-record{left:18%;top:30%;width:76%}
+  .s2-releases{left:-5%;top:9%;width:49%}
+  .s2-marketing{left:44%;top:0;width:48%}
+  .s2-business{left:75%;top:17%;width:48%}
+  .s2-opportunities{left:-13%;top:51%;width:48%}
+  .s2-next{left:74%;top:57%;width:39%}
+  .s2-handled{left:47%;top:42%;width:52%}
+ }
+ @media(prefers-reduced-motion:reduce){
+  .hero-journey{height:auto}.hero-journey__sticky{position:relative;height:auto;overflow:hidden}
+  .section-two{position:relative;height:100svh;min-height:650px;visibility:visible}
+  .s2-releases,.s2-marketing,.s2-business,.s2-opportunities,.s2-next{display:none}
+  .s2-handled{opacity:1}.s2-record{left:39%;top:21%;width:49%}
+  @media(max-width:1000px){.s2-record{left:8%;top:12%;width:84%}}
+ }
+</style>
