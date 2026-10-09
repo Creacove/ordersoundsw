@@ -1,0 +1,26 @@
+{
+  "section": "homepage-section-2",
+  "concept": "All the work around the music. Handled.",
+  "logo_source_of_truth": "/section2/ordersounds-logo-source.png",
+  "production": {
+    "environment": "/section2/section2-environment.webp",
+    "record": "/section2/record-sleeve-vinyl.webp",
+    "releases": "/section2/releases-booklet.webp",
+    "marketing": "/section2/marketing-sheet.webp",
+    "business": "/section2/business-sheet.webp",
+    "opportunities": "/section2/opportunities-pass.webp",
+    "whats_next": "/section2/whats-next-note.webp",
+    "handled_stack": "/section2/handled-stack.webp"
+  },
+  "references": {
+    "scattered": "docs/section2/reference-scattered.webp",
+    "final": "docs/section2/reference-final.webp"
+  },
+  "rules": [
+    "Use the exact provided OrderSounds logo source; never regenerate it.",
+    "Primary website copy stays semantic HTML.",
+    "Tiny printed prop copy remains baked into image assets.",
+    "Scattered-to-organized motion plays once and settles.",
+    "No generic SaaS card treatment."
+  ]
+}
