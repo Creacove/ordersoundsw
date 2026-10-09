@@ -53,7 +53,7 @@ function Record() {
 
   useEffect(() => {
     const hero = document.querySelector('[data-hero]');
-    const copy = hero.querySelector('[data-hero-copy]');
+    const copy = document.querySelector('[data-hero-copy]');
     const frontTitle = copy.querySelector('h1');
     const bridge = copy.querySelector('[data-bridge]');
     const support = copy.querySelector('[data-back-support]');

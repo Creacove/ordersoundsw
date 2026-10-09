@@ -4,12 +4,17 @@ import Hero from '../components/Hero.astro';
 import SectionTwo from '../components/SectionTwo.astro';
 import SectionThree from '../components/SectionThree.astro';
 import StudioLight from '../components/StudioLight.astro';
+import '../styles/journey.css';
 ---
 <BaseLayout>
-  <main class="hero-journey"><div class="s3-preload" aria-hidden="true" style="position:absolute;top:175svh;width:1px;height:1px"></div><div class="hero-journey__sticky">
-    <StudioLight />
-    <Hero />
-    <SectionTwo />
-    <SectionThree />
-  </div></main>
+  <main class="hero-journey">
+    <div class="journey-stage">
+      <StudioLight />
+      <div class="journey-nav"></div>
+      <Hero /><SectionTwo /><SectionThree />
+    </div>
+    <div class="chapter chapter--hero"><div class="chapter__copy hero"></div></div>
+    <div class="chapter chapter--work"><div class="chapter__copy section-two"></div></div>
+    <div class="chapter chapter--signals"><div class="chapter__copy section-three"></div></div>
+  </main>
 </BaseLayout>

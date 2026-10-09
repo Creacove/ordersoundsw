@@ -1,0 +1,18 @@
+.hero-journey{position:relative;isolation:isolate}
+.journey-stage{position:sticky;top:0;height:100svh;margin-bottom:-100svh;overflow:hidden;isolation:isolate}
+.journey-nav{position:absolute;inset:0;z-index:60;pointer-events:none}
+.journey-nav .hero__nav{top:24px;pointer-events:auto}
+.chapter{position:relative;height:130svh;pointer-events:none;z-index:20}
+.chapter--hero{height:100svh}
+.chapter--signals{height:170svh}
+.hero-journey .hero{height:100svh;min-height:0;max-height:none}
+.hero-journey .chapter__copy{position:relative;inset:auto;height:100svh;visibility:visible;isolation:auto;overflow:visible;background:none;pointer-events:none}
+.chapter__copy a{pointer-events:auto}
+@media(max-width:600px) and (prefers-reduced-motion:no-preference){
+ .journey-stage .s3-stage{top:36%;height:57%}
+}
+@media(prefers-reduced-motion:reduce){
+ .journey-stage{position:relative;height:auto;margin:0;overflow:visible}
+ .chapter{display:none}
+ .journey-nav{height:100svh}
+}

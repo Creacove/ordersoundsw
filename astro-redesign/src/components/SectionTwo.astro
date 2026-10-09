@@ -26,8 +26,6 @@ const props = [
   import '../scripts/section-two';
 </script>
 <style is:global>
- .hero-journey{position:relative;height:285svh}
- .hero-journey__sticky{position:sticky;top:0;height:100svh;overflow:hidden;isolation:isolate}
  .hero-journey .hero{overflow:visible;isolation:auto}
  .hero-journey .hero__nav{z-index:60}
  .section-two{position:absolute;inset:0;pointer-events:none;visibility:hidden;overflow:visible}
@@ -85,7 +83,6 @@ const props = [
   .s2-handled{left:47%;top:42%;width:52%}
  }
  @media(prefers-reduced-motion:reduce){
-  .hero-journey{height:auto}.hero-journey__sticky{position:relative;height:auto;overflow:hidden}
   .section-two{position:relative;height:100svh;min-height:650px;visibility:visible}
   .s2-releases,.s2-marketing,.s2-business,.s2-opportunities,.s2-next{display:none}
   .s2-handled{opacity:1;left:52%;top:20%;width:43%}.s2-record{display:none}

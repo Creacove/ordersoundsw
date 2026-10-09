@@ -1,94 +1,100 @@
-import { setupSectionThree } from './section-three';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-gsap.registerPlugin(ScrollTrigger);
-const section = document.querySelector<HTMLElement>('.section-two')!;
-const hero = document.querySelector<HTMLElement>('[data-hero]')!;
-const stage = hero.querySelector<HTMLElement>('.hero__stage')!;
-const copy = hero.querySelector<HTMLElement>('.hero__copy')!;
-const prop = (name:string) => section.querySelector<HTMLElement>(`[data-s2="${name}"]`)!;
-const nav = document.querySelector<HTMLElement>('.hero__nav')!;
-document.querySelector('.hero-journey__sticky')!.append(nav);
-nav.style.zIndex = '60';
-const images = [...section.querySelectorAll<HTMLImageElement>('img')];
-const mm = gsap.matchMedia();
-Promise.all(images.map(image => image.decode().catch(() => {}))).then(() => {
- mm.add({motion:'(prefers-reduced-motion: no-preference)',mobile:'(max-width:600px)',tablet:'(min-width:601px) and (max-width:1000px)'}, context => {
-  if(!context.conditions?.motion) return;
-  const mobile = context.conditions.mobile;
-  const pieces = ['releases','marketing','business','opportunities','next'];
-  const bounds = prop('record').getBoundingClientRect();
-  const source = hero.querySelector('.hero__standin-sleeve')!.getBoundingClientRect();
-  const stageBox = stage.getBoundingClientRect();
-  const scale = bounds.width * .65 / source.width;
-  const x = bounds.left - stageBox.left - (source.left-stageBox.left)*scale;
-  const y = bounds.top - stageBox.top - (source.top-stageBox.top)*scale;
-  const bridge = {progress:0};
-  const sync = () => {
-   hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:bridge.progress}}));
-   hero.style.setProperty('--s2-brand-opacity', String(1-Math.min(1,bridge.progress/.14)));
-   copy.inert = bridge.progress > .1;
-   section.inert = bridge.progress < .08;
-  };
-  hero.addEventListener('desk:ready',sync);
-  gsap.set(section,{visibility:'visible'});
-  gsap.set(prop('record'),{visibility:'hidden'});
-  const lines = [...section.querySelectorAll('.s2-line')];
-  gsap.set(lines,{opacity:.2,yPercent:110,x:10});
-  gsap.set(section.querySelector('.section-two__eyebrow'),{opacity:0,y:12});
-  const timeline = gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.hero-journey',start:'top top',end:()=>'+='+innerHeight*1.85,scrub:.65,invalidateOnRefresh:true}});
-  timeline.to(bridge,{progress:1,duration:1,onUpdate:sync},0)
-   .to(copy.querySelectorAll('.journey-hero-line'),{yPercent:-110,opacity:0,duration:.07,stagger:.018,ease:'power2.in'},.01)
-   .to(copy.querySelectorAll('.hero__bridge,.hero__support'),{y:-12,opacity:0,duration:.07},.045)
-   .to(copy.querySelector('.primary-cta'),{y:12,opacity:0,duration:.07},.065)
-   .to(copy,{opacity:0,duration:.015},.14)
-   .to(hero.querySelector('.turn-control'),{autoAlpha:0,duration:.045},0)
-   .to(stage,{x,y,scale,duration:.20,ease:'power2.inOut'},.01)
-   .to(section.querySelector('.section-two__eyebrow'),{opacity:1,y:0,duration:.07},.09);
-  [.13,.22,.40].forEach((at,i)=>timeline.to(lines[i],{opacity:1,yPercent:0,x:0,duration:.1,ease:'power2.out'},at));
-  [.72,.76,.88].forEach((at,i)=>timeline.to(lines[i],{opacity:0,yPercent:-110,duration:.085,ease:'power2.in'},at));
-  timeline.to(section.querySelector('.section-two__eyebrow'),{opacity:0,y:-8,duration:.08},.86);
-  // One light field spans both sections. Broad daylight drifts with the turn;
-  // the floor reflection opens during the spread, then quiets at resolution.
-  timeline.to('.journey-bg',{scale:1.045,xPercent:-1.2,yPercent:-.4,duration:.46,ease:'power1.inOut'},.02)
-   .to('.studio-daylight',{xPercent:10,yPercent:-2,rotation:2,opacity:1,duration:.32,ease:'power1.inOut'},.02)
-   .to('.studio-shade',{xPercent:8,yPercent:2,scale:1.08,opacity:1,duration:.34},.16)
-   .to('.studio-refraction:not(.journey-focus-light)',{opacity:.65,xPercent:5,duration:.28,ease:'power2.out'},.16)
-   .to('.studio-daylight',{xPercent:9,rotation:0,opacity:.8,duration:.23,ease:'power2.inOut'},.72)
-   .to('.studio-shade',{opacity:.42,xPercent:6,scale:1,duration:.23},.72)
-   .to('.studio-refraction:not(.journey-focus-light)',{opacity:.2,xPercent:9,duration:.23},.72)
-   .to('.s2-bundle-contact',{opacity:.85,scaleX:1,duration:.10,ease:'power2.out'},.89);
-  // The same sleeve travels through the scene; only its branding clears.
+import { cueChapter } from './chapter-cue';
+import { setupSectionThree } from './section-three';
 
-  const angles = [-5,4,3,-6,3];
-  const arrivals = [.20,.27,.34,.41,.48];
-  const stack = prop('handled').getBoundingClientRect();
-  pieces.forEach((name,i) => {
-   const el = prop(name),r=el.getBoundingClientRect();
-   const startX=bounds.left+bounds.width*.3-r.left-r.width*.5;
-   const startY=bounds.top+bounds.height*.35-r.top-r.height*.5;
-   timeline.fromTo(el,{x:startX,y:startY,scale:.7,opacity:0,rotation:0},
-    {x:0,y:0,scale:1,opacity:1,rotation:angles[i]*(mobile?.5:1),duration:.13,ease:'power2.out'},arrivals[i]);
-   // Different paths settle into the photographed bundle's paper footprint.
-   timeline.to(el,{x:stack.left+stack.width*(.46+i*.012)-r.left-r.width*.5,
-    y:stack.top+stack.height*(.42+i*.025)-r.top-r.height*.5,
-    rotation:-5+i*2,scale:Math.min(1.15,stack.width*.7/r.width),duration:.16,ease:'power2.inOut'},.72+i*.008)
-    .to(el,{opacity:0,duration:.05},.88);
-  });
-  if(mobile) timeline.to(prop('business'),{opacity:0,duration:.05},.54);
-  timeline.to(stage,{x:x-innerWidth*(mobile?.03:.035),y:y-innerHeight*(mobile?.025:.065),scale:scale*1.12,duration:.17,ease:'power2.inOut'},.72)
-   .to(stage,{opacity:0,duration:.09,ease:'power2.inOut'},.82)
-   .fromTo(prop('handled'),{opacity:0,y:5},{opacity:1,y:0,duration:.05},.88)
-   .to(prop('handled'),{x:()=> {const area=section.getBoundingClientRect();return area.width*(mobile?.5:context.conditions?.tablet?.55:.72)-(stack.left+stack.width*.5);},y:()=>-innerHeight*(mobile?.07:.13),scale:mobile?1.48:1.22,duration:.10,ease:'power2.inOut'},.89);
-  const cleanupThree=setupSectionThree(timeline);
-  sync();
-  if(import.meta.env.DEV){
-   const states = {initial:.17,scattered:.67,gathering:.83,final:1};
-   const state=new URLSearchParams(location.search).get('s2');
-   const seek=(p:number)=>{timeline.scrollTrigger?.disable(false);timeline.progress(p);};
-   (window as any).__sectionTwo={seek};
-   if(state && state in states) seek(states[state as keyof typeof states]);
-  }
-  return () => {cleanupThree();hero.removeEventListener('desk:ready',sync);hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:0}}));copy.inert=false;section.inert=false;};
+gsap.registerPlugin(ScrollTrigger);
+const section=document.querySelector<HTMLElement>('.section-two')!;
+const chapter=document.querySelector<HTMLElement>('.chapter--work')!;
+const hero=document.querySelector<HTMLElement>('[data-hero]')!;
+const copy=hero.querySelector<HTMLElement>('.hero__copy')!;
+const stage=hero.querySelector<HTMLElement>('.hero__stage')!;
+const workCopy=section.querySelector<HTMLElement>('.section-two__copy')!;
+const signals=document.querySelector<HTMLElement>('.journey-stage .section-three')!;
+const signalCopy=signals.querySelector<HTMLElement>('.section-three__copy')!;
+const nav=hero.querySelector<HTMLElement>('.hero__nav')!;
+document.querySelector('.journey-nav')!.append(nav);
+const prop=(name:string)=>section.querySelector<HTMLElement>('[data-s2="'+name+'"]')!;
+const images=[...section.querySelectorAll<HTMLImageElement>('img')];
+const load=()=>Promise.all(images.map(img=>img.decode().catch(()=>{})));
+const mm=gsap.matchMedia();
+
+mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px)',tablet:'(min-width:601px) and (max-width:1000px)'},context=>{
+ if(!context.conditions?.motion){section.inert=false;return;}
+ const mobile=context.conditions.mobile,tablet=context.conditions.tablet;
+ const pieces=['releases','marketing','business','opportunities','next'];
+ const bounds=prop('record').getBoundingClientRect(),stack=prop('handled').getBoundingClientRect();
+ const area=section.getBoundingClientRect();
+ const source=hero.querySelector('.hero__standin-sleeve')!.getBoundingClientRect(),stageBox=stage.getBoundingClientRect();
+ const scale=bounds.width*.65/source.width;
+ const x=bounds.left-stageBox.left-(source.left-stageBox.left)*scale;
+ const y=bounds.top-stageBox.top-(source.top-stageBox.top)*scale;
+ const bridge={progress:0};
+ const sync=()=>hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:bridge.progress}}));
+ hero.addEventListener('desk:ready',sync);
+ gsap.set(prop('record'),{visibility:'hidden'});
+ const lines=[...section.querySelectorAll('.s2-line')];
+ gsap.set(section,{visibility:'visible'});
+ gsap.set(lines,{opacity:.2,yPercent:110,x:10});
+ gsap.set(section.querySelector('.section-two__eyebrow'),{opacity:0,y:12});
+ const tl=gsap.timeline({paused:true,defaults:{ease:'power2.out'}});
+ tl.to(bridge,{progress:1,duration:1,onUpdate:sync},0)
+  .to(stage,{x,y,scale,duration:.85,ease:'power2.inOut'},0)
+  .to(hero.querySelector('.turn-control'),{autoAlpha:0,duration:.25},0)
+  .to(section.querySelector('.section-two__eyebrow'),{opacity:1,y:0,duration:.34},.08);
+ [.16,.36,.62].forEach((at,i)=>tl.to(lines[i],{opacity:1,yPercent:0,x:0,duration:.55},at));
+ // The completed chapter keeps its final statement readable on return.
+ tl.to('.studio-daylight',{xPercent:10,yPercent:-2,rotation:2,opacity:1,duration:1.6,ease:'power2.inOut'},0)
+  .to('.studio-shade',{xPercent:8,yPercent:2,scale:1.08,opacity:1,duration:.85},.28)
+  .to('.studio-refraction:not(.journey-focus-light)',{opacity:.65,xPercent:5,duration:.9},.28)
+  .to('.studio-daylight',{xPercent:9,rotation:0,opacity:.8,duration:.65},1.65)
+  .to('.studio-shade',{opacity:.42,xPercent:6,scale:1,duration:.65},1.65)
+  .to('.studio-refraction:not(.journey-focus-light)',{opacity:.2,xPercent:9,duration:.65},1.65)
+  .to('.s2-bundle-contact',{opacity:.85,scaleX:1,duration:.4},2.15);
+ const angles=[-5,4,3,-6,3];
+ [.28,.48,.55,.68,.8].forEach((at,i)=>{
+  const el=prop(pieces[i]),r=el.getBoundingClientRect();
+  tl.fromTo(el,{x:bounds.left+bounds.width*.3-r.left-r.width*.5,y:bounds.top+bounds.height*.35-r.top-r.height*.5,scale:.7,opacity:0,rotation:0},
+   {x:0,y:0,scale:1,opacity:1,rotation:angles[i]*(mobile?.5:1),duration:.55},at)
+   .to(el,{x:stack.left+stack.width*(.46+i*.012)-r.left-r.width*.5,y:stack.top+stack.height*(.42+i*.025)-r.top-r.height*.5,
+    rotation:-5+i*2,scale:Math.min(1.15,stack.width*.7/r.width),duration:.55,ease:'power2.inOut'},1.65+i*.025)
+   .to(el,{opacity:0,duration:.2},2.13);
  });
+ tl.to(stage,{opacity:0,y:y-20,scale:scale*1.06,duration:.4,ease:'power2.inOut'},1.85)
+  .fromTo(prop('handled'),{opacity:0,y:5},{opacity:1,y:0,duration:.25},2.13)
+  .to(prop('handled'),{x:area.width*(mobile?.5:tablet?.55:.72)-(stack.left-area.left+stack.width*.5),y:-area.height*(mobile?.07:.13),scale:mobile?1.48:1.22,duration:.42,ease:'power2.inOut'},2.18);
+ // Measure the shared bundle footprint once, without coupling chapter clocks.
+ tl.progress(1);
+ const final=prop('handled').getBoundingClientRect();
+ const bundle={left:final.left-area.left,top:final.top-area.top,width:final.width};
+ tl.progress(0).pause();
+ const cleanupThree=setupSectionThree(bundle);
+ const control=cueChapter(chapter,tl,load,'top 70%',[{at:'top 70%',time:1.5},{at:'top 8%',time:tl.duration()}]);
+ // Only the artwork stays on stage. Copy occupies real document space.
+ document.querySelector('.chapter--hero .chapter__copy')!.append(copy);
+ chapter.querySelector('.chapter__copy')!.append(workCopy);
+ document.querySelector('.chapter--signals .chapter__copy')!.append(signalCopy);
+ // A viewport reading window keeps naturally scrolling copy clear of the
+ // navigation and, on small screens, the physical objects below it.
+ const hosts=[...document.querySelectorAll<HTMLElement>('.chapter__copy')];
+ const clipCopy=()=>hosts.forEach(host=>{
+  const r=host.getBoundingClientRect();
+  const heroHost=host.parentElement?.classList.contains('chapter--hero');
+  const signalHost=host.parentElement?.classList.contains('chapter--signals');
+  const bottom=innerHeight*(mobile?(heroHost?.52:signalHost?.42:.37):tablet?(heroHost?.52:.4):1);
+  host.style.clipPath=`inset(${Math.max(0,90-r.top)}px 0 ${Math.max(0,r.bottom-bottom)}px 0)`;
+ });
+ const readingWindow=ScrollTrigger.create({trigger:'.hero-journey',start:'top top',end:'bottom bottom',onUpdate:clipCopy,onRefresh:clipCopy});
+ clipCopy();
+ // Only this camera is scrubbed. Object/light/copy timelines run on time.
+ const camera=gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.chapter--work',start:'top 68%',endTrigger:'.chapter--signals',end:'top top',scrub:.45}})
+  .to('.journey-camera',{scale:1.045,xPercent:-1.2,yPercent:-.4,duration:1})
+  .to('.journey-camera',{scale:1.085,xPercent:-2.2,yPercent:-.9,duration:1});
+ if(import.meta.env.DEV){
+  const states={initial:.22,scattered:.57,gathering:.78,final:1};
+  const seek=async(p:number)=>{await control.seek(p);scrollTo(0,chapter.offsetTop);};
+  (window as any).__sectionTwo={seek,info:()=>({time:tl.time(),duration:tl.duration(),state:chapter.dataset.state})};
+  const state=new URLSearchParams(location.search).get('s2');if(state&&state in states)void seek(states[state as keyof typeof states]);
+ }
+ return()=>{readingWindow.kill();hosts.forEach(host=>host.style.clipPath='');control.dispose();cleanupThree();camera.scrollTrigger?.kill();camera.kill();hero.removeEventListener('desk:ready',sync);hero.append(copy);section.prepend(workCopy);signals.prepend(signalCopy);hero.dispatchEvent(new CustomEvent('desk:scroll',{detail:{progress:0}}));};
 });
