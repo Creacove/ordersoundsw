@@ -38,7 +38,7 @@ function Record() {
     const stage = gl.domElement.getBoundingClientRect();
     const jacket = document.querySelector('.hero__standin-sleeve').getBoundingClientRect();
     const vinyl = document.querySelector('.hero__standin-disc').getBoundingClientRect();
-    const zoom = camera.zoom;
+    const zoom = camera.zoom * (stage.width / gl.domElement.clientWidth);
     const centerX = (jacket.left + vinyl.right) / 2;
     const centerY = jacket.top + jacket.height / 2;
     placement.current.position.set((centerX - stage.left - stage.width / 2) / zoom,
@@ -163,7 +163,36 @@ function Record() {
           return { left: Math.min(...points.map(p => p.x)), right: Math.max(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), bottom: Math.max(...points.map(p => p.y)) };
         },
       };
-      cleanupButton = () => button.removeEventListener('click', turn);
+      let entry = null;
+      let lastTurn = -1;
+      const followScroll = event => {
+        const p = event.detail.progress;
+        if (p > 0 && entry === null) {
+          entry = { angle: assembly.current.rotation.y, z: disc.current.position.z,
+            running: timeline.isActive() };
+          timeline.pause();
+        }
+        if (entry === null) return;
+        if (p <= 0) {
+          assembly.current.rotation.y = entry.angle;
+          disc.current.position.z = entry.z;
+          const resume = entry.running;
+          entry = null; lastTurn = -1;
+          update();
+          if (resume) timeline.play();
+          return;
+        }
+        const turnProgress = Math.min(1, p / .16);
+        if (turnProgress === lastTurn) return;
+        lastTurn = turnProgress;
+        const eased = turnProgress * turnProgress * (3 - 2 * turnProgress);
+        assembly.current.rotation.y = entry.angle * (1 - eased);
+        disc.current.position.z = entry.z + (-.1 - entry.z) * eased;
+        update();
+      };
+      hero.addEventListener('desk:scroll', followScroll);
+      hero.dispatchEvent(new CustomEvent('desk:ready'));
+      cleanupButton = () => { button.removeEventListener('click', turn); hero.removeEventListener('desk:scroll', followScroll); };
       invalidate();
     };
     let cleanupButton = () => {};
@@ -212,7 +241,7 @@ function ResponsiveCamera() {
 }
 
 export default function HeroScene() {
-  return <Canvas orthographic className="hero-canvas" frameloop="demand" dpr={[1,1.75]}
+  return <Canvas orthographic resize={{ offsetSize: true }} className="hero-canvas" frameloop="demand" dpr={[1,1.75]}
     camera={{ position:[0,0,12], zoom:100, near:.1, far:40 }}
     gl={{ antialias:true, alpha:true, powerPreference:'default' }}
     onCreated={({ gl }) => { gl.outputColorSpace=THREE.SRGBColorSpace; gl.toneMapping=THREE.NoToneMapping; }}>
