@@ -13,11 +13,11 @@ const signals = [
  </div>
  <div class="s3-stage">
   <div class="s3-stack"><img data-src="/section3/stack-unbound.webp" width="1448" height="1086" alt="" /></div>
-  <div class="s3-band"><img data-src="/section3/band-blank.webp" width="1448" height="1086" alt="" /><img class="s3-logo" data-src="/section2/ordersounds-logo-source.png" width="225" height="225" alt="OrderSounds" /></div>
+  <div class="s3-band"><img data-src="/section3/band-blank.webp" width="1448" height="1086" alt="" /></div>
   {signals.map(({id,label,logos,lines,details,footer})=><div class={`s3-paper s3-${id}`}><img data-src={`/section3/signal-${id}.webp`} width="1448" height="1086" alt="" /><div class="s3-paper-copy s3-signal-copy"><span class="s3-signal-label">{label}</span>{logos.length>0 && <div class="s3-platforms">{logos.map(([slug,name])=><img src={`/section3/logos/${slug}.svg`} width="16" height="16" alt={name} title={name} />)}</div>}<strong>{lines.map(line=><span>{line}</span>)}</strong>{details.length>0 && <p class="s3-metrics">{details.map(line=><span>{line}</span>)}</p>}<span class="s3-signal-footer">{footer}</span></div></div>)}
   <img class="s3-lens" data-src="/section3/optical-lens.webp" width="1448" height="1086" alt="" />
-  <div class="s3-decision"><span>WHAT DESK WOULD DO</span><strong>Lead with the story<br />before you buy reach.</strong><p>The strongest signal is already clear.</p></div>
-  <div class="s3-paper s3-action"><img data-src="/section3/action-slip.webp" width="1448" height="1086" alt="" /><div class="s3-paper-copy"><span>YOUR NEXT MOVE</span><strong>Record the story<br />behind the hook.</strong><p>20–30 sec · vertical · one take</p></div></div>
+  <div class="s3-decision"><span>DESK IS HANDLING</span><strong>Build the 7-day<br />rollout.</strong><p>3 hooks · 20 creators · test budget</p></div>
+  <div class="s3-paper s3-action"><img data-src="/section3/action-slip.webp" width="1448" height="1086" alt="" /><div class="s3-paper-copy"><span>YOUR NEXT MOVE</span><strong>Film 3 story-led<br />clips tonight.</strong><p>Post the strongest cut to TikTok + Reels</p></div></div>
  </div>
 </section>
 <style is:global>
