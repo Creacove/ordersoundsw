@@ -1,26 +1,27 @@
 {
   "section": "homepage-section-2",
   "concept": "All the work around the music. Handled.",
-  "logo_source_of_truth": "/section2/ordersounds-logo-source.png",
+  "status": "approved-asset-set-v2",
   "production": {
     "environment": "/section2/section2-environment.webp",
     "record": "/section2/record-sleeve-vinyl.webp",
     "releases": "/section2/releases-booklet.webp",
-    "marketing": "/section2/marketing-sheet.webp",
+    "releases_alt": "/section2/releases-booklet-alt.webp",
     "business": "/section2/business-sheet.webp",
     "opportunities": "/section2/opportunities-pass.webp",
     "whats_next": "/section2/whats-next-note.webp",
     "handled_stack": "/section2/handled-stack.webp"
   },
-  "references": {
-    "scattered": "docs/section2/reference-scattered.webp",
-    "final": "docs/section2/reference-final.webp"
+  "brand_rule": {
+    "only_visible_logo_asset": "/section2/handled-stack.webp",
+    "exact_logo_source": "/section2/ordersounds-logo-source.png",
+    "rule": "Loose Section 2 props must not display the OrderSounds logo. The final bound handled stack is the only approved Section 2 prop with a visible logo."
   },
-  "rules": [
-    "Use the exact provided OrderSounds logo source; never regenerate it.",
-    "Primary website copy stays semantic HTML.",
-    "Tiny printed prop copy remains baked into image assets.",
-    "Scattered-to-organized motion plays once and settles.",
-    "No generic SaaS card treatment."
+  "notes": [
+    "This asset set supersedes the earlier logo-heavy Section 2 assets.",
+    "Do not use the old marketing-sheet asset.",
+    "Do not add logos to releases, business, opportunities, or what's-next props.",
+    "Do not invent or regenerate any additional branded marks.",
+    "Use the PNG files in docs/section2/source as high-quality source masters and WebP files in public/section2 for browser delivery."
   ]
 }
