@@ -8,7 +8,7 @@ const signals = [
 <section class="section-three" aria-labelledby="section-three-title" inert>
  <div class="section-three__copy">
   <span class="s3-eyebrow">YOUR MANAGER</span>
-  <h2 id="section-three-title">All your signals.<br />One next move.</h2>
+  <h2 id="section-three-title"><span class="copy-mask"><span class="s3-line">All your signals.</span></span><span class="copy-mask"><span class="s3-line">One next move.</span></span></h2>
   <p>Desk pulls in platform data, audience response, release timing and your real-world situation, then tells you what to do next.</p>
  </div>
  <div class="s3-stage">
@@ -26,6 +26,7 @@ const signals = [
 .section-three__copy{position:absolute;left:7.7%;top:28%;width:32%;z-index:20}
 .s3-eyebrow{display:block;color:#a044e3;font-size:17px;font-weight:550;margin-bottom:18px}
 .section-three h2{font-size:clamp(42px,4.05vw,70px);line-height:1;letter-spacing:-.058em;font-weight:570;margin:0}
+ .section-three .copy-mask{padding-block:.13em;margin-block:-.13em}.s3-line{display:block}
 .section-three__copy>p{font-size:clamp(18px,1.5vw,24px);line-height:1.4;letter-spacing:-.025em;color:#77716c;max-width:360px;margin-top:26px}
 .s3-stage{position:absolute;inset:0}
 .s3-stack,.s3-band,.s3-paper,.s3-lens{position:absolute;aspect-ratio:4/3}

@@ -10,10 +10,9 @@ const props = [
 ];
 ---
 <section class="section-two" aria-labelledby="section-two-title">
-  <img class="section-two__environment" src="/section2/section2-environment.webp" width="1672" height="941" alt="" />
   <div class="section-two__copy">
     <span class="section-two__eyebrow">DESK</span>
-    <h2 id="section-two-title"><span class="s2-line">All the work</span><span class="s2-line">around the</span><span class="s2-line">music. Handled.</span></h2>
+    <h2 id="section-two-title"><span class="copy-mask"><span class="s2-line">All the work</span></span><span class="copy-mask"><span class="s2-line">around the</span></span><span class="copy-mask"><span class="s2-line">music. Handled.</span></span></h2>
     <p class="sr-only">Desk helps manage releases, marketing, business, opportunities and what comes next.</p>
   </div>
   <div class="section-two__stage" aria-hidden="true">
@@ -32,7 +31,6 @@ const props = [
  .hero-journey .hero{overflow:visible;isolation:auto}
  .hero-journey .hero__nav{z-index:60}
  .section-two{position:absolute;inset:0;pointer-events:none;visibility:hidden;overflow:visible}
- .section-two__environment{z-index:0;position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
  .section-two__copy{position:absolute;left:7.7%;top:28%;z-index:12;width:38%}
  .section-two__eyebrow{display:block;color:#a044e3;font-size:17px;font-weight:550;margin-bottom:18px}
  .section-two h2{margin:0;font-size:clamp(46px,4.35vw,76px);font-weight:570;letter-spacing:-.058em;line-height:.95}
@@ -58,6 +56,7 @@ const props = [
  @media(max-width:600px){.s2-bundle-contact{left:17%;top:63%;width:66%;height:7%}}
  @media(prefers-reduced-motion:reduce){.s2-bundle-contact{opacity:.6}}
  .s2-line{display:block}.hero-journey .hero__stage{transform-origin:0 0}.hero-journey .hero__copy{z-index:12}
+ .section-two .copy-mask{padding-block:.13em;margin-block:-.13em}
  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
  @media(max-width:1000px){
   .hero-journey .hero{height:100svh;min-height:0;max-height:none}

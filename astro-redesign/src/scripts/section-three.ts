@@ -12,10 +12,16 @@ export function setupSectionThree(previous:gsap.core.Timeline){
  previous.progress(saved);
  gsap.set(root,{visibility:'visible'});
  gsap.set([find('.s3-stack'),find('.s3-band')],{left:bounds.left-stage.left,top:bounds.top-stage.top,width:bounds.width});
- gsap.set(root.querySelectorAll('.section-three__copy,.s3-stack,.s3-band,.s3-paper,.s3-lens,.s3-decision'),{opacity:0});
+ gsap.set(root.querySelectorAll('.s3-eyebrow,.section-three__copy>p,.s3-stack,.s3-band,.s3-paper,.s3-lens,.s3-decision'),{opacity:0});
+ const lines=root.querySelectorAll('.s3-line');
+ gsap.set(lines,{yPercent:110,opacity:.2});
  const tl=gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.hero-journey',start:()=>`top+=${innerHeight*1.85} top`,end:()=>`top+=${innerHeight*3.35} top`,scrub:.65,onUpdate:self=>{root.inert=self.progress<.02;}}});
- tl.to('.section-two__copy',{opacity:0,y:-12,duration:.1},0)
- .fromTo(find('.section-three__copy'),{y:12},{opacity:1,y:0,duration:.13},.02)
+ tl.fromTo(find('.s3-eyebrow'),{x:-12},{opacity:1,x:0,duration:.08,ease:'power2.out'},.015)
+ .to(lines[0],{yPercent:0,opacity:1,duration:.12,ease:'power2.out'},.055)
+ .fromTo(lines[1],{x:8},{x:0,yPercent:0,opacity:1,duration:.12,ease:'power2.out'},.08)
+ .fromTo(find('.section-three__copy>p'),{y:10},{y:0,opacity:1,duration:.1},.14)
+ .to('.journey-camera',{scale:1.085/1.045,xPercent:-.9541,yPercent:-.4847,duration:.28,ease:'power1.inOut'},0)
+ .to('.studio-shade>div',{opacity:.34,duration:.2},.02)
  // Retain the exact bound object until the first paper masks the material swap.
  .to(find('.s3-stack'),{opacity:1,duration:.12},.23)
  .to(handled.querySelector('img'),{opacity:0,duration:.12},.23)
@@ -26,6 +32,11 @@ export function setupSectionThree(previous:gsap.core.Timeline){
   tl.fromTo(el,{x:bounds.left+bounds.width*.5-r.left-r.width*.5,y:bounds.top+bounds.height*.35-r.top-r.height*.5,scale:.8,rotation:3-i*3},{x:0,y:0,scale:1,rotation:0,opacity:1,duration:.14,ease:'power2.out'},.25+i*.035);
  });
  tl.fromTo(find('.s3-lens'),{x:-35,y:20,rotation:-5},{x:30,y:-10,rotation:3,opacity:.42,duration:.18,ease:'power1.inOut'},.46)
+ .to(lines[0],{opacity:.5,duration:.16},.46)
+ .fromTo('.journey-focus-light',{opacity:0,xPercent:9},{opacity:.8,xPercent:-6,yPercent:-12,duration:.2,ease:'power1.inOut'},.46)
+ .to('.studio-vignette',{opacity:.7,duration:.14},.67)
+ .to(find('.section-three__copy>p'),{opacity:.36,duration:.14},.67)
+ .to('.journey-focus-light',{opacity:.2,duration:.12},.82)
  .fromTo(root.querySelectorAll('.s3-paper:not(.s3-action) .s3-paper-copy'),{opacity:.5},{opacity:1,duration:.14},.47)
  .to(find('.s3-stack'),{opacity:.32,duration:.16},.47)
  .to(find('.s3-stack'),{opacity:.08,duration:.13},.67)

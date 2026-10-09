@@ -33,23 +33,30 @@ Promise.all(images.map(image => image.decode().catch(() => {}))).then(() => {
   hero.addEventListener('desk:ready',sync);
   gsap.set(section,{visibility:'visible'});
   gsap.set(prop('record'),{visibility:'hidden'});
-  gsap.set(section.querySelector('.section-two__environment'),{opacity:0});
-  gsap.set(section.querySelectorAll('.s2-line,.section-two__eyebrow'),{opacity:0,y:18});
+  const lines = [...section.querySelectorAll('.s2-line')];
+  gsap.set(lines,{opacity:.2,yPercent:110,x:10});
+  gsap.set(section.querySelector('.section-two__eyebrow'),{opacity:0,y:12});
   const timeline = gsap.timeline({defaults:{ease:'none'},scrollTrigger:{trigger:'.hero-journey',start:'top top',end:()=>'+='+innerHeight*1.85,scrub:.65,invalidateOnRefresh:true}});
   timeline.to(bridge,{progress:1,duration:1,onUpdate:sync},0)
-   .to(copy,{opacity:0,y:-24,duration:.09},.01)
+   .to(copy.querySelectorAll('.journey-hero-line'),{yPercent:-110,opacity:0,duration:.07,stagger:.018,ease:'power2.in'},.01)
+   .to(copy.querySelectorAll('.hero__bridge,.hero__support'),{y:-12,opacity:0,duration:.07},.045)
+   .to(copy.querySelector('.primary-cta'),{y:12,opacity:0,duration:.07},.065)
+   .to(copy,{opacity:0,duration:.015},.14)
    .to(hero.querySelector('.turn-control'),{autoAlpha:0,duration:.045},0)
    .to(stage,{x,y,scale,duration:.20,ease:'power2.inOut'},.01)
-   .to(section.querySelector('.section-two__environment'),{opacity:1,duration:.18},.02)
-   .to(section.querySelectorAll('.section-two__eyebrow,.s2-line'),{opacity:1,y:0,duration:.08,stagger:.018,ease:'power2.out'},.08);
+   .to(section.querySelector('.section-two__eyebrow'),{opacity:1,y:0,duration:.07},.09);
+  [.13,.22,.40].forEach((at,i)=>timeline.to(lines[i],{opacity:1,yPercent:0,x:0,duration:.1,ease:'power2.out'},at));
+  [.72,.76,.88].forEach((at,i)=>timeline.to(lines[i],{opacity:0,yPercent:-110,duration:.085,ease:'power2.in'},at));
+  timeline.to(section.querySelector('.section-two__eyebrow'),{opacity:0,y:-8,duration:.08},.86);
   // One light field spans both sections. Broad daylight drifts with the turn;
   // the floor reflection opens during the spread, then quiets at resolution.
-  timeline.to('.studio-daylight',{xPercent:6,yPercent:-2,rotation:2,duration:.66},0)
-   .to('.studio-shade',{xPercent:4,yPercent:2,opacity:.7,duration:.66},0)
-   .to('.studio-refraction',{opacity:.65,xPercent:5,duration:.28,ease:'power2.out'},.16)
+  timeline.to('.journey-bg',{scale:1.045,xPercent:-1.2,yPercent:-.4,duration:.46,ease:'power1.inOut'},.02)
+   .to('.studio-daylight',{xPercent:10,yPercent:-2,rotation:2,opacity:1,duration:.32,ease:'power1.inOut'},.02)
+   .to('.studio-shade',{xPercent:8,yPercent:2,scale:1.08,opacity:1,duration:.34},.16)
+   .to('.studio-refraction:not(.journey-focus-light)',{opacity:.65,xPercent:5,duration:.28,ease:'power2.out'},.16)
    .to('.studio-daylight',{xPercent:9,rotation:0,opacity:.8,duration:.23,ease:'power2.inOut'},.72)
-   .to('.studio-shade',{opacity:.42,xPercent:6,duration:.23},.72)
-   .to('.studio-refraction',{opacity:.2,xPercent:9,duration:.23},.72)
+   .to('.studio-shade',{opacity:.42,xPercent:6,scale:1,duration:.23},.72)
+   .to('.studio-refraction:not(.journey-focus-light)',{opacity:.2,xPercent:9,duration:.23},.72)
    .to('.s2-bundle-contact',{opacity:.85,scaleX:1,duration:.10,ease:'power2.out'},.89);
   // The same sleeve travels through the scene; only its branding clears.
 
