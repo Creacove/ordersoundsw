@@ -103,7 +103,7 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
  const resetPhysical=()=>{
   playTicket++;
   gsap.killTweensOf(physicalTl);
-  physicalTl.timeScale(2.2).reverse();
+  physicalTl.timeScale(1.5).reverse();
  };
 
  // Start returning the sleeve almost as soon as Section 1 begins to leave, so it is fully front-facing before Section 2 takes over.
@@ -128,11 +128,23 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
   onEnter:playPhysical
  });
 
- // Hysteresis: do not nervously reverse at the same threshold.
+ // Begin the return while the Section 2 world still fills the viewport.
  const physicalReset=ScrollTrigger.create({
   trigger:chapter,
-  start:'top 68%',
+  start:'top -25%',
   onLeaveBack:resetPhysical
+ });
+
+ // A fast upward swipe can skip the visible return, but cannot carry loose
+ // management papers into Section 1.
+ const returnBoundary=ScrollTrigger.create({
+  trigger:chapter,
+  start:'top 0%',
+  onLeaveBack:()=>{
+   playTicket++;
+   gsap.killTweensOf(physicalTl);
+   physicalTl.pause(0);
+  }
  });
 
  // Defensive only: a very fast swipe should still leave Section 2 resolved.
@@ -171,6 +183,7 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
   copyTrigger.kill();
   physicalTrigger.kill();
   physicalReset.kill();
+  returnBoundary.kill();
   finalize.kill();
   copyTl.kill();
   gsap.killTweensOf(physicalTl);
