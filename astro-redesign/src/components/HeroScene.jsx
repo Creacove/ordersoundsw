@@ -177,12 +177,13 @@ function Record() {
       };
       const returnFront = () => orientSleeve(0, -.10);
       const returnBack = () => {
-        // Returning from Section 2 starts a fresh front-facing hero. Reset the
-        // copy and sleeve together so the paused timeline cannot show both lines.
+        // Returning from Section 2 replays the complete front-to-back story.
+        // Reset copy and object together before the time-based turn resumes.
         timeline.seek(0).pause();
         update();
         syncAccessibility();
         orientSleeve(0, -.10);
+        if (!motion.matches) handoffTween.eventCallback('onComplete', () => timeline.play());
       };
       hero.addEventListener('desk:return-front', returnFront);
       hero.addEventListener('desk:return-back', returnBack);
