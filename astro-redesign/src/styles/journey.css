@@ -21,6 +21,7 @@
 .object-rail{position:absolute;inset:0;z-index:10;pointer-events:none}
 .object-stage{position:sticky;top:0;height:100svh;overflow:hidden;isolation:isolate;pointer-events:none}
 .object-stage .hero__stage,.object-stage .section-two__stage,.object-stage .s3-stage{position:absolute;pointer-events:none}
+.object-stage .section-two__stage,.object-stage .s3-stage{visibility:hidden}
 .object-stage .hero__stage{transform-origin:0 0}
 .object-stage .section-two__stage,.object-stage .s3-stage{inset:0}
 .object-stage .turn-control{position:absolute;pointer-events:auto}
@@ -54,6 +55,7 @@
  .next-act{padding:12svh 7%;min-height:100svh}.next-act__orbit{width:145vw;right:-95%;top:-6%}
 }
 @media(prefers-reduced-motion:reduce){
+ .object-stage .section-two__stage,.object-stage .s3-stage{visibility:visible}
  .object-stage .hero__stage,.object-stage .section-two__stage,.object-stage .s3-stage,.object-stage .turn-control{display:none}
  .hero-journey[data-act="hero"] .object-stage .hero__stage,.hero-journey[data-act="hero"] .object-stage .turn-control{display:block}
  .hero-journey[data-act="work"] .object-stage .section-two__stage{display:block}

@@ -176,7 +176,14 @@ function Record() {
           .to(contactShadow, { x: angle === 0 ? 0 : 36, duration: .62, ease: 'power3.inOut' }, 0);
       };
       const returnFront = () => orientSleeve(0, -.10);
-      const returnBack = () => orientSleeve(Math.PI, .24);
+      const returnBack = () => {
+        // Returning from Section 2 starts a fresh front-facing hero. Reset the
+        // copy and sleeve together so the paused timeline cannot show both lines.
+        timeline.seek(0).pause();
+        update();
+        syncAccessibility();
+        orientSleeve(0, -.10);
+      };
       hero.addEventListener('desk:return-front', returnFront);
       hero.addEventListener('desk:return-back', returnBack);
       if (hero.dataset.handoff === 'front') returnFront();

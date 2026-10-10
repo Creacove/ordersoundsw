@@ -17,6 +17,7 @@ export function setupSectionThree(bundle:{left:number;top:number;width:number}){
  const stage=objectStage.querySelector<HTMLElement>('.s3-stage')!.getBoundingClientRect();
 
  gsap.set(root,{visibility:'visible'});
+ gsap.set(objectStage.querySelector('.s3-stage'),{visibility:'visible'});
  root.inert=false;
  gsap.set([find('.s3-stack'),find('.s3-band')],{
   left:bundle.left-(stage.left-area.left),

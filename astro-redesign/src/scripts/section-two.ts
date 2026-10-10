@@ -28,6 +28,7 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
 
  gsap.set(prop('record'),{visibility:'hidden'});
  gsap.set(section,{visibility:'visible'});
+ gsap.set(objectStage.querySelector('.section-two__stage'),{visibility:'visible'});
 
  const lines=[...section.querySelectorAll<HTMLElement>('.s2-line')];
  const eyebrow=section.querySelector<HTMLElement>('.section-two__eyebrow')!;
