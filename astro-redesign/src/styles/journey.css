@@ -1,11 +1,11 @@
 .hero-journey{position:relative;isolation:isolate}
-.chapter{position:relative;min-height:100svh;overflow:hidden;isolation:isolate}
+.chapter{position:relative;min-height:100svh;overflow:hidden}
 .chapter--hero{background:#f2ebe2}
 .chapter--work{background:#e4cfc4;min-height:130svh}
 .chapter--signals{background:#edeaf0;min-height:150svh}
-.chapter>.hero,.chapter>.section-two,.chapter>.section-three{position:relative;min-height:100svh;height:100svh;visibility:visible;z-index:2;pointer-events:none;background:none}
+.chapter>.hero,.chapter>.section-two,.chapter>.section-three{position:relative;min-height:100svh;height:100svh;visibility:visible;z-index:auto;pointer-events:none;background:none}
 .chapter a,.chapter button{pointer-events:auto}
-.chapter .hero__copy,.chapter .section-two__copy,.chapter .section-three__copy{z-index:2}
+.chapter .hero__copy,.chapter .section-two__copy,.chapter .section-three__copy{z-index:20}
 .chapter .studio{display:none}
 .world{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .world::before,.world::after{content:"";position:absolute;display:block;pointer-events:none}
@@ -24,7 +24,7 @@
 .object-stage .hero__stage{transform-origin:0 0}
 .object-stage .section-two__stage,.object-stage .s3-stage{inset:0}
 .object-stage .turn-control{position:absolute;pointer-events:auto}
-.chapter--hero .hero__nav{z-index:25}
+.chapter--hero .hero__nav{z-index:40}
 .chapter--hero .hero__copy{z-index:2}
 .next-act{position:relative;min-height:105svh;overflow:hidden;background:#1d1922;color:#f6f0eb;display:flex;align-items:center;padding:12svh 7.7%;isolation:isolate}
 .next-act__orbit{position:absolute;width:min(90vw,1100px);aspect-ratio:1;right:-22%;top:-43%;border-radius:50%;border:1px solid #efdeff3d;box-shadow:0 0 0 70px #ab82c018,0 0 0 142px #ab82c00b;pointer-events:none}
@@ -46,7 +46,7 @@
  .chapter--hero .hero{min-height:100svh;height:100svh}
  .chapter--work{min-height:120svh}.chapter--signals{min-height:140svh}
  .world--work::after{width:150%;left:-60%;bottom:-13%}
- .object-stage .section-two__stage{top:38%;height:59%}
+ .object-stage .section-two__stage{top:50%;height:48%}
  .object-stage .s3-stage{top:36%;height:57%}
  .chapter--signals .section-three__copy{top:4%}
  .next-act{padding:12svh 7%;min-height:100svh}.next-act__orbit{width:145vw;right:-95%;top:-6%}
