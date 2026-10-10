@@ -71,7 +71,9 @@ const signals = [
  .hero-journey{height:auto}.section-three{position:relative;height:100svh;min-height:850px;visibility:visible;background:#eee6dc}.s3-band{display:none}.s3-stack{opacity:.35}.s3-lens{opacity:.18}.s3-paper:not(.s3-action){opacity:1}.s3-paper:not(.s3-action) .s3-paper-copy{opacity:.65}
 }
 /* Denser live copy follows the existing paper perspective and footprints. */
-.s3-signal-copy{top:30%;left:23%;width:64%;}
+.s3-signal-copy{top:30%;left:23%;width:64%;color:#625c59}
+.s3-signal-copy strong{color:#514b48}
+.s3-signal-copy .s3-signal-label,.s3-signal-copy .s3-signal-footer{color:#827a76}
 .s3-content .s3-signal-copy{top:28%;left:20%;width:62%}
 .s3-budget .s3-signal-copy{top:25%;left:34%;width:46%}
 .s3-signal-copy .s3-signal-label{font-size:clamp(8px,.65vw,11px);letter-spacing:.08em;margin:0 0 7px}
@@ -97,12 +99,13 @@ const signals = [
  .s3-budget .s3-signal-copy{top:26%}.s3-decision strong{font-size:25px}.s3-decision p{font-size:12px}
 }
 @media(max-width:600px){
- .s3-timing .s3-signal-copy{top:27%}
- .s3-content .s3-signal-copy{top:26%;left:21%;width:60%}
+ .s3-timing .s3-signal-copy{top:31%}
+ .s3-content .s3-signal-copy{top:30%;left:21%;width:60%}
  .s3-content .s3-signal-copy strong span{font-size:14px}
  .s3-content .s3-metrics{margin-top:4px}
  .s3-content .s3-signal-copy .s3-metrics span{font-size:9px;line-height:1.2}
  .s3-content .s3-signal-copy .s3-signal-footer{font-size:5.5px;margin-top:4px;letter-spacing:0}
+ .s3-budget .s3-signal-copy{top:29%}
  .s3-budget .s3-signal-copy strong span{font-size:10px}
  .s3-budget .s3-signal-copy .s3-signal-footer{font-size:5.5px;letter-spacing:0}
 }

@@ -109,7 +109,7 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
  // Start returning the sleeve almost as soon as Section 1 begins to leave, so it is fully front-facing before Section 2 takes over.
  const heroReturn=ScrollTrigger.create({
   trigger:heroChapter,
-  start:'bottom 88%',
+  start:'bottom 55%',
   onEnter:()=>{hero.dataset.handoff='front';hero.dispatchEvent(new CustomEvent('desk:return-front'));},
   onLeaveBack:()=>{hero.dataset.handoff='back';hero.dispatchEvent(new CustomEvent('desk:return-back'));}
  });
