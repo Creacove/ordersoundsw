@@ -101,26 +101,22 @@ export function setupSectionThree(bundle:{left:number;top:number;width:number}){
  const resetPhysical=()=>{
   ticket++;
   gsap.killTweensOf(physicalTl);
-  physicalTl.timeScale(2).reverse();
+  physicalTl.timeScale(4.5).reverse();
  };
 
  const copyTrigger=ScrollTrigger.create({
   trigger:chapter,
   start:'top 78%',
-  onEnter:()=>copyTl.play(),
+  onEnter:()=>{ void load(); copyTl.play(); },
   onLeaveBack:()=>copyTl.reverse()
  });
 
  const physicalTrigger=ScrollTrigger.create({
   trigger:chapter,
   start:'top 20%',
-  onEnter:playPhysical
- });
-
- // Use a separate upward threshold so tiny scroll reversals do not make the stack nervous.
- const physicalReset=ScrollTrigger.create({
-  trigger:chapter,
-  start:'top 64%',
+  onEnter:playPhysical,
+  // Rebind while Section 3 still owns the viewport. The completed stack then
+  // crosses back into Section 2 instead of loose signals leaking upstream.
   onLeaveBack:resetPhysical
  });
 
@@ -157,7 +153,6 @@ export function setupSectionThree(bundle:{left:number;top:number;width:number}){
   ticket++;
   copyTrigger.kill();
   physicalTrigger.kill();
-  physicalReset.kill();
   finalize.kill();
   copyTl.kill();
   gsap.killTweensOf(physicalTl);

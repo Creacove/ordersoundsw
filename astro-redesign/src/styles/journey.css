@@ -1,8 +1,8 @@
 .hero-journey{position:relative;isolation:isolate}
 .chapter{position:relative;min-height:100svh;overflow:hidden}
 .chapter--hero{background:#f2ebe2}
-.chapter--work{background:#e4cfc4;min-height:130svh}
-.chapter--signals{background:#edeaf0;min-height:150svh}
+.chapter--work{background:#e7d5ca;min-height:130svh}
+.chapter--signals{background:#eee9ec;min-height:150svh}
 .chapter>.hero,.chapter>.section-two,.chapter>.section-three{position:relative;min-height:100svh;height:100svh;visibility:visible;z-index:auto;pointer-events:none;background:none}
 .chapter a,.chapter button{pointer-events:auto}
 .chapter .hero__copy,.chapter .section-two__copy,.chapter .section-three__copy{z-index:20}
@@ -12,12 +12,12 @@
 .world--music{background:radial-gradient(ellipse 88% 65% at 2% 11%,#fffdf8 0%,transparent 73%),linear-gradient(120deg,#f7f2e9,#e5dad2)}
 .world--music::before{width:min(95vw,1300px);aspect-ratio:1;right:-25%;top:-48%;border-radius:50%;background:repeating-radial-gradient(circle at center,#30292e0b 0 1px,transparent 2px 14px),radial-gradient(circle at center,transparent 0 31%,#54465e10 50%,transparent 71%);mask-image:radial-gradient(circle,transparent 0 33%,#000 34% 70%,transparent 71%);transform:rotate(-13deg)}
 .world--music::after{width:80%;height:30%;bottom:-10%;left:-17%;background:radial-gradient(ellipse,#d1b8b244,transparent 72%);transform:rotate(-8deg)}
-.world--work{background:radial-gradient(ellipse 72% 65% at 27% 20%,#f0dfd3,transparent 80%),#e4cfc4}
-.world--work::before{width:min(81vw,1120px);aspect-ratio:1;right:-12%;top:-27%;border-radius:50%;background:conic-gradient(from 30deg,#a892c544,#c6b2db70,#efe4e39c,#a592ca5c,#a892c544);mask-image:radial-gradient(circle,transparent 0 45%,#000 47% 65%,transparent 69%)}
-.world--work::after{width:90%;height:55%;left:-28%;bottom:-23%;border-radius:50%;background:radial-gradient(ellipse,#f8e7d6e0 0 35%,#edcdb872 63%,transparent 72%);transform:rotate(-24deg)}
-.world--focus{background:radial-gradient(ellipse 100% 85% at 8% 6%,#faf9fb,transparent 77%),#edeaf0}
-.world--focus::before{width:min(106vw,1500px);aspect-ratio:1;right:-31%;top:-39%;border-radius:50%;background:conic-gradient(from 25deg,#d6a9d265,#fff9f2c2,#b59ad982,#ead1aaad,#b69cda83,#d6a9d265);mask-image:radial-gradient(circle,transparent 0 50%,#000 52% 61%,transparent 66%);filter:blur(7px)}
-.world--focus::after{width:80%;height:45%;right:-19%;bottom:-21%;background:radial-gradient(ellipse,#c9b9dd58,transparent 70%);transform:rotate(16deg)}
+.world--work{background:radial-gradient(ellipse 74% 66% at 25% 18%,#f4e6dc,transparent 78%),linear-gradient(145deg,#ead9cf,#dfc8bd)}
+.world--work::before{width:min(81vw,1120px);aspect-ratio:1;right:-12%;top:-27%;border-radius:50%;background:conic-gradient(from 30deg,#9c88b83d,#c0acd15c,#f3e9e399,#9d8abd4a,#9c88b83d);mask-image:radial-gradient(circle,transparent 0 45%,#000 47% 65%,transparent 69%)}
+.world--work::after{width:90%;height:55%;left:-28%;bottom:-23%;border-radius:50%;background:radial-gradient(ellipse,#fbecdee8 0 35%,#e8c8b66b 63%,transparent 72%);transform:rotate(-24deg)}
+.world--focus{background:radial-gradient(ellipse 100% 82% at 6% 5%,#fbfaf9,transparent 74%),linear-gradient(145deg,#f2eef0,#e8e2e8)}
+.world--focus::before{width:min(106vw,1500px);aspect-ratio:1;right:-31%;top:-39%;border-radius:50%;background:conic-gradient(from 25deg,#cda9c94d,#fffaf3a8,#aa95cb6b,#e5cba08a,#ab96ca6b,#cda9c94d);mask-image:radial-gradient(circle,transparent 0 50%,#000 52% 61%,transparent 66%);filter:blur(8px)}
+.world--focus::after{width:80%;height:45%;right:-19%;bottom:-21%;background:radial-gradient(ellipse,#c6b8d548,transparent 70%);transform:rotate(16deg)}
 .object-rail{position:absolute;inset:0;z-index:10;pointer-events:none}
 .object-stage{position:sticky;top:0;height:100svh;overflow:hidden;isolation:isolate;pointer-events:none}
 .object-stage .hero__stage,.object-stage .section-two__stage,.object-stage .s3-stage{position:absolute;pointer-events:none}
@@ -48,8 +48,9 @@
  .world--work::after{width:150%;left:-60%;bottom:-13%}
  .object-stage .section-two__stage{top:50%;height:48%}
  .object-stage .s3-stage{top:36%;height:57%}
- .chapter--work .section-two__copy,.chapter--signals .section-three__copy{top:4%;mask-image:linear-gradient(to bottom,#000 calc(var(--reading-edge,100vh) - 12px),transparent var(--reading-edge,100vh))}
- .chapter--signals .section-three__copy{top:0}
+ .chapter--work .section-two__copy{top:4%}
+ .chapter--signals .section-three__copy{top:7%}
+ .chapter--work .section-two__copy,.chapter--signals .section-three__copy{mask-image:linear-gradient(to bottom,#000 calc(var(--reading-edge,100vh) - 12px),transparent var(--reading-edge,100vh))}
  .next-act{padding:12svh 7%;min-height:100svh}.next-act__orbit{width:145vw;right:-95%;top:-6%}
 }
 @media(prefers-reduced-motion:reduce){
