@@ -103,10 +103,10 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
   physicalTl.timeScale(2.2).reverse();
  };
 
- // Finish the hero's sleeve turn while Section 1 is still visibly leaving.
+ // Start returning the sleeve almost as soon as Section 1 begins to leave, so it is fully front-facing before Section 2 takes over.
  const heroReturn=ScrollTrigger.create({
   trigger:heroChapter,
-  start:'bottom 35%',
+  start:'bottom 88%',
   onEnter:()=>hero.dispatchEvent(new CustomEvent('desk:return-front')),
   onLeaveBack:()=>hero.dispatchEvent(new CustomEvent('desk:return-back'))
  });
