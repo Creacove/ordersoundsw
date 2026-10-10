@@ -166,36 +166,25 @@ function Record() {
           return { left: Math.min(...points.map(p => p.x)), right: Math.max(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), bottom: Math.max(...points.map(p => p.y)) };
         },
       };
-      let entry = null;
-      let lastTurn = -1;
-      const followScroll = event => {
-        const p = event.detail.progress;
-        if (p > 0 && entry === null) {
-          entry = { angle: assembly.current.rotation.y, z: disc.current.position.z,
-            running: timeline.isActive() };
-          timeline.pause();
-        }
-        if (entry === null) return;
-        if (p <= 0) {
-          assembly.current.rotation.y = entry.angle;
-          disc.current.position.z = entry.z;
-          const resume = entry.running;
-          entry = null; lastTurn = -1;
-          update();
-          if (resume) timeline.play();
-          return;
-        }
-        const turnProgress = Math.min(1, p / .16);
-        if (turnProgress === lastTurn) return;
-        lastTurn = turnProgress;
-        const eased = turnProgress * turnProgress * (3 - 2 * turnProgress);
-        assembly.current.rotation.y = entry.angle * (1 - eased);
-        disc.current.position.z = entry.z + (-.1 - entry.z) * eased;
-        update();
+      let handoffTween = null;
+      const orientSleeve = (angle, z) => {
+        timeline.pause();
+        handoffTween?.kill();
+        handoffTween = gsap.timeline({ onUpdate: update })
+          .to(assembly.current.rotation, { y: angle, duration: .62, ease: 'power3.inOut' }, 0)
+          .to(disc.current.position, { z, duration: .62, ease: 'power3.inOut' }, 0)
+          .to(contactShadow, { x: angle === 0 ? 0 : 36, duration: .62, ease: 'power3.inOut' }, 0);
       };
-      hero.addEventListener('desk:scroll', followScroll);
-      hero.dispatchEvent(new CustomEvent('desk:ready'));
-      cleanupButton = () => { button.removeEventListener('click', turn); hero.removeEventListener('desk:scroll', followScroll); };
+      const returnFront = () => orientSleeve(0, -.10);
+      const returnBack = () => orientSleeve(Math.PI, .24);
+      hero.addEventListener('desk:return-front', returnFront);
+      hero.addEventListener('desk:return-back', returnBack);
+      cleanupButton = () => {
+        button.removeEventListener('click', turn);
+        hero.removeEventListener('desk:return-front', returnFront);
+        hero.removeEventListener('desk:return-back', returnBack);
+        handoffTween?.kill();
+      };
       invalidate();
     };
     let cleanupButton = () => {};
