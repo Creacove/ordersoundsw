@@ -1,0 +1,257 @@
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { Html, useTexture, RoundedBox, ContactShadows } from '@react-three/drei';
+import * as THREE from 'three';
+import gsap from 'gsap';
+import SleeveContent from './SleeveContent';
+import { paperNormalTexture, vinylVertex, vinylFragment, lightPaper } from './recordMaterials';
+
+const BASE_YAW = 0;
+const vinylBack = vinylFragment
+  .replace('lobe(a,.55,.19) + lobe(a,-.59,.21)', 'lobe(a,2.59,.19) + lobe(a,-2.55,.21)')
+  .replace('lobe(a,.51,.058) + lobe(a,-.66,.065)', 'lobe(a,2.63,.058) + lobe(a,-2.48,.065)')
+  .replace('smoothstep(-.06,.10,p.x)', 'smoothstep(-.06,.10,-p.x)');
+
+function Record() {
+  const assembly = useRef();
+  const disc = useRef();
+  const body = useRef();
+  const sleeve = useRef();
+  const placement = useRef();
+  const frontVinyl = useRef();
+  const backVinyl = useRef();
+  const { invalidate, gl, camera, size } = useThree();
+  const [front, back] = useTexture(['/hero/sleeve-front.webp', '/hero/sleeve-back.webp']);
+  const normal = useMemo(paperNormalTexture, []);
+  useLayoutEffect(() => {
+    for (const texture of [front, back]) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    }
+    invalidate();
+  }, [front, back, gl, invalidate]);
+  useEffect(() => () => normal.dispose(), [normal]);
+
+  // The HTML first-paint composition owns layout. Register both real objects
+  // against those same rectangles so hydration and viewport changes cannot jump.
+  useLayoutEffect(() => {
+    const stage = gl.domElement.getBoundingClientRect();
+    const jacket = document.querySelector('.hero__standin-sleeve').getBoundingClientRect();
+    const vinyl = document.querySelector('.hero__standin-disc').getBoundingClientRect();
+    const zoom = camera.zoom * (stage.width / gl.domElement.clientWidth);
+    const centerX = (jacket.left + vinyl.right) / 2;
+    const centerY = jacket.top + jacket.height / 2;
+    placement.current.position.set((centerX - stage.left - stage.width / 2) / zoom,
+      (stage.top + stage.height / 2 - centerY) / zoom, 0);
+    sleeve.current.position.x = (jacket.left + jacket.width / 2 - centerX) / zoom;
+    sleeve.current.scale.set(jacket.width / (3.74 * zoom), jacket.height / (3.74 * zoom), 1);
+    disc.current.position.set((vinyl.left + vinyl.width / 2 - centerX) / zoom,
+      (centerY - vinyl.top - vinyl.height / 2) / zoom, -.10);
+    disc.current.scale.setScalar(vinyl.width / (3.74 * zoom));
+    invalidate();
+  }, [size.width, size.height, camera, gl, invalidate]);
+
+  useEffect(() => {
+    const hero = document.querySelector('[data-hero]');
+    const objectStage = document.querySelector('.object-stage');
+    const heroStage = objectStage.querySelector('.hero__stage');
+    const copy = document.querySelector('[data-hero-copy]');
+    const frontTitle = copy.querySelector('h1');
+    const bridge = copy.querySelector('[data-bridge]');
+    const support = copy.querySelector('[data-back-support]');
+    const contactShadow = heroStage.querySelector('.object-shadow');
+    const studioLight = hero.querySelector('.studio__light');
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    let timeline;
+    let cancelled = false;
+    const setup = async () => {
+      await document.fonts.ready;
+      while (!cancelled && (!heroStage.querySelector('[data-sleeve-front]') || !heroStage.querySelector('[data-sleeve-back]'))) {
+        invalidate();
+        await new Promise(requestAnimationFrame);
+      }
+      if (cancelled) return;
+      const frontFace = heroStage.querySelector('[data-sleeve-front]');
+      const backFace = heroStage.querySelector('[data-sleeve-back]');
+      const before = backFace.querySelector('[data-before]');
+      const after = backFace.querySelector('[data-after]');
+      const frontLines = [...frontTitle.querySelectorAll('[data-copy-line]')];
+      const backRows = [...backFace.querySelectorAll('.sleeve-heading, .desk-rows li')];
+      const largeSize = () => parseFloat(getComputedStyle(frontTitle).fontSize) * (innerWidth > 1000 ? .91 : 1);
+
+      const update = () => {
+        const angle = assembly.current.rotation.y;
+        frontFace.style.visibility = angle < Math.PI / 2 ? 'visible' : 'hidden';
+        backFace.style.visibility = angle >= Math.PI / 2 ? 'visible' : 'hidden';
+        frontFace.inert = angle >= Math.PI / 2;
+        backFace.inert = angle < Math.PI / 2;
+        hero.dataset.angle = angle.toFixed(5);
+        frontVinyl.current.uniforms.uTurn.value = angle;
+        backVinyl.current.uniforms.uTurn.value = angle;
+        invalidate();
+      };
+      gsap.set(support, { autoAlpha: 0, y: 18 });
+      gsap.set(backRows, { y: 11, opacity: 0 });
+      gsap.set(after, { autoAlpha: 0, y: 8 });
+      // Keep the authored seconds under low frame rates and software WebGL.
+      gsap.ticker.lagSmoothing(0);
+      timeline = gsap.timeline({ paused: true, onUpdate: update, onComplete: () => { hero.dataset.settled = 'true'; } });
+      timeline.to(frontLines.slice().reverse(), { yPercent: -105, duration: .54, stagger: .08, ease: 'power3.inOut' }, 2.59)
+        .set(frontTitle, { autoAlpha: 0 }, 3.23)
+        .to(bridge, {
+          top: 0,
+          fontSize: () => `${largeSize()}px`,
+          lineHeight: () => `${largeSize() * .96}px`,
+          letterSpacing: () => `${largeSize() * -.055}px`,
+          fontWeight: 560,
+          color: '#171519',
+          duration: 1.08,
+          ease: 'power3.inOut',
+        }, 2.60)
+        .to(assembly.current.rotation, { y: Math.PI, duration: 1.18, ease: 'power3.inOut' }, 2.55)
+        .to(disc.current.position, { z: .24, duration: .30, ease: 'power2.inOut' }, 2.99)
+        .to(contactShadow, { x: 36, duration: 1.18, ease: 'power3.inOut' }, 2.55)
+        .fromTo(studioLight, { xPercent: -3, opacity: 1 }, { xPercent: 4, opacity: .72, duration: 1.18, ease: 'power2.inOut' }, 2.55)
+        .to(support, { autoAlpha: 1, y: 0, duration: .52, ease: 'power2.out' }, 3.49)
+        .to(backRows, { y: 0, opacity: 1, duration: .48, stagger: .10, ease: 'power2.out' }, 3.69)
+        .to(before, { autoAlpha: 0, y: -7, duration: .27, ease: 'power2.in' }, 6.72)
+        .to(after, { autoAlpha: 1, y: 0, duration: .36, ease: 'power2.out' }, 6.84)
+        .to({}, { duration: .80 }, 7.2);
+      const syncAccessibility = () => {
+        const isBack = timeline.time() >= 3.02;
+        frontTitle.inert = isBack;
+        support.inert = !isBack;
+        frontTitle.setAttribute('aria-hidden', String(isBack));
+        support.setAttribute('aria-hidden', String(!isBack));
+      };
+      timeline.eventCallback('onUpdate', () => { update(); syncAccessibility(); });
+      update();
+      syncAccessibility();
+      const button = objectStage.querySelector('[data-turn]');
+      const turn = () => {
+        if (timeline.isActive()) return;
+        if (motion.matches) {
+          timeline.seek(timeline.time() < 3.55 ? 8 : 0);
+          update(); syncAccessibility();
+        } else if (timeline.time() >= 8) {
+          timeline.reverse();
+        } else timeline.play();
+      };
+      button.addEventListener('click', turn);
+      const time = import.meta.env.DEV ? new URLSearchParams(location.search).get('heroTime') : null;
+      if (time !== null) {
+        timeline.seek(Number(time)).pause();
+        update();
+        syncAccessibility();
+      }
+      // Wait for the canvas AND transformed HTML to paint before revealing them.
+      for (let frame = 0; frame < 3 && !cancelled; frame++) {
+        invalidate();
+        await new Promise(requestAnimationFrame);
+      }
+      if (cancelled) return;
+      hero.dataset.ready = 'true';
+      heroStage.dataset.ready = 'true';
+      if (time === null && !motion.matches) timeline.play();
+      if (import.meta.env.DEV) window.__deskHero = {
+        seek: t => { timeline.pause().seek(t); update(); syncAccessibility(); },
+        info: () => ({ time: timeline.time(), rotation: assembly.current.rotation.y, running: timeline.isActive() }),
+        sleeveBounds: () => {
+          body.current.updateWorldMatrix(true, false);
+          const canvas = gl.domElement.getBoundingClientRect();
+          const points = [[-1.87,1.87],[1.87,1.87],[-1.87,-1.87],[1.87,-1.87]].map(([x,y]) => {
+            const p = body.current.localToWorld(new THREE.Vector3(x,y,0)).project(camera);
+            return { x: canvas.left + (p.x + 1) * canvas.width / 2, y: canvas.top + (1 - p.y) * canvas.height / 2 };
+          });
+          return { left: Math.min(...points.map(p => p.x)), right: Math.max(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), bottom: Math.max(...points.map(p => p.y)) };
+        },
+      };
+      let handoffTween = null;
+      const orientSleeve = (angle, z) => {
+        timeline.pause();
+        handoffTween?.kill();
+        handoffTween = gsap.timeline({ onUpdate: update })
+          .to(assembly.current.rotation, { y: angle, duration: .62, ease: 'power3.inOut' }, 0)
+          .to(disc.current.position, { z, duration: .62, ease: 'power3.inOut' }, 0)
+          .to(contactShadow, { x: angle === 0 ? 0 : 36, duration: .62, ease: 'power3.inOut' }, 0);
+      };
+      const returnFront = () => orientSleeve(0, -.10);
+      const returnBack = () => {
+        // Returning from Section 2 replays the complete front-to-back story.
+        // Reset copy and object together before the time-based turn resumes.
+        timeline.seek(0).pause();
+        update();
+        syncAccessibility();
+        orientSleeve(0, -.10);
+        if (!motion.matches) handoffTween.eventCallback('onComplete', () => timeline.play());
+      };
+      hero.addEventListener('desk:return-front', returnFront);
+      hero.addEventListener('desk:return-back', returnBack);
+      if (hero.dataset.handoff === 'front') returnFront();
+      else if (hero.dataset.handoff === 'back') returnBack();
+      cleanupButton = () => {
+        button.removeEventListener('click', turn);
+        hero.removeEventListener('desk:return-front', returnFront);
+        hero.removeEventListener('desk:return-back', returnBack);
+        handoffTween?.kill();
+      };
+      invalidate();
+    };
+    let cleanupButton = () => {};
+    setup();
+    return () => { cancelled = true; timeline?.kill(); cleanupButton(); delete window.__deskHero; };
+  }, [invalidate]);
+
+  return <group ref={placement}><group ref={assembly}>
+    <group ref={disc} position={[1.14,-.01,-.10]} rotation={[0,0,0]}>
+      <mesh rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[1.87,1.87,.035,192]} /><meshStandardMaterial color="#0c0b0e" roughness={.3} metalness={.28} /></mesh>
+      <mesh position={[0,0,.021]}><circleGeometry args={[1.862,192]} /><shaderMaterial ref={frontVinyl} uniforms={{ uTurn: { value: 0 } }} vertexShader={vinylVertex} fragmentShader={vinylFragment} /></mesh>
+      <mesh position={[0,0,.026]}><circleGeometry args={[.62,96]} /><meshStandardMaterial color="#d7cbc0" roughness={.85} normalMap={normal} normalScale={[.15,.15]} /></mesh>
+      <mesh position={[0,0,.030]}><circleGeometry args={[.049,32]} /><meshBasicMaterial color="#070609" /></mesh>
+      <mesh position={[0,0,-.030]} rotation={[0,Math.PI,0]}><circleGeometry args={[1.862,192]} /><shaderMaterial ref={backVinyl} uniforms={{ uTurn: { value: 0 } }} vertexShader={vinylVertex} fragmentShader={vinylBack} /></mesh>
+      <mesh position={[0,0,-.034]} rotation={[0,Math.PI,0]}><circleGeometry args={[.62,96]} /><meshStandardMaterial color="#d7cbc0" roughness={.85} normalMap={normal} normalScale={[.15,.15]} /></mesh>
+      <mesh position={[0,0,-.039]} rotation={[0,Math.PI,0]}><circleGeometry args={[.049,32]} /><meshBasicMaterial color="#070609" /></mesh>
+    </group>
+    <group ref={sleeve} position={[-.73,0,.14]} rotation={[0,BASE_YAW,0]}>
+      <RoundedBox ref={body} args={[3.74,3.74,.068]} radius={.008} smoothness={2}>
+        <meshStandardMaterial color="#d3c5b8" roughness={.88} normalMap={normal} normalScale={[.15,.15]} />
+      </RoundedBox>
+      <mesh position={[0,0,.035]}><planeGeometry args={[3.724,3.724]} />
+        <meshStandardMaterial map={front} color="#ffffff" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={lightPaper} />
+      </mesh>
+      <mesh position={[0,0,-.035]} rotation={[0,Math.PI,0]}><planeGeometry args={[3.724,3.724]} />
+        <meshStandardMaterial map={back} color="#ffffff" roughness={.91} normalMap={normal} normalScale={[.12,.12]} onBeforeCompile={lightPaper} />
+      </mesh>
+      <Html transform position={[0,0,.039]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="front" /></Html>
+      <Html transform position={[0,0,-.039]} rotation={[0,Math.PI,0]} distanceFactor={2.48} zIndexRange={[10,2]}><SleeveContent face="back" /></Html>
+    </group>
+  </group></group>;
+}
+
+function ResponsiveCamera() {
+  const { camera, size, invalidate } = useThree();
+  useLayoutEffect(() => {
+    // Stable world-space framing across independently laid out stage containers.
+    camera.position.set(0,0,12);
+    camera.zoom = size.height / 4.02;
+    camera.updateProjectionMatrix();
+    invalidate();
+    const frame = requestAnimationFrame(() => invalidate());
+    return () => cancelAnimationFrame(frame);
+  }, [camera, size, invalidate]);
+  return null;
+}
+
+export default function HeroScene() {
+  return <Canvas orthographic resize={{ offsetSize: true }} className="hero-canvas" frameloop="demand" dpr={[1,1.75]}
+    camera={{ position:[0,0,12], zoom:100, near:.1, far:40 }}
+    gl={{ antialias:true, alpha:true, powerPreference:'default' }}
+    onCreated={({ gl }) => { gl.outputColorSpace=THREE.SRGBColorSpace; gl.toneMapping=THREE.NoToneMapping; }}>
+    <ResponsiveCamera />
+    <ambientLight intensity={1.50} color="#fff9f2" />
+    <directionalLight position={[-3,5,8]} intensity={1.7} color="#fff8ee" />
+    <directionalLight position={[4,1,-6]} intensity={1.7} color="#fff8ee" />
+    <Suspense fallback={null}><Record /></Suspense>
+    <ContactShadows position={[0,-2.005,0]} opacity={.55} scale={10} blur={2.3} far={4} resolution={512} color="#554037" frames={1} />
+  </Canvas>;
+}

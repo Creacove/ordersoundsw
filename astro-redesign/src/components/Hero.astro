@@ -1,0 +1,36 @@
+---
+import HeroScene from './HeroScene.jsx';
+const deskUrl = import.meta.env.PUBLIC_DESK_URL || 'https://desk.ordersounds.com/';
+---
+<section class="hero" data-hero>
+  <div class="studio" aria-hidden="true"><div class="studio__light"></div><div class="studio__floor"></div><div class="studio__leaves"></div></div>
+
+  <header class="hero__nav">
+    <a class="brand" href="/" aria-label="OrderSounds home">
+      <img class="brand__wordmark" src="/hero/ordersounds-logo.png" alt="" /><strong>OrderSounds</strong>
+      <span class="brand__divider"></span>
+      <span class="brand__desk">Desk</span>
+    </a>
+  </header>
+
+  <div class="hero__copy" data-hero-copy>
+    <h1><span class="copy-mask"><span class="journey-hero-line"><span data-copy-line>Make the</span></span></span><span class="copy-mask"><span class="journey-hero-line"><span data-copy-line>music.</span></span></span></h1>
+    <h2 class="hero__bridge" data-bridge>Desk handles the other side.</h2>
+    <p class="hero__support" data-back-support aria-hidden="true" inert>The work that keeps<br />your career moving.</p>
+    <a class="primary-cta" href={deskUrl}>Enter Desk <span aria-hidden="true">→</span></a>
+  </div>
+
+  <div class="hero__stage">
+    <div class="object-shadow" aria-hidden="true"></div>
+    <div class="hero__standin" aria-hidden="true">
+      <div class="hero__standin-disc"></div>
+      <div class="hero__standin-sleeve">
+        <img class="hero__standin-art" src="/hero/sleeve-front.webp" alt="" fetchpriority="high" />
+        <img class="hero__standin-logo" src="/hero/ordersounds-logo.png" alt="" />
+        <span>OrderSounds</span>
+      </div>
+    </div>
+    <HeroScene client:only="react" />
+  </div>
+  <button type="button" class="turn-control" data-turn aria-label="Turn the record sleeve">Turn sleeve <span aria-hidden="true">↻</span></button>
+</section>
