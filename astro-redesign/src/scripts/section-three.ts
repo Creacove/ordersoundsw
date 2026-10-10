@@ -94,11 +94,13 @@ export function setupSectionThree(bundle:{left:number;top:number;width:number}){
   const current=++ticket;
   void load().then(()=>{
    if(current!==ticket)return;
+   gsap.killTweensOf(physicalTl);
    physicalTl.timeScale(1).play();
   });
  };
  const resetPhysical=()=>{
   ticket++;
+  gsap.killTweensOf(physicalTl);
   physicalTl.timeScale(2).reverse();
  };
 
@@ -127,8 +129,13 @@ export function setupSectionThree(bundle:{left:number;top:number;width:number}){
   start:'top -20%',
   onEnter:()=>{
    if(physicalTl.progress()<1){
-    ticket++;
-    gsap.to(physicalTl,{time:physicalTl.duration(),duration:.30,ease:'power2.out'});
+    const current=++ticket;
+    physicalTl.pause();
+    void load().then(()=>{
+     if(current!==ticket)return;
+     gsap.killTweensOf(physicalTl);
+     gsap.to(physicalTl,{time:physicalTl.duration(),duration:.30,ease:'power2.out'});
+    });
    }
   }
  });
@@ -153,6 +160,7 @@ export function setupSectionThree(bundle:{left:number;top:number;width:number}){
   physicalReset.kill();
   finalize.kill();
   copyTl.kill();
+  gsap.killTweensOf(physicalTl);
   physicalTl.kill();
  };
 }

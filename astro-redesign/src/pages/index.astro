@@ -49,6 +49,22 @@ const deskUrl = import.meta.env.PUBLIC_DESK_URL || 'https://desk.ordersounds.com
       }
       journey.dataset.act = active;
     };
+    // Copy stays in document flow; only its passage through the mobile art
+    // zone is masked. Reversing scroll naturally reveals it again.
+    const copies = [...document.querySelectorAll('.section-two__copy,.section-three__copy')];
+    const protectCopy = () => {
+      if (innerWidth > 600) return;
+      const edges = copies.map(copy => innerHeight * (copy.classList.contains('section-two__copy') ? .46 : .39) - copy.getBoundingClientRect().top);
+      copies.forEach((copy,i) => copy.style.setProperty('--reading-edge', Math.max(0,edges[i]) + 'px'));
+    };
+    let frame = 0;
+    const scheduleProtection = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => { frame = 0; protectCopy(); });
+    };
+    protectCopy();
+    addEventListener('scroll',scheduleProtection,{passive:true});
+    addEventListener('resize',scheduleProtection);
     setAct();
     addEventListener('scroll',setAct,{passive:true});
     matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',setAct);

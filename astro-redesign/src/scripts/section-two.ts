@@ -95,11 +95,13 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
   const ticket=++playTicket;
   void load().then(()=>{
    if(ticket!==playTicket)return;
+   gsap.killTweensOf(physicalTl);
    physicalTl.timeScale(1).play();
   });
  };
  const resetPhysical=()=>{
   playTicket++;
+  gsap.killTweensOf(physicalTl);
   physicalTl.timeScale(2.2).reverse();
  };
 
@@ -107,8 +109,8 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
  const heroReturn=ScrollTrigger.create({
   trigger:heroChapter,
   start:'bottom 88%',
-  onEnter:()=>hero.dispatchEvent(new CustomEvent('desk:return-front')),
-  onLeaveBack:()=>hero.dispatchEvent(new CustomEvent('desk:return-back'))
+  onEnter:()=>{hero.dataset.handoff='front';hero.dispatchEvent(new CustomEvent('desk:return-front'));},
+  onLeaveBack:()=>{hero.dataset.handoff='back';hero.dispatchEvent(new CustomEvent('desk:return-back'));}
  });
 
  // Let Section 2 copy arrive before the physical work expands.
@@ -121,7 +123,7 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
 
  const physicalTrigger=ScrollTrigger.create({
   trigger:chapter,
-  start:'top 22%',
+  start:'top 20%',
   onEnter:playPhysical
  });
 
@@ -138,8 +140,13 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
   start:'top -10%',
   onEnter:()=>{
    if(physicalTl.progress()<1){
-    playTicket++;
-    gsap.to(physicalTl,{time:physicalTl.duration(),duration:.28,ease:'power2.out'});
+    const ticket=++playTicket;
+    physicalTl.pause();
+    void load().then(()=>{
+     if(ticket!==playTicket)return;
+     gsap.killTweensOf(physicalTl);
+     gsap.to(physicalTl,{time:physicalTl.duration(),duration:.28,ease:'power2.out'});
+    });
    }
   }
  });
@@ -165,6 +172,7 @@ mm.add({motion:'(prefers-reduced-motion:no-preference)',mobile:'(max-width:600px
   physicalReset.kill();
   finalize.kill();
   copyTl.kill();
+  gsap.killTweensOf(physicalTl);
   physicalTl.kill();
   cleanupThree();
  };

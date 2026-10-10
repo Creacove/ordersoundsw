@@ -179,6 +179,8 @@ function Record() {
       const returnBack = () => orientSleeve(Math.PI, .24);
       hero.addEventListener('desk:return-front', returnFront);
       hero.addEventListener('desk:return-back', returnBack);
+      if (hero.dataset.handoff === 'front') returnFront();
+      else if (hero.dataset.handoff === 'back') returnBack();
       cleanupButton = () => {
         button.removeEventListener('click', turn);
         hero.removeEventListener('desk:return-front', returnFront);
