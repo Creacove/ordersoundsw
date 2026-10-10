@@ -53,24 +53,26 @@ function Record() {
 
   useEffect(() => {
     const hero = document.querySelector('[data-hero]');
+    const objectStage = document.querySelector('.object-stage');
+    const heroStage = objectStage.querySelector('.hero__stage');
     const copy = document.querySelector('[data-hero-copy]');
     const frontTitle = copy.querySelector('h1');
     const bridge = copy.querySelector('[data-bridge]');
     const support = copy.querySelector('[data-back-support]');
-    const contactShadow = hero.querySelector('.object-shadow');
+    const contactShadow = heroStage.querySelector('.object-shadow');
     const studioLight = hero.querySelector('.studio__light');
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let timeline;
     let cancelled = false;
     const setup = async () => {
       await document.fonts.ready;
-      while (!cancelled && (!hero.querySelector('[data-sleeve-front]') || !hero.querySelector('[data-sleeve-back]'))) {
+      while (!cancelled && (!heroStage.querySelector('[data-sleeve-front]') || !heroStage.querySelector('[data-sleeve-back]'))) {
         invalidate();
         await new Promise(requestAnimationFrame);
       }
       if (cancelled) return;
-      const frontFace = hero.querySelector('[data-sleeve-front]');
-      const backFace = hero.querySelector('[data-sleeve-back]');
+      const frontFace = heroStage.querySelector('[data-sleeve-front]');
+      const backFace = heroStage.querySelector('[data-sleeve-back]');
       const before = backFace.querySelector('[data-before]');
       const after = backFace.querySelector('[data-after]');
       const frontLines = [...frontTitle.querySelectorAll('[data-copy-line]')];
@@ -125,7 +127,7 @@ function Record() {
       timeline.eventCallback('onUpdate', () => { update(); syncAccessibility(); });
       update();
       syncAccessibility();
-      const button = hero.querySelector('[data-turn]');
+      const button = objectStage.querySelector('[data-turn]');
       const turn = () => {
         if (timeline.isActive()) return;
         if (motion.matches) {
@@ -149,6 +151,7 @@ function Record() {
       }
       if (cancelled) return;
       hero.dataset.ready = 'true';
+      heroStage.dataset.ready = 'true';
       if (time === null && !motion.matches) timeline.play();
       if (import.meta.env.DEV) window.__deskHero = {
         seek: t => { timeline.pause().seek(t); update(); syncAccessibility(); },

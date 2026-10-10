@@ -12,7 +12,7 @@ export function cueChapter(chapter:HTMLElement,timeline:gsap.core.Timeline,load:
    if(ticket!==revision)return;
    transition?.kill();
    chapter.dataset.state='playing';
-   transition=timeline.tweenTo(time,{duration:Math.max(.25,Math.abs(time-timeline.time())),ease:'power1.inOut',onComplete:()=>{chapter.dataset.state='holding';}});
+   transition=timeline.tweenTo(time,{duration:Math.max(.28,Math.min(1.15,Math.abs(time-timeline.time())*.65)),ease:'power1.inOut',onComplete:()=>{chapter.dataset.state='holding';}});
   });
  };
  const triggers=stops.map((stop,index)=>ScrollTrigger.create({trigger:chapter,start:stop.at,
